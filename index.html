@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スマートスケジュール帳</title>
+  <style>
+    :root {
+      --primary-color: #2563eb;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-sub: #64748b;
+      --alert-red: #ef4444;
+      --alert-yellow: #f59e0b;
+      --alert-green: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 12px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 414px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    header {
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      border: 1px solid #e2e8f0;
+    }
+
+    /* ① 今日のバイト（特大表示） */
+    .card-today-job {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 2px solid #bfdbfe;
+      text-align: center;
+      padding: 20px 16px;
+    }
+
+    .job-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .job-status-large {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      margin: 4px 0;
+    }
+
+    .job-time {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1e40af;
+    }
+
+    /* ② 明日のバイト（小表示） */
+    .card-tomorrow-job {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: #f1f5f9;
+    }
+
+    .job-status-small {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* ③④ 課題リスト & カウントダウン */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .task-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-left: 5px solid var(--alert-green);
+      transition: all 0.3s ease;
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .task-name {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .task-detail-preview {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .task-deadline {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+    }
+
+    .ai-estimate-tag {
+      font-size: 0.75rem;
+      background-color: #e0e7ff;
+      color: #3730a3;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .countdown-badge {
+      align-self: flex-end;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+
+    .urgent-red {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .urgent-yellow {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .urgent-green {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+
+    .delete-btn:hover {
+      color: var(--alert-red);
+    }
+
+    .empty-message {
+      text-align: center;
+      color: var(--text-sub);
+      font-size: 0.9rem;
+      padding: 20px 0;
+    }
+
+    /* ⑤ 追加フォーム & 設定 */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    textarea.form-control {
+      resize: vertical;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background-color: var(--primary-color);
+      color: #ffffff;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .api-settings {
+      margin-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+      padding-top: 12px;
+    }
+
+    .api-settings summary {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-clear {
+      background-color: #cbd5e1;
+      color: #334155;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    .status-msg {
+      font-size: 0.75rem;
+      margin-top: 4px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: none;
+    }
+    .status-msg.error {
+      background-color: #fee2e2;
+      color: #991b1b;
+      display: block;
+    }
+    .status-msg.info {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <h1>My Schedule</h1>
+    </header>
+
+    <!-- ① 今日のバイト（特大表示） -->
+    <div class="card card-today-job" id="today-job-card">
+      <div class="job-title">本日のアルバイト</div>
+      <div class="job-status-large" id="today-job-status">なし</div>
+      <div class="job-time" id="today-job-time" style="display:none;"></div>
+    </div>
+
+    <!-- ② 明日のバイト（小表示） -->
+    <div class="card card-tomorrow-job">
+      <span class="job-title" style="margin:0;">明日のアルバイト</span>
+      <span class="job-status-small" id="tomorrow-job-status">なし</span>
+    </div>
+
+    <!-- ③④ 課題リスト & カウントダウン -->
+    <section>
+      <div class="section-title">
+        <span>直近の課題</span>
+        <span style="font-size: 0.75rem; color: var(--text-sub);">優先度順</span>
+      </div>
+      <div class="task-list" id="task-list">
+        <!-- JavaScriptで動的に生成されます -->
+      </div>
+    </section>
+
+    <!-- ⑤ 予定追加フォーム -->
+    <section class="card">
+      <div class="section-title">新しい予定・課題の追加</div>
+      <form id="add-schedule-form">
+        <div class="form-group">
+          <label for="task-name">タイトル・件名</label>
+          <input type="text" id="task-name" class="form-control" placeholder="例: 知能メディアレポート / アルバイト" required>
+        </div>
+
+        <div class="form-group">
+          <label for="task-type">種別</label>
+          <select id="task-type" class="form-control" onchange="toggleJobTimeInput()">
+            <option value="task">課題</option>
+            <option value="job">アルバイト</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="detail-group">
+          <label for="task-detail">課題の詳細・指示内容</label>
+          <textarea id="task-detail" class="form-control" rows="2" placeholder="例: manabaの指示文（2000字程度、参考文献要）"></textarea>
+        </div>
+
+        <div class="form-group" id="manual-est-group">
+          <label for="task-manual-minutes">所要時間（分） <span style="font-size:0.75rem; font-weight:normal; color:var(--text-sub);">※空欄時はAIが自動推測</span></label>
+          <input type="number" id="task-manual-minutes" class="form-control" placeholder="例: 90（手動指定する場合）" min="5" step="5">
+        </div>
+
+        <div class="form-group">
+          <label for="task-datetime">日時・締め切り</label>
+          <input type="datetime-local" id="task-datetime" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn-submit" id="submit-btn">登録する</button>
+
+        <div id="status-display" class="status-msg"></div>
+
+        <!-- Gemini APIキー設定エリア -->
+        <details class="api-settings" open>
+          <summary>⚙️ Gemini APIキー設定（自動推測用）</summary>
+          <div class="form-group" style="margin-top: 8px;">
+            <input type="text" id="api-key-input" class="form-control" placeholder="APIキーを入力してください" onchange="saveApiKey()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+              <span style="font-size: 0.7rem; color: var(--text-sub);">※入力するとブラウザに保存されます。</span>
+              <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
+            </div>
+          </div>
+        </details>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'smart_schedule_items';
+    const API_KEY_STORAGE = 'smart_schedule_gemini_key';
+
+    const initialDefaultTasks = [
+      {
+        id: 1,
+        name: "知能メディアレポート",
+        type: "task",
+        detail: "授業の感想と考察を2000字でまとめる。参考文献要。",
+        datetime: new Date(Date.now() + 8 * 3600 * 1000 + 32 * 60 * 1000).toISOString().slice(0,16),
+        estimatedMinutes: 120
+      },
+      {
+        id: 2,
+        name: "プログラミング演習課題",
+        type: "task",
+        detail: "繰り返し処理と配列の演習問題3問",
+        datetime: new Date(Date.now() + 44 * 3600 * 1000).toISOString().slice(0,16),
+        estimatedMinutes: 45
+      }
+    ];
+
+    function loadTasks() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          return initialDefaultTasks;
+        }
+      }
+      return initialDefaultTasks;
+    }
+
+    function saveTasks() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('api-key-input').value.trim();
+      localStorage.setItem(API_KEY_STORAGE, key);
+    }
+
+    function clearApiKey() {
+      localStorage.removeItem(API_KEY_STORAGE);
+      document.getElementById('api-key-input').value = '';
+      showStatus("APIキーを消去しました。", "info");
+    }
+
+    function loadApiKey() {
+      const savedKey = localStorage.getItem(API_KEY_STORAGE);
+      if (savedKey) {
+        document.getElementById('api-key-input').value = savedKey;
+      }
+    }
+
+    function showStatus(msg, type = "info") {
+      const statusEl = document.getElementById('status-display');
+      statusEl.textContent = msg;
+      statusEl.className = `status-msg ${type}`;
+    }
+
+    let tasks = loadTasks();
+    loadApiKey();
+
+    function toggleJobTimeInput() {
+      const type = document.getElementById('task-type').value;
+      const detailGroup = document.getElementById('detail-group');
+      const manualEstGroup = document.getElementById('manual-est-group');
+      const datetimeInput = document.getElementById('task-datetime');
+
+      if (type === 'job') {
+        detailGroup.style.display = 'none';
+        manualEstGroup.style.display = 'none';
+        
+        let baseDate = datetimeInput.value ? new Date(datetimeInput.value) : new Date();
+        if (isNaN(baseDate.getTime())) baseDate = new Date();
+
+        const year = baseDate.getFullYear();
+        const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+        const day = String(baseDate.getDate()).padStart(2, '0');
+        datetimeInput.value = `${year}-${month}-${day}T18:00`;
+      } else {
+        detailGroup.style.display = 'flex';
+        manualEstGroup.style.display = 'flex';
+      }
+    }
+
+    // ★Google AI Studio公式仕様に準拠した認証通信処理
+    // ★404・503エラー時に自動で最新モデル（2.5-flash / 2.0-flash / flash-latest）へ切り替える処理
+    async function estimateTaskMinutes(name, detail, manualMinutes) {
+      if (manualMinutes && !isNaN(parseInt(manualMinutes, 10))) {
+        const val = parseInt(manualMinutes, 10);
+        showStatus(`所要時間: 手動指定 (${val}分) で登録しました`, "info");
+        return val;
+      }
+
+      let apiKey = document.getElementById('api-key-input').value.trim() || localStorage.getItem(API_KEY_STORAGE);
+      if (!apiKey) {
+        showStatus("※APIキー未設定のためデフォルト値(60分)を適用しました", "info");
+        return 60;
+      }
+
+      // 試行するモデルの優先順位リスト（404や503発生時に自動切り替え）
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+      
+      const contentPrompt = detail ? `【課題名】${name}\n【詳細】${detail}` : `【課題名】${name}`;
+      const prompt = `以下の課題内容から、大学生が完了するのに必要な推定作業時間（分単位の数値）を答えてください。説明文や単位は含めず、数字のみを出力してください。\n\n${contentPrompt}`;
+
+      for (const model of models) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey
+            },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+
+          // 404(存在しない)・503(混雑)・429(制限) の場合はポップアップを出さず次のモデルを試す
+          if (!response.ok) {
+            console.warn(`モデル ${model} でエラー (${response.status})。次のモデルへ切り替えます...`);
+            continue;
+          }
+
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+          const match = text.match(/\d+/);
+
+          if (match) {
+            const minutes = parseInt(match[0], 10);
+            showStatus(`🤖 AI解析成功 (${model}): 推定 ${minutes}分`, "info");
+            return minutes;
+          }
+        } catch (err) {
+          console.error(`通信エラー (${model}):`, err);
+        }
+      }
+
+      showStatus("⚠️️ AI解析に失敗したため、標準値(60分)で登録しました。", "error");
+      return 60;
+    }
+
+    function updateJobCards() {
+      const todayStr = new Date().toDateString();
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toDateString();
+
+      const todayJobs = tasks.filter(t => t.type === 'job' && new Date(t.datetime).toDateString() === todayStr);
+      const tomorrowJobs = tasks.filter(t => t.type === 'job' && new Date(t.datetime).toDateString() === tomorrowStr);
+
+      const todayStatusEl = document.getElementById('today-job-status');
+      const todayTimeEl = document.getElementById('today-job-time');
+      const tomorrowStatusEl = document.getElementById('tomorrow-job-status');
+
+      if (todayJobs.length > 0) {
+        todayStatusEl.textContent = "あり";
+        todayStatusEl.style.color = "var(--primary-color)";
+        const times = todayJobs.map(j => {
+          const d = new Date(j.datetime);
+          return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        }).join(', ');
+        todayTimeEl.textContent = `${times} 〜 （${todayJobs[0].name}）`;
+        todayTimeEl.style.display = "block";
+      } else {
+        todayStatusEl.textContent = "なし";
+        todayStatusEl.style.color = "var(--text-sub)";
+        todayTimeEl.style.display = "none";
+      }
+
+      if (tomorrowJobs.length > 0) {
+        tomorrowStatusEl.textContent = "あり";
+        tomorrowStatusEl.style.color = "var(--primary-color)";
+      } else {
+        tomorrowStatusEl.textContent = "なし";
+        tomorrowStatusEl.style.color = "var(--text-sub)";
+      }
+    }
+
+    function renderTasks() {
+      updateJobCards();
+
+      const taskListEl = document.getElementById('task-list');
+      taskListEl.innerHTML = '';
+
+      const now = new Date();
+      const taskOnlyList = tasks.filter(t => t.type === 'task');
+
+      taskOnlyList.sort((a, b) => {
+        const diffA = new Date(a.datetime) - now;
+        const diffB = new Date(b.datetime) - now;
+        const ratioA = (diffA / (1000 * 60)) / (a.estimatedMinutes || 60);
+        const ratioB = (diffB / (1000 * 60)) / (b.estimatedMinutes || 60);
+        return ratioA - ratioB;
+      });
+
+      if (taskOnlyList.length === 0) {
+        taskListEl.innerHTML = '<div class="card empty-message">登録されている課題はありません 🎉</div>';
+        return;
+      }
+
+      taskOnlyList.forEach(task => {
+        const targetDate = new Date(task.datetime);
+        const diffMs = targetDate - now;
+        const diffMinutes = diffMs / (1000 * 60);
+        const estMinutes = task.estimatedMinutes || 60;
+
+        let countdownText = "";
+        let borderClass = "var(--alert-green)";
+        let badgeClass = "urgent-green";
+
+        if (diffMs <= 0) {
+          countdownText = "期限切れ";
+          borderClass = "var(--alert-red)";
+          badgeClass = "urgent-red";
+        } else {
+          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+          const urgencyRatio = diffMinutes / estMinutes;
+
+          if (urgencyRatio < 2.0 || diffHours < 12) {
+            countdownText = `🚨 あと ${diffHours}時間 ${diffMins}分`;
+            borderClass = "var(--alert-red)";
+            badgeClass = "urgent-red";
+          } else if (urgencyRatio < 5.0 || diffHours < 36) {
+            const diffDays = Math.floor(diffHours / 24);
+            const remainHours = diffHours % 24;
+            countdownText = `⚠️ あと ${diffDays > 0 ? diffDays + '日 ' : ''}${remainHours}時間`;
+            borderClass = "var(--alert-yellow)";
+            badgeClass = "urgent-yellow";
+          } else {
+            const diffDays = Math.floor(diffHours / 24);
+            const remainHours = diffHours % 24;
+            countdownText = `あと ${diffDays}日 ${remainHours}時間`;
+            borderClass = "var(--alert-green)";
+            badgeClass = "urgent-green";
+          }
+        }
+
+        const month = targetDate.getMonth() + 1;
+        const date = targetDate.getDate();
+        const hours = String(targetDate.getHours()).padStart(2, '0');
+        const mins = String(targetDate.getMinutes()).padStart(2, '0');
+        const formattedDate = `${month}月${date}日 ${hours}:${mins}`;
+
+        const cardHtml = `
+          <div class="card task-item" style="border-left-color: ${borderClass};">
+            <div class="task-header">
+              <div>
+                <div class="task-name">${escapeHtml(task.name)}</div>
+                ${task.detail ? `<div class="task-detail-preview">${escapeHtml(task.detail)}</div>` : ''}
+                <div class="task-meta">
+                  <span class="task-deadline">締切: ${formattedDate}</span>
+                  <span class="ai-estimate-tag">🤖 所要推定: ${estMinutes}分</span>
+                </div>
+              </div>
+              <button class="delete-btn" onclick="deleteTask(${task.id})">✕</button>
+            </div>
+            <div class="countdown-badge ${badgeClass}">${countdownText}</div>
+          </div>
+        `;
+
+        taskListEl.insertAdjacentHTML('beforeend', cardHtml);
+      });
+    }
+
+    document.getElementById('add-schedule-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '登録中...';
+
+      const name = document.getElementById('task-name').value;
+      const type = document.getElementById('task-type').value;
+      const detail = document.getElementById('task-detail').value;
+      const manualMinutes = document.getElementById('task-manual-minutes').value;
+      const datetime = document.getElementById('task-datetime').value;
+
+      let estimatedMinutes = 60;
+      if (type === 'task') {
+        estimatedMinutes = await estimateTaskMinutes(name, detail, manualMinutes);
+      }
+
+      const newTask = {
+        id: Date.now(),
+        name,
+        type,
+        detail,
+        datetime,
+        estimatedMinutes
+      };
+
+      tasks.push(newTask);
+      saveTasks();
+      renderTasks();
+
+      this.reset();
+      toggleJobTimeInput();
+      submitBtn.disabled = false;
+      submitBtn.textContent = '登録する';
+    });
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      renderTasks();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+      });
+    }
+
+    renderTasks();
+    setInterval(renderTasks, 60000);
+  </script>
+</body>
+</html>

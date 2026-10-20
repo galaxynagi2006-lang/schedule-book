@@ -288,6 +288,60 @@
       color: #0369a1;
       display: block;
     }
+    /* 残り合計時間バッジ */
+    .badge-summary {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+    }
+
+    /* 完了済みセクション */
+    .completed-section {
+      margin-top: 12px;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+
+    .completed-section summary {
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .completed-card {
+      opacity: 0.65;
+      text-decoration: line-through;
+      background-color: #f1f5f9 !important;
+    }
+
+    .task-checkbox {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      cursor: pointer;
+      accent-color: var(--primary-color);
+      margin-top: 2px;
+    }
+
+    .task-main {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .completed-meta {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -310,6 +364,9 @@
       <span class="job-status-small" id="tomorrow-job-status">なし</span>
     </div>
 
+    <!-- 未完了課題の残り合計時間バッジ -->
+    <div class="badge-summary" id="summary-badge" style="display:none;"></div>
+
     <!-- ③④ 課題リスト & カウントダウン -->
     <section>
       <div class="section-title">
@@ -319,6 +376,8 @@
       <div class="task-list" id="task-list">
         <!-- JavaScriptで動的に生成されます -->
       </div>
+      <!-- 完了済み課題（折りたたみ） -->
+      <div id="completed-container"></div>
     </section>
 
     <!-- ⑤ 予定追加フォーム -->
@@ -376,13 +435,20 @@
     const STORAGE_KEY = 'smart_schedule_items';
     const API_KEY_STORAGE = 'smart_schedule_gemini_key';
 
+    // Date を datetime-local 形式（ローカル時刻の "YYYY-MM-DDTHH:mm"）に変換
+    // ※toISOString() はUTCになるため、日本時間では9時間ずれてしまう
+    function toLocalInputValue(date) {
+      const pad = n => String(n).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
     const initialDefaultTasks = [
       {
         id: 1,
         name: "知能メディアレポート",
         type: "task",
         detail: "授業の感想と考察を2000字でまとめる。参考文献要。",
-        datetime: new Date(Date.now() + 8 * 3600 * 1000 + 32 * 60 * 1000).toISOString().slice(0,16),
+        datetime: toLocalInputValue(new Date(Date.now() + 8 * 3600 * 1000 + 32 * 60 * 1000)),
         estimatedMinutes: 120
       },
       {
@@ -390,21 +456,36 @@
         name: "プログラミング演習課題",
         type: "task",
         detail: "繰り返し処理と配列の演習問題3問",
-        datetime: new Date(Date.now() + 44 * 3600 * 1000).toISOString().slice(0,16),
+        datetime: toLocalInputValue(new Date(Date.now() + 44 * 3600 * 1000)),
         estimatedMinutes: 45
       }
     ];
 
+    // 行動傾向の分析に使う記録項目をそろえる（旧データにも補完する）
+    //   createdAt   : 登録日時
+    //   completed   : 完了したかどうか
+    //   completedAt : 完了日時（未完了なら null）
+    function normalizeTask(t) {
+      return {
+        ...t,
+        createdAt: t.createdAt || new Date(t.id > 1e12 ? t.id : Date.now()).toISOString(),
+        completed: t.completed === true,
+        completedAt: t.completed === true ? (t.completedAt || null) : null
+      };
+    }
+
     function loadTasks() {
       const saved = localStorage.getItem(STORAGE_KEY);
+      let list = initialDefaultTasks;
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) list = parsed;
         } catch (e) {
-          return initialDefaultTasks;
+          list = initialDefaultTasks;
         }
       }
-      return initialDefaultTasks;
+      return list.map(normalizeTask);
     }
 
     function saveTasks() {
@@ -556,6 +637,89 @@
       }
     }
 
+    // 分数を「〇時間〇分」に整形
+    function formatMinutes(totalMinutes) {
+      const m = Math.round(totalMinutes);
+      const hours = Math.floor(m / 60);
+      const mins = m % 60;
+      if (hours === 0) return `${mins}分`;
+      return mins > 0 ? `${hours}時間${mins}分` : `${hours}時間`;
+    }
+
+    // 締切までの余裕を「〇日〇時間」「〇時間〇分」に整形
+    function formatMargin(totalMinutes) {
+      const m = Math.round(totalMinutes);
+      if (m >= 1440) return `${Math.floor(m / 1440)}日${Math.floor((m % 1440) / 60)}時間`;
+      return formatMinutes(m);
+    }
+
+    function formatDateTime(date) {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const mins = String(date.getMinutes()).padStart(2, '0');
+      return `${date.getMonth() + 1}月${date.getDate()}日 ${hours}:${mins}`;
+    }
+
+    // 未完了課題の残り合計時間バッジ
+    function updateSummaryBadge(activeTasks) {
+      const badge = document.getElementById('summary-badge');
+      if (activeTasks.length === 0) {
+        badge.style.display = 'none';
+        return;
+      }
+      const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
+      badge.textContent = `⏱ 未完了 ${activeTasks.length}件 ・ 残り作業 合計 ${formatMinutes(totalMinutes)}`;
+      badge.style.display = 'block';
+    }
+
+    // 完了済み課題の折りたたみ表示（60秒ごとの再描画でも開閉状態を保つ）
+    let completedSectionOpen = false;
+
+    function renderCompletedSection(completedTasks) {
+      const containerEl = document.getElementById('completed-container');
+      if (completedTasks.length === 0) {
+        containerEl.innerHTML = '';
+        return;
+      }
+
+      const sorted = [...completedTasks].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+      const cardsHtml = sorted.map(task => {
+        let completedText = '';
+        if (task.completedAt) {
+          const completedDate = new Date(task.completedAt);
+          const marginMinutes = (new Date(task.datetime) - completedDate) / (1000 * 60);
+          const marginText = marginMinutes >= 0
+            ? `締切の${formatMargin(marginMinutes)}前`
+            : `締切を${formatMargin(-marginMinutes)}超過`;
+          completedText = `完了: ${formatDateTime(completedDate)}（${marginText}）`;
+        }
+
+        return `
+          <div class="card task-item completed-card" style="border-left-color: #cbd5e1;">
+            <div class="task-header">
+              <div class="task-main">
+                <input type="checkbox" class="task-checkbox" checked onchange="toggleComplete(${task.id})" aria-label="未完了に戻す">
+                <div>
+                  <div class="task-name">${escapeHtml(task.name)}</div>
+                  <div class="completed-meta">${completedText}</div>
+                </div>
+              </div>
+              <button class="delete-btn" onclick="deleteTask(${task.id})">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      containerEl.innerHTML = `
+        <details class="completed-section" id="completed-details" ${completedSectionOpen ? 'open' : ''}>
+          <summary>✅ 完了済み（${completedTasks.length}件）</summary>
+          <div class="task-list" style="margin-top: 10px;">${cardsHtml}</div>
+        </details>
+      `;
+      document.getElementById('completed-details').addEventListener('toggle', e => {
+        completedSectionOpen = e.target.open;
+      });
+    }
+
     function renderTasks() {
       updateJobCards();
 
@@ -563,7 +727,11 @@
       taskListEl.innerHTML = '';
 
       const now = new Date();
-      const taskOnlyList = tasks.filter(t => t.type === 'task');
+      const taskOnlyList = tasks.filter(t => t.type === 'task' && !t.completed);
+      const completedTasks = tasks.filter(t => t.type === 'task' && t.completed);
+
+      updateSummaryBadge(taskOnlyList);
+      renderCompletedSection(completedTasks);
 
       taskOnlyList.sort((a, b) => {
         const diffA = new Date(a.datetime) - now;
@@ -574,7 +742,7 @@
       });
 
       if (taskOnlyList.length === 0) {
-        taskListEl.innerHTML = '<div class="card empty-message">登録されている課題はありません 🎉</div>';
+        taskListEl.innerHTML = '<div class="card empty-message">未完了の課題はありません 🎉</div>';
         return;
       }
 
@@ -617,21 +785,20 @@
           }
         }
 
-        const month = targetDate.getMonth() + 1;
-        const date = targetDate.getDate();
-        const hours = String(targetDate.getHours()).padStart(2, '0');
-        const mins = String(targetDate.getMinutes()).padStart(2, '0');
-        const formattedDate = `${month}月${date}日 ${hours}:${mins}`;
+        const formattedDate = formatDateTime(targetDate);
 
         const cardHtml = `
           <div class="card task-item" style="border-left-color: ${borderClass};">
             <div class="task-header">
-              <div>
-                <div class="task-name">${escapeHtml(task.name)}</div>
-                ${task.detail ? `<div class="task-detail-preview">${escapeHtml(task.detail)}</div>` : ''}
-                <div class="task-meta">
-                  <span class="task-deadline">締切: ${formattedDate}</span>
-                  <span class="ai-estimate-tag">🤖 所要推定: ${estMinutes}分</span>
+              <div class="task-main">
+                <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="完了にする">
+                <div>
+                  <div class="task-name">${escapeHtml(task.name)}</div>
+                  ${task.detail ? `<div class="task-detail-preview">${escapeHtml(task.detail)}</div>` : ''}
+                  <div class="task-meta">
+                    <span class="task-deadline">締切: ${formattedDate}</span>
+                    <span class="ai-estimate-tag">🤖 所要推定: ${estMinutes}分</span>
+                  </div>
                 </div>
               </div>
               <button class="delete-btn" onclick="deleteTask(${task.id})">✕</button>
@@ -662,14 +829,15 @@
         estimatedMinutes = await estimateTaskMinutes(name, detail, manualMinutes);
       }
 
-      const newTask = {
+      const newTask = normalizeTask({
         id: Date.now(),
         name,
         type,
         detail,
         datetime,
-        estimatedMinutes
-      };
+        estimatedMinutes,
+        createdAt: new Date().toISOString()
+      });
 
       tasks.push(newTask);
       saveTasks();
@@ -680,6 +848,16 @@
       submitBtn.disabled = false;
       submitBtn.textContent = '登録する';
     });
+
+    // 完了 ⇔ 未完了の切り替え（完了日時を記録する）
+    function toggleComplete(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      task.completed = !task.completed;
+      task.completedAt = task.completed ? new Date().toISOString() : null;
+      saveTasks();
+      renderTasks();
+    }
 
     function deleteTask(id) {
       tasks = tasks.filter(t => t.id !== id);

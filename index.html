@@ -16,6 +16,7 @@
       --alert-red: #dc2626;
       --alert-yellow: #d97706;
       --alert-green: #059669;
+      --class-color: #0d9488;
     }
 
     * {
@@ -129,6 +130,7 @@
     .pill-job { background: var(--primary-color); color: #fff; }
     .pill-none { background: #f1f5f9; color: #64748b; }
     .pill-sum { background: #eef2ff; color: var(--accent-color); }
+    .pill-class { background: var(--class-color); color: #fff; }
 
     #tab-timeline { background: var(--bg-sub); min-height: 100vh; }
     .tl-body { padding: 16px 20px 0; }
@@ -148,6 +150,7 @@
     .b-red { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
     .b-yellow { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
     .b-green { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
+    .b-class { background: var(--class-color); color: #fff; }
     .b-move { background: repeating-linear-gradient(135deg, #f8fafc, #f8fafc 6px, #eef2f7 6px, #eef2f7 12px); color: #94a3b8; border: 1px dashed #cbd5e1; }
 
     .tl-now { position: absolute; left: 40px; right: 0; border-top: 2px solid #ef4444; z-index: 2; }
@@ -216,7 +219,8 @@
     .btn-clear { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
     /* ========== シフト表からの一括登録 ========== */
-    .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 16px; }
+    .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
+    #add-schedule-form { margin-top: 6px; }
     .shift-settings { background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
     .shift-settings summary { font-size: 13px; font-weight: 700; color: var(--text-sub); cursor: pointer; }
     .field-note { font-size: 11px; color: var(--text-sub); }
@@ -238,6 +242,28 @@
     .shift-row input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
     .shift-dash { color: var(--text-sub); flex-shrink: 0; }
     .shift-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
+    /* ========== 時間割 ========== */
+    .class-grid { display: grid; gap: 2px; margin: 14px 0; font-size: 10px; }
+    .class-grid div { min-height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; line-height: 1.15; padding: 1px; }
+    .class-grid .grid-head { font-weight: 700; color: var(--text-sub); }
+    .class-grid .grid-cell { background: #f1f5f9; }
+    .class-grid .grid-cell.filled { background: #ccfbf1; color: #115e59; font-weight: 700; }
+    .class-grid .grid-cell.overlap { background: #fde68a; color: #92400e; }
+
+    .class-row { display: grid; grid-template-columns: 22px 1fr 1fr 14px 1fr; gap: 6px; align-items: center; padding: 8px 4px; border-bottom: 1px solid #f3f4f6; }
+    .class-row.excluded { opacity: 0.45; }
+    .class-row.warn { background: #fffbeb; }
+    .class-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary-color); }
+    .class-row .form-control { padding: 6px; font-size: 16px; border-radius: 8px; min-width: 0; }
+    .class-row-names { grid-column: 2 / -1; display: flex; gap: 6px; }
+    .class-row-names input:first-child { flex: 2; }
+    .class-row-names input:last-child { flex: 1; }
+    .period-times { display: grid; grid-template-columns: 34px 1fr 14px 1fr; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; }
+    .period-times .form-control { padding: 6px; font-size: 16px; text-align: center; }
+    .period-times input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
+    .term-range { display: grid; grid-template-columns: 1fr 14px 1fr; gap: 6px; align-items: center; }
+    .term-range .form-control { padding: 8px 6px; font-size: 15px; }
 
     /* 通知トースト */
     .status-msg {
@@ -327,6 +353,7 @@
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
     <button type="button" class="btn-secondary" onclick="openShiftSheet()">📷 シフト表の写真からバイトを一括登録</button>
+    <button type="button" class="btn-secondary" onclick="openClassSheet()">🏫 時間割の画像から授業を登録</button>
     <form id="add-schedule-form">
       <div class="form-group">
         <label for="task-name">タイトル・件名</label>
@@ -406,6 +433,22 @@
     </form>
   </section>
 
+  <!-- 時間割の登録・編集（ボトムシート） -->
+  <section class="sheet" id="class-sheet" aria-label="時間割の登録">
+    <div class="sheet-head">
+      <span>🏫 時間割</span>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
+    </div>
+    <div class="form-group">
+      <label for="class-file">時間割のスクリーンショット（ポータルの時間割画面）</label>
+      <input type="file" id="class-file" class="form-control" accept="image/*" onchange="previewClassImage()">
+    </div>
+    <img id="class-preview" class="shift-preview" alt="選んだ時間割" hidden>
+    <button type="button" class="btn-submit" id="class-analyze-btn" onclick="analyzeClassImage()">AIで読み取る</button>
+
+    <div id="class-editor"></div>
+  </section>
+
   <!-- シフト表の写真から一括登録（ボトムシート） -->
   <section class="sheet" id="shift-sheet" aria-label="シフト表から登録">
     <div class="sheet-head">
@@ -463,6 +506,7 @@
     const GCAL_TOKEN_STORAGE = 'smart_schedule_gcal_token';        // カレンダー書き込み用の合言葉
     const SHIFT_NAME_STORAGE = 'smart_schedule_shift_name';
     const SHIFT_TITLE_STORAGE = 'smart_schedule_shift_title';
+    const CLASS_STORAGE = 'smart_schedule_classes';               // 時間割（授業）
 
     // AIごとの設定（APIキーはAIごとに別々に保存する）
     const AI_PROVIDERS = {
@@ -607,6 +651,7 @@
       document.getElementById('sheet-overlay').classList.remove('open');
       document.getElementById('add-sheet').classList.remove('open');
       document.getElementById('shift-sheet').classList.remove('open');
+      document.getElementById('class-sheet').classList.remove('open');
     }
 
     function openShiftSheet() {
@@ -1049,9 +1094,10 @@
         .map(getJobRange)
         .filter(r => r.end > now && r.start < dayEnd);
 
-      // バイト前後の移動時間も含めて「埋まっている時間」とする
+      // バイト前後の移動時間と、今日の授業を「埋まっている時間」とする
       const busy = jobRanges
         .map(r => [r.start.getTime() - MOVE_BUFFER_MIN * 60000, r.end.getTime() + MOVE_BUFFER_MIN * 60000])
+        .concat(classRangesOn(now).map(r => [r.start.getTime(), r.end.getTime()]))
         .sort((a, b) => a[0] - b[0]);
 
       // 次の15分刻みから計画を始める
@@ -1110,9 +1156,13 @@
       const todayJobs = jobsOn(now);
       const tomorrowJobs = jobsOn(tomorrow);
       const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
+      const todayClasses = classRangesOn(now);
 
       document.getElementById('tl-date').textContent = formatDateHeading(now);
       document.getElementById('tl-pills').innerHTML = `
+        ${todayClasses.length > 0
+          ? `<span class="pill pill-class">授業 ${formatHM(todayClasses[0].start)}–${formatHM(todayClasses[todayClasses.length - 1].end)}</span>`
+          : ''}
         ${todayJobs.length > 0
           ? todayJobs.map(j => `<span class="pill pill-job">バイト ${formatJobRange(j, '–')}</span>`).join('')
           : '<span class="pill pill-none">今日のバイト なし</span>'}
@@ -1153,6 +1203,11 @@
         html += block('b-move', new Date(r.start - moveMs), r.start, '移動', '');
         html += block('b-job', r.start, r.end, `アルバイト${job ? `（${escapeHtml(job.name)}）` : ''}`, `${formatHM(r.start)}–${formatHM(r.end)}`);
         html += block('b-move', r.end, new Date(r.end.getTime() + moveMs), '移動', '');
+      });
+
+      todayClasses.forEach(r => {
+        html += block('b-class', r.start, r.end, escapeHtml(r.name),
+          `${formatHM(r.start)}–${formatHM(r.end)}${r.room ? ` ・ ${escapeHtml(r.room)}` : ''}`);
       });
 
       blocks.forEach(b => {
@@ -1408,6 +1463,381 @@
     function loadGcalSettings() {
       document.getElementById('gcal-url').value = localStorage.getItem(GCAL_URL_STORAGE) || '';
       updateGcalStatus();
+    }
+
+    // ---------- 時間割（授業） ----------
+    // 保存形式: { termLabel, termStart, termEnd, periodTimes: [{ start, end }, …（1限から順）],
+    //            classes: [{ weekday（1=月〜6=土）, startPeriod, endPeriod, name, room }] }
+    const PERIOD_COUNT = 10;
+    // 新習志野キャンパスの時限（時間割画面の注記：1限 9:00〜10:00 …）。画像から読み取れた時刻があればそちらを使う
+    const DEFAULT_PERIOD_TIMES = Array.from({ length: PERIOD_COUNT }, (_, i) => ({
+      start: `${pad2(9 + i)}:00`,
+      end: `${pad2(10 + i)}:00`
+    }));
+
+    const CLASS_SCHEMA = {
+      type: 'object',
+      properties: {
+        term_label: { type: 'string' },
+        classes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              weekday: { type: 'string' },
+              period: { type: 'integer' },
+              name: { type: 'string' },
+              room: { type: 'string' }
+            },
+            required: ['weekday', 'period', 'name', 'room'],
+            additionalProperties: false
+          }
+        },
+        period_times: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              period: { type: 'integer' },
+              start: { type: 'string' },
+              end: { type: 'string' }
+            },
+            required: ['period', 'start', 'end'],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ['term_label', 'classes', 'period_times'],
+      additionalProperties: false
+    };
+
+    function loadClassData() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(CLASS_STORAGE) || 'null');
+        return parsed && Array.isArray(parsed.classes) ? parsed : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    let classData = loadClassData();
+    let classImage = null;     // 縮小した画像
+    let classDraft = null;     // 編集中の時間割（「保存する」まで classData は変えない）
+    let classNotes = [];       // 読み取り結果についてのメッセージ
+
+    // その日の授業（開始・終了時刻つき）。学期の期間外なら空
+    function classRangesOn(date) {
+      if (!classData) return [];
+      const day = toLocalInputValue(date).slice(0, 10);
+      if (classData.termStart && day < classData.termStart) return [];
+      if (classData.termEnd && day > classData.termEnd) return [];
+
+      const times = classData.periodTimes || DEFAULT_PERIOD_TIMES;
+      const at = hm => {
+        const [h, m] = hm.split(':').map(Number);
+        const d = new Date(date);
+        d.setHours(h, m, 0, 0);
+        return d;
+      };
+      return classData.classes
+        .filter(c => c.weekday === date.getDay() && times[c.startPeriod - 1] && times[c.endPeriod - 1])
+        .map(c => ({
+          name: c.name,
+          room: c.room,
+          start: at(times[c.startPeriod - 1].start),
+          end: at(times[c.endPeriod - 1].end)
+        }))
+        .sort((a, b) => a.start - b.start);
+    }
+
+    function openClassSheet() {
+      document.getElementById('add-sheet').classList.remove('open');
+      document.getElementById('sheet-overlay').classList.add('open');
+      document.getElementById('class-sheet').classList.add('open');
+      classDraft = JSON.parse(JSON.stringify(classData || {
+        termLabel: '', termStart: '', termEnd: '', periodTimes: DEFAULT_PERIOD_TIMES, classes: []
+      }));
+      classDraft.classes.forEach(c => { c.include = true; });
+      classNotes = [];
+      renderClassEditor();
+    }
+
+    async function previewClassImage() {
+      const file = document.getElementById('class-file').files[0];
+      const previewEl = document.getElementById('class-preview');
+      classImage = null;
+      previewEl.hidden = true;
+      if (!file) return;
+      try {
+        classImage = await prepareImage(file);
+        previewEl.src = classImage.dataUrl;
+        previewEl.hidden = false;
+      } catch (err) {
+        console.error('画像の読み込みエラー:', err);
+        showStatus('画像を読み込めませんでした。別の画像で試してください', 'error');
+      }
+    }
+
+    function buildClassPrompt() {
+      return `これは大学のポータルサイトの時間割画面のスクリーンショットです。
+表の列は曜日（月曜日〜金曜日、または土曜日まで）、行は時限（1〜${PERIOD_COUNT}）です。
+
+授業が入っている各マスについて、次を読み取ってください。
+- weekday: 曜日（"月"〜"土" の1文字）
+- period: 時限の数字
+- name: 科目名（マスの1行目の太字。2行に折り返している場合はつなげる）
+- room: 教室名（例: "7104演習室"。キャンパス名、教員名、単位数、「複数回」「定員有」などの表示は含めない）
+同じ授業が複数の時限にまたがる場合は、時限ごとに1件ずつ返してください。空いているマスは返さないでください。
+
+表の下などに各時限の時刻（例: 1限 09:00〜10:00）が書かれていれば、period_times に period・start・end（"09:00" の形）で返してください。画像から読めない時限は返さないでください。
+term_label: 年度と学期の表示（例: "2026年度 後期"）。なければ空文字。`;
+    }
+
+    // 時限ごとの読み取り結果を、同じ曜日で連続する同じ授業ごとに1件（例: 1〜4限）にまとめる
+    function mergeClassPeriods(items) {
+      const sorted = [...items].sort((a, b) =>
+        a.weekday - b.weekday || a.name.localeCompare(b.name) || a.period - b.period);
+      const merged = [];
+      sorted.forEach(item => {
+        const last = merged[merged.length - 1];
+        if (last && last.weekday === item.weekday && last.name === item.name && last.endPeriod + 1 === item.period) {
+          last.endPeriod = item.period;
+        } else if (!(last && last.weekday === item.weekday && last.name === item.name && last.endPeriod >= item.period)) {
+          merged.push({ weekday: item.weekday, startPeriod: item.period, endPeriod: item.period, name: item.name, room: item.room, include: true });
+        }
+      });
+      return merged.sort((a, b) => a.weekday - b.weekday || a.startPeriod - b.startPeriod);
+    }
+
+    async function analyzeClassImage() {
+      const providerId = currentProvider();
+      const provider = AI_PROVIDERS[providerId];
+      const apiKey = localStorage.getItem(provider.keyStorage);
+      if (!classImage) {
+        showStatus('時間割のスクリーンショットを選んでください', 'error');
+        return;
+      }
+      if (!apiKey) {
+        showStatus(`${provider.label}のAPIキーが未設定です。「予定・課題を追加」のAI設定で入力してください`, 'error');
+        return;
+      }
+
+      const analyzeBtn = document.getElementById('class-analyze-btn');
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = '読み取り中…（30秒〜1分ほどかかります）';
+
+      const prompt = buildClassPrompt();
+      const result = providerId === 'claude'
+        ? await callClaude(apiKey, [
+            { type: 'image', source: { type: 'base64', media_type: classImage.mediaType, data: classImage.data } },
+            { type: 'text', text: prompt }
+          ], {
+            max_tokens: 16000,
+            output_config: { format: { type: 'json_schema', schema: CLASS_SCHEMA } }
+          })
+        : await callGemini(apiKey, [
+            { inlineData: { mimeType: classImage.mediaType, data: classImage.data } },
+            { text: prompt }
+          ], {
+            responseMimeType: 'application/json',
+            responseSchema: toGeminiSchema(CLASS_SCHEMA)
+          });
+
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = 'AIで読み取る';
+
+      if (result.error) {
+        showStatus(`読み取りに失敗しました（${result.error}）`, 'error');
+        return;
+      }
+
+      let analysis;
+      try {
+        analysis = parseJsonText(result.text);
+      } catch (err) {
+        console.error('AIの返答:', result.text);
+        showStatus('AIの返答を読み取れませんでした。もう一度試してください', 'error');
+        return;
+      }
+
+      applyClassAnalysis(analysis);
+      showStatus(`🤖 読み取りました（${result.model}）。内容を確認して保存してください`, 'info');
+    }
+
+    function applyClassAnalysis(analysis) {
+      const items = (analysis.classes || [])
+        .map(c => ({
+          weekday: WEEKDAYS.indexOf(String(c.weekday || '').trim().charAt(0)),
+          period: Number(c.period),
+          name: String(c.name || '').trim(),
+          room: String(c.room || '').trim()
+        }))
+        .filter(c => c.weekday >= 1 && c.period >= 1 && c.period <= PERIOD_COUNT && c.name);
+      classDraft.classes = mergeClassPeriods(items);
+
+      let timesRead = 0;
+      (analysis.period_times || []).forEach(pt => {
+        const start = hhmmToTime(pt.start);
+        const end = hhmmToTime(pt.end);
+        if (pt.period >= 1 && pt.period <= PERIOD_COUNT && start && end) {
+          classDraft.periodTimes[pt.period - 1] = { start, end };
+          timesRead++;
+        }
+      });
+      if (analysis.term_label) classDraft.termLabel = analysis.term_label;
+
+      const subjectCount = new Set(classDraft.classes.map(c => c.name)).size;
+      classNotes = [
+        { level: 'ok', text: `${subjectCount}科目・${items.length}コマを読み取りました。下の表を元の画像と見比べてください` },
+        timesRead > 0
+          ? { level: 'ok', text: `時限の時刻を画像から${timesRead}件読み取りました（「⏰ 時限の時刻」で確認できます）` }
+          : { level: 'warn', text: '時限の時刻は画像から読み取れなかったため、設定の時刻を使います' }
+      ];
+      renderClassEditor();
+    }
+
+    function renderClassEditor() {
+      const el = document.getElementById('class-editor');
+      const d = classDraft;
+      const active = d.classes.filter(c => c.include && c.name.trim());
+
+      // 同じ曜日・時限に重なっている授業を探す
+      const overlapping = new Set();
+      d.classes.forEach((a, i) => d.classes.forEach((b, j) => {
+        if (i < j && a.include && b.include && a.weekday === b.weekday &&
+            a.startPeriod <= b.endPeriod && b.startPeriod <= a.endPeriod) {
+          overlapping.add(i);
+          overlapping.add(j);
+        }
+      }));
+      const checks = [...classNotes];
+      if (overlapping.size > 0) checks.push({ level: 'warn', text: '同じ時間に授業が重なっています（黄色の行）' });
+
+      // 確認用の小さな時間割表
+      const days = active.some(c => c.weekday === 6) ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5];
+      const maxPeriod = Math.max(5, ...active.map(c => c.endPeriod));
+      let gridHtml = `<div class="grid-head"></div>${days.map(w => `<div class="grid-head">${WEEKDAYS[w]}</div>`).join('')}`;
+      for (let p = 1; p <= maxPeriod; p++) {
+        gridHtml += `<div class="grid-head">${p}</div>`;
+        days.forEach(w => {
+          const here = active.filter(c => c.weekday === w && c.startPeriod <= p && p <= c.endPeriod);
+          gridHtml += here.length === 0
+            ? '<div class="grid-cell"></div>'
+            : `<div class="grid-cell filled${here.length > 1 ? ' overlap' : ''}">${escapeHtml(here.map(c => c.name.slice(0, 6)).join('/'))}</div>`;
+        });
+      }
+
+      const weekdayOptions = selected => [1, 2, 3, 4, 5, 6]
+        .map(w => `<option value="${w}"${w === selected ? ' selected' : ''}>${WEEKDAYS[w]}曜</option>`).join('');
+      const periodOptions = selected => Array.from({ length: PERIOD_COUNT }, (_, i) => i + 1)
+        .map(p => `<option value="${p}"${p === selected ? ' selected' : ''}>${p}限</option>`).join('');
+
+      const rowsHtml = d.classes.map((c, i) => `
+        <div class="class-row${c.include ? '' : ' excluded'}${overlapping.has(i) ? ' warn' : ''}">
+          <input type="checkbox" ${c.include ? 'checked' : ''} onchange="updateClassRow(${i}, 'include', this.checked)" aria-label="この授業を登録する">
+          <select class="form-control" onchange="updateClassRow(${i}, 'weekday', Number(this.value))" aria-label="曜日">${weekdayOptions(c.weekday)}</select>
+          <select class="form-control" onchange="updateClassRow(${i}, 'startPeriod', Number(this.value))" aria-label="開始時限">${periodOptions(c.startPeriod)}</select>
+          <span class="shift-dash">〜</span>
+          <select class="form-control" onchange="updateClassRow(${i}, 'endPeriod', Number(this.value))" aria-label="終了時限">${periodOptions(c.endPeriod)}</select>
+          <div class="class-row-names">
+            <input type="text" class="form-control" value="${escapeHtml(c.name)}" placeholder="科目名" onchange="updateClassRow(${i}, 'name', this.value)" aria-label="科目名">
+            <input type="text" class="form-control" value="${escapeHtml(c.room || '')}" placeholder="教室" onchange="updateClassRow(${i}, 'room', this.value)" aria-label="教室">
+          </div>
+        </div>
+      `).join('');
+
+      const periodTimesHtml = d.periodTimes.map((t, i) => `
+        <span>${i + 1}限</span>
+        <input type="time" class="form-control" value="${t.start}" onchange="classDraft.periodTimes[${i}].start = this.value" aria-label="${i + 1}限の開始">
+        <span class="shift-dash">〜</span>
+        <input type="time" class="form-control" value="${t.end}" onchange="classDraft.periodTimes[${i}].end = this.value" aria-label="${i + 1}限の終了">
+      `).join('');
+
+      el.innerHTML = `
+        ${checks.length ? `<div class="shift-checks">${checks.map(c => `<div class="check-${c.level}">${c.level === 'ok' ? '✓' : '⚠️'} ${c.text}</div>`).join('')}</div>` : ''}
+        <div class="list-head label">${escapeHtml(d.termLabel || '時間割')}</div>
+        ${active.length > 0
+          ? `<div class="class-grid" style="grid-template-columns: 18px repeat(${days.length}, 1fr);">${gridHtml}</div>`
+          : '<div class="empty-message">まだ授業が登録されていません。画像から読み取るか、「＋ 授業を追加」で入力してください</div>'}
+        <div>${rowsHtml}</div>
+        <div class="shift-actions">
+          <button type="button" class="btn-clear" onclick="addClassRow()">＋ 授業を追加</button>
+        </div>
+
+        <details class="shift-settings" style="margin-top: 14px;">
+          <summary>⏰ 時限の時刻</summary>
+          <div class="period-times">${periodTimesHtml}</div>
+        </details>
+
+        <div class="form-group">
+          <label>学期の期間（任意・空欄なら毎週ずっと表示）</label>
+          <div class="term-range">
+            <input type="date" class="form-control" value="${d.termStart || ''}" onchange="classDraft.termStart = this.value" aria-label="学期の開始日">
+            <span class="shift-dash">〜</span>
+            <input type="date" class="form-control" value="${d.termEnd || ''}" onchange="classDraft.termEnd = this.value" aria-label="学期の終了日">
+          </div>
+        </div>
+
+        <div class="shift-actions">
+          <button type="button" class="btn-submit" onclick="saveClassData()">保存する（${active.length}件）</button>
+          ${classData ? '<button type="button" class="btn-clear" onclick="deleteClassData()">登録した時間割を削除</button>' : ''}
+        </div>
+      `;
+    }
+
+    function updateClassRow(index, field, value) {
+      const row = classDraft.classes[index];
+      row[field] = value;
+      // 開始と終了の時限が逆にならないようにそろえる
+      if (field === 'startPeriod' && row.endPeriod < value) row.endPeriod = value;
+      if (field === 'endPeriod' && row.startPeriod > value) row.startPeriod = value;
+      renderClassEditor();
+    }
+
+    function addClassRow() {
+      classDraft.classes.push({ weekday: 1, startPeriod: 1, endPeriod: 1, name: '', room: '', include: true });
+      renderClassEditor();
+    }
+
+    function resetClassImage() {
+      classImage = null;
+      classNotes = [];
+      document.getElementById('class-file').value = '';
+      document.getElementById('class-preview').hidden = true;
+    }
+
+    function saveClassData() {
+      const classes = classDraft.classes
+        .filter(c => c.include && c.name.trim())
+        .map(c => ({
+          weekday: c.weekday,
+          startPeriod: c.startPeriod,
+          endPeriod: c.endPeriod,
+          name: c.name.trim(),
+          room: (c.room || '').trim()
+        }));
+      classData = {
+        termLabel: classDraft.termLabel || '',
+        termStart: classDraft.termStart || '',
+        termEnd: classDraft.termEnd || '',
+        periodTimes: classDraft.periodTimes,
+        classes
+      };
+      localStorage.setItem(CLASS_STORAGE, JSON.stringify(classData));
+      resetClassImage();
+      closeSheet();
+      renderTasks();
+      showStatus(`🏫 時間割を保存しました（${classes.length}件）。タイムラインに表示されます`, 'info');
+    }
+
+    function deleteClassData() {
+      if (!confirm('登録した時間割を削除しますか？')) return;
+      localStorage.removeItem(CLASS_STORAGE);
+      classData = null;
+      resetClassImage();
+      closeSheet();
+      renderTasks();
+      showStatus('🏫 時間割を削除しました', 'info');
     }
 
     // ---------- シフト表の写真から一括登録 ----------

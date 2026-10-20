@@ -21,6 +21,8 @@
  *  7. このコードに貼り替えたら「デプロイを管理」→ 編集 → バージョン「新バージョン」で更新する
  *     （Gmail を読む許可を求められるので「許可」する。読むのは MANABA_QUERY に合うメールだけ）
  *  8. 不要なら CONFIG.MANABA_ENABLED を false にする
+ *  9. manaba の「提出のお知らせ」メールも読み、提出した課題をアプリで自動的に完了にする
+ *     （manaba のリマインダ設定で、課題提出の通知をONにしておく）
  *
  * 【注意】
  *  - URLを知っている人は、条件に合う予定（タイトルと時刻）を見られます。URLは人に教えないこと。
@@ -47,7 +49,9 @@ const CONFIG = {
 
   // manaba の「〇〇公開のお知らせ」メールから課題を読み取ってアプリに渡す
   MANABA_ENABLED: true,
-  MANABA_QUERY: 'from:manaba subject:公開のお知らせ newer_than:45d'
+  MANABA_QUERY: 'from:manaba subject:公開のお知らせ newer_than:45d',
+  // 「〇〇提出のお知らせ」メール（提出した課題を完了にするため）
+  MANABA_SUBMIT_QUERY: 'from:manaba subject:提出のお知らせ newer_than:45d'
 };
 
 function getCalendar() {
@@ -88,6 +92,7 @@ function doGet() {
   if (CONFIG.MANABA_ENABLED) {
     try {
       result.assignments = getManabaAssignments();
+      result.submissions = getManabaSubmissions();
     } catch (err) {
       // Gmail の許可がないときなど。カレンダーの予定は返せるようにする
       result.assignmentsError = String(err && err.message || err);
@@ -122,12 +127,22 @@ function getManabaAssignments() {
  * メール本文の「[コース名] : 〜」「[課題名] : 〜」「[受付終了日時] : 〜」を読み取る
  * （レポート以外の小テストなどでも使えるよう、項目名は少しゆるく探す）
  */
-function parseManabaMail(body) {
+function readManabaFields(body) {
   const fields = {};
   String(body).split(/\r?\n/).forEach(line => {
     const match = line.match(/^\s*[\[［]([^\]］]+)[\]］]\s*[:：]\s*(.+?)\s*$/);
     if (match) fields[match[1].trim()] = match[2];
   });
+  return fields;
+}
+
+function findManabaUrl(body) {
+  const match = String(body).match(/https:\/\/[^\s]*manaba\.jp\/ct\/course_[^\s]+/);
+  return match ? match[0] : '';
+}
+
+function parseManabaMail(body) {
+  const fields = readManabaFields(body);
 
   const titleKey = ['課題名', 'タイトル'].find(key => fields[key]) ||
     Object.keys(fields).find(key => /名$/.test(key) && key !== 'コース名');
@@ -139,18 +154,55 @@ function parseManabaMail(body) {
   if (!/^\d{4}-\d{1,2}-\d{1,2}[ T]\d{1,2}:\d{2}/.test(deadline)) return null;
 
   const kindMatch = String(body).match(/--\s*(.+?)情報\s*--/);
-  const urlMatch = String(body).match(/https:\/\/[^\s]*manaba\.jp\/ct\/course_[^\s]+/);
+  const url = findManabaUrl(body);
   const title = fields[titleKey].replace(/\s+/g, ' ');
   const course = (fields['コース名'] || '').replace(/\s+/g, ' ');
 
   return {
     // 課題ごとのURL（course_〇〇_report_〇〇）を重複防止の目印にする
-    id: urlMatch ? `manaba_${urlMatch[0].split('/ct/')[1]}` : `manaba_${course}_${title}_${deadline}`,
+    id: url ? `manaba_${url.split('/ct/')[1]}` : `manaba_${course}_${title}_${deadline}`,
     kind: kindMatch ? kindMatch[1].trim() : '課題',
     course,
     title,
     deadline,
-    url: urlMatch ? urlMatch[0] : ''
+    url
+  };
+}
+
+/**
+ * manaba の「提出のお知らせ」メールから、提出した課題の一覧を作る
+ * 返す形: [{ id, course, title, submittedAt }]（本文に提出日時がないため、受信日時を提出日時とする）
+ */
+function getManabaSubmissions() {
+  const byId = {};
+  GmailApp.search(CONFIG.MANABA_SUBMIT_QUERY, 0, 100).forEach(thread => {
+    thread.getMessages().forEach(message => {
+      const parsed = parseManabaSubmission(message.getPlainBody());
+      if (!parsed) return;
+      const submittedAt = message.getDate().toISOString();
+      const previous = byId[parsed.id];
+      if (!previous || previous.submittedAt < submittedAt) {   // 再提出したときは最後の提出
+        byId[parsed.id] = Object.assign(parsed, { submittedAt });
+      }
+    });
+  });
+  return Object.keys(byId).map(id => byId[id]);
+}
+
+function parseManabaSubmission(body) {
+  if (!/提出されました/.test(String(body))) return null;
+  const fields = readManabaFields(body);
+  const url = findManabaUrl(body);
+  const titleKey = ['課題名', 'タイトル'].find(key => fields[key]) ||
+    Object.keys(fields).find(key => /名$/.test(key) && key !== 'コース名');
+  if (!url && !titleKey) return null;
+  const title = titleKey ? fields[titleKey].replace(/\s+/g, ' ') : '';
+  const course = (fields['コース名'] || '').replace(/\s+/g, ' ');
+  return {
+    // 公開のお知らせと同じ目印（課題URL）で結び付ける
+    id: url ? `manaba_${url.split('/ct/')[1]}` : '',
+    course,
+    title
   };
 }
 

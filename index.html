@@ -507,6 +507,7 @@
     const GCAL_TOKEN_STORAGE = 'smart_schedule_gcal_token';        // カレンダー書き込み用の合言葉
     const SHIFT_NAME_STORAGE = 'smart_schedule_shift_name';
     const SHIFT_TITLE_STORAGE = 'smart_schedule_shift_title';
+    const MANABA_SUBMITTED_STORAGE = 'smart_schedule_manaba_submitted';   // 処理済みの提出メール
     const CLASS_STORAGE = 'smart_schedule_classes';               // 時間割（授業）
 
     // AIごとの設定（APIキーはAIごとに別々に保存する）
@@ -1477,12 +1478,23 @@
         const manaba = Array.isArray(data.assignments)
           ? await applyManabaAssignments(data.assignments)
           : { added: 0, updated: 0 };
+        const submitted = Array.isArray(data.submissions) ? applyManabaSubmissions(data.submissions) : 0;
+        if (Array.isArray(data.assignments)) {
+          manabaLastInfo = {
+            received: data.assignments.length,
+            upcoming: tasks.filter(t => t.source === 'manaba' && !t.completed && new Date(t.datetime) > new Date()).length
+          };
+        }
+        estimatePendingTasks();   // 提出済みで完了にした課題は推定しない。待たずに裏で進める
         gcalLastError = '';
         manabaLastError = data.assignmentsError ? 'manabaのメールを読めませんでした（Gmailの許可を確認）' : '';
         localStorage.setItem(GCAL_LAST_SYNC_STORAGE, new Date().toISOString());
 
-        if (manaba.added > 0) {
-          showStatus(`📩 manabaから新しい課題を${manaba.added}件取り込みました`, 'info');
+        if (manaba.added > 0 || submitted > 0) {
+          showStatus([
+            manaba.added > 0 ? `📩 manabaから新しい課題を${manaba.added}件取り込みました` : '',
+            submitted > 0 ? `✅ 提出済みの課題を${submitted}件完了にしました` : ''
+          ].filter(Boolean).join(' ／ '), 'info');
         } else if (manual || result.added + result.updated + result.removed > 0) {
           showStatus(`📅 同期しました（バイト 追加 ${result.added}件・更新 ${result.updated}件・削除 ${result.removed}件${Array.isArray(data.assignments) ? ` ／ manaba 新着 ${manaba.added}件` : ''}）`, 'info');
         }
@@ -1549,12 +1561,48 @@
         saveTasks();
         renderTasks();
       }
-      manabaLastInfo = {
-        received: assignments.length,
-        upcoming: tasks.filter(t => t.source === 'manaba' && !t.completed && new Date(t.datetime) > now).length
-      };
-      estimatePendingTasks();   // 待たずに裏で進める
       return { added, updated };
+    }
+
+    // manaba の「提出のお知らせ」から、提出した課題を自動で完了にする
+    //   一度処理した提出メールは記録しておき、あとで自分でチェックを外しても付け直さない
+    function applyManabaSubmissions(submissions) {
+      let processed = [];
+      try {
+        processed = JSON.parse(localStorage.getItem(MANABA_SUBMITTED_STORAGE) || '[]');
+      } catch (e) {
+        processed = [];
+      }
+      const done = new Set(processed);
+      let completed = 0;
+
+      submissions.forEach(sub => {
+        if (!sub || !sub.submittedAt) return;
+        const key = `${sub.id || `${sub.course}：${sub.title}`}|${sub.submittedAt}`;
+        if (done.has(key)) return;
+
+        // 課題URLの目印で探し、なければ「コース名：課題名」で探す（manabaから取り込んだ課題のみ）
+        const name = sub.course ? `${sub.course}：${sub.title}` : sub.title;
+        const task = tasks.find(t => t.source === 'manaba' && sub.id && t.externalId === sub.id) ||
+          tasks.find(t => t.source === 'manaba' && t.name === name);
+        if (!task) return;   // まだ取り込んでいない課題なら、次の同期でもう一度試す
+
+        if (!task.completed) {
+          task.completed = true;
+          task.completedAt = sub.submittedAt;   // 提出メールの受信時刻を完了日時として記録
+          task.completedBy = 'manaba';
+          delete task.estimatePending;
+          completed++;
+        }
+        done.add(key);
+      });
+
+      localStorage.setItem(MANABA_SUBMITTED_STORAGE, JSON.stringify([...done]));
+      if (completed > 0) {
+        saveTasks();
+        renderTasks();
+      }
+      return completed;
     }
 
     // 「推定待ち」の課題の所要時間を1件ずつAIで推定して更新する

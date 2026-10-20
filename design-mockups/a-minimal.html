@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>案A クリーン・ミニマル</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 390px; height: 844px; overflow: hidden;
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: #ffffff; color: #111827;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+  }
+  .wrap { padding: 52px 24px 0; }
+  .date { font-size: 13px; color: #6b7280; letter-spacing: 0.04em; }
+  .hello { font-size: 22px; font-weight: 700; margin-top: 2px; }
+
+  .job { margin-top: 28px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb; }
+  .label { font-size: 12px; color: #6b7280; font-weight: 600; letter-spacing: 0.08em; }
+  .job-main { display: flex; align-items: baseline; gap: 12px; margin-top: 6px; }
+  .job-yes { font-size: 44px; font-weight: 800; color: #2563eb; line-height: 1; }
+  .job-time { font-size: 22px; font-weight: 700; }
+  .job-place { font-size: 13px; color: #6b7280; margin-top: 6px; }
+  .tomorrow { display: flex; justify-content: space-between; margin-top: 14px; font-size: 14px; color: #6b7280; }
+  .tomorrow b { color: #111827; }
+
+  .summary { display: flex; gap: 24px; padding: 20px 0; border-bottom: 1px solid #e5e7eb; }
+  .stat-num { font-size: 26px; font-weight: 800; }
+  .stat-num small { font-size: 13px; font-weight: 600; margin-left: 2px; }
+  .stat-label { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+  .list-head { display: flex; justify-content: space-between; margin-top: 22px; margin-bottom: 4px; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid #f3f4f6; }
+  .check { width: 22px; height: 22px; border: 2px solid #d1d5db; border-radius: 50%; flex-shrink: 0; }
+  .row-body { flex: 1; min-width: 0; }
+  .row-name { font-size: 15px; font-weight: 700; }
+  .row-meta { font-size: 12px; color: #6b7280; margin-top: 3px; }
+  .row-count { text-align: right; }
+  .count-num { font-size: 17px; font-weight: 800; white-space: nowrap; }
+  .count-unit { font-size: 11px; color: #6b7280; }
+  .red { color: #dc2626; }
+  .amber { color: #d97706; }
+  .green { color: #059669; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+  .done { margin-top: 14px; font-size: 13px; color: #9ca3af; }
+
+  .fab {
+    position: absolute; right: 24px; bottom: 34px;
+    width: 58px; height: 58px; border-radius: 50%;
+    background: #111827; color: #fff; font-size: 30px; font-weight: 300;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(17, 24, 39, 0.25);
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="date">10月20日（火）</div>
+    <div class="hello">今日の予定</div>
+
+    <div class="job">
+      <div class="label">本日のアルバイト</div>
+      <div class="job-main">
+        <span class="job-yes">あり</span>
+        <span class="job-time">18:00 – 22:00</span>
+      </div>
+      <div class="job-place">カフェ・駅前店</div>
+      <div class="tomorrow"><span>明日のアルバイト</span><b>なし</b></div>
+    </div>
+
+    <div class="summary">
+      <div><div class="stat-num">3<small>件</small></div><div class="stat-label">未完了の課題</div></div>
+      <div><div class="stat-num">3<small>時間</small>45<small>分</small></div><div class="stat-label">残り作業の合計</div></div>
+    </div>
+
+    <div class="list-head">
+      <span class="label">課題（優先度順）</span>
+    </div>
+
+    <div class="row">
+      <div class="check"></div>
+      <div class="row-body">
+        <div class="row-name">知能メディアレポート</div>
+        <div class="row-meta"><span class="dot" style="background:#dc2626"></span>今日 23:59 締切 ・ 約120分</div>
+      </div>
+      <div class="row-count red"><div class="count-num">8時間31分</div><div class="count-unit">残り</div></div>
+    </div>
+    <div class="row">
+      <div class="check"></div>
+      <div class="row-body">
+        <div class="row-name">プログラミング演習課題</div>
+        <div class="row-meta"><span class="dot" style="background:#d97706"></span>10/22 10:40 締切 ・ 約45分</div>
+      </div>
+      <div class="row-count amber"><div class="count-num">1日19時間</div><div class="count-unit">残り</div></div>
+    </div>
+    <div class="row">
+      <div class="check"></div>
+      <div class="row-body">
+        <div class="row-name">英語 小テスト対策</div>
+        <div class="row-meta"><span class="dot" style="background:#059669"></span>10/24 09:00 締切 ・ 約60分</div>
+      </div>
+      <div class="row-count green"><div class="count-num">3日21時間</div><div class="count-unit">残り</div></div>
+    </div>
+
+    <div class="done">› 完了済み 2件</div>
+  </div>
+  <div class="fab">＋</div>
+</body>
+</html>

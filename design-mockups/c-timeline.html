@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>案C タイムライン型</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 390px; height: 844px; overflow: hidden;
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: #f6f7fb; color: #1f2937;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+  }
+  .head { background: #fff; padding: 50px 20px 16px; border-bottom: 1px solid #e5e7eb; }
+  .head-top { display: flex; justify-content: space-between; align-items: center; }
+  .date { font-size: 20px; font-weight: 800; }
+  .pills { display: flex; gap: 8px; margin-top: 12px; }
+  .pill { font-size: 12px; font-weight: 700; padding: 7px 10px; border-radius: 999px; white-space: nowrap; }
+  .pill.job { background: #2563eb; color: #fff; }
+  .pill.tmr { background: #f1f5f9; color: #64748b; }
+  .pill.sum { background: #eef2ff; color: #4338ca; margin-left: auto; }
+
+  .tl { padding: 16px 20px 0 20px; position: relative; }
+  .tl-title { font-size: 13px; font-weight: 700; color: #6b7280; margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .tl-title span:last-child { color: #4338ca; }
+  .grid { position: relative; height: 470px; }
+  .hour { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9ca3af; }
+  .hour::after { content: ""; flex: 1; border-top: 1px dashed #e5e7eb; }
+  .hour span { width: 38px; }
+
+  .block { position: absolute; left: 46px; right: 0; border-radius: 12px; padding: 8px 12px; font-size: 13px; }
+  .block b { display: block; font-size: 14px; }
+  .block small { font-size: 11px; opacity: 0.85; }
+  .b-job { background: #2563eb; color: #fff; }
+  .b-red { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+  .b-amber { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+  .b-free { background: repeating-linear-gradient(135deg, #f8fafc, #f8fafc 6px, #f1f5f9 6px, #f1f5f9 12px); color: #94a3b8; border: 1px dashed #cbd5e1; }
+
+  .now { position: absolute; left: 40px; right: 0; border-top: 2px solid #ef4444; }
+  .now::before { content: ""; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+  .now span { position: absolute; right: 0; top: -18px; font-size: 10px; font-weight: 700; color: #ef4444; }
+  .deadline { position: absolute; left: 46px; right: 0; border-top: 2px dotted #ef4444; }
+  .deadline span { position: absolute; right: 0; top: 2px; font-size: 10px; font-weight: 700; color: #ef4444; }
+
+  .later { margin: 10px 20px 0; background: #fff; border-radius: 14px; padding: 12px 14px; border: 1px solid #e5e7eb; }
+  .later-title { font-size: 12px; font-weight: 700; color: #6b7280; margin-bottom: 6px; }
+  .later-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+  .later-row span:last-child { font-weight: 700; color: #059669; }
+
+  .fab { position: absolute; right: 20px; bottom: 30px; width: 56px; height: 56px; border-radius: 18px; background: #4338ca; color: #fff; font-size: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(67, 56, 202, 0.35); }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="head-top">
+      <span class="date">10月20日（火）</span>
+    </div>
+    <div class="pills">
+      <span class="pill job">バイト 18:00–22:00</span>
+      <span class="pill tmr">明日 なし</span>
+      <span class="pill sum">残り 3h45m</span>
+    </div>
+  </div>
+
+  <div class="tl">
+    <div class="tl-title"><span>今日のタイムライン</span><span>🤖 おすすめ配置</span></div>
+    <div class="grid">
+      <!-- 15:00 = 0px, 1時間 = 50px -->
+      <div class="hour" style="top:0"><span>15:00</span></div>
+      <div class="hour" style="top:50px"><span>16:00</span></div>
+      <div class="hour" style="top:100px"><span>17:00</span></div>
+      <div class="hour" style="top:150px"><span>18:00</span></div>
+      <div class="hour" style="top:200px"><span>19:00</span></div>
+      <div class="hour" style="top:250px"><span>20:00</span></div>
+      <div class="hour" style="top:300px"><span>21:00</span></div>
+      <div class="hour" style="top:350px"><span>22:00</span></div>
+      <div class="hour" style="top:400px"><span>23:00</span></div>
+      <div class="hour" style="top:450px"><span>24:00</span></div>
+
+      <div class="block b-red" style="top:28px; height:95px;">
+        <b>知能メディアレポート</b>
+        <small>15:30–17:30 ・ 約120分 ・ バイト前に終わらせる</small>
+      </div>
+      <div class="block b-free" style="top:126px; height:20px; padding:2px 12px;"><small>移動・休憩</small></div>
+      <div class="block b-job" style="top:152px; height:196px;">
+        <b>アルバイト（カフェ）</b>
+        <small>18:00–22:00</small>
+      </div>
+      <div class="block b-amber" style="top:375px; height:46px; padding:5px 12px;">
+        <b style="font-size:13px">プログラミング演習課題</b>
+        <small>22:30–23:15 ・ 約45分</small>
+      </div>
+
+      <div class="now" style="top:25px"><span>いま 15:28</span></div>
+      <div class="deadline" style="top:449px"><span>レポート締切 23:59</span></div>
+    </div>
+  </div>
+
+  <div class="later">
+    <div class="later-title">今日やらなくてOK</div>
+    <div class="later-row"><span>英語 小テスト対策（約60分）</span><span>あと3日21時間</span></div>
+  </div>
+
+  <div class="fab">＋</div>
+</body>
+</html>

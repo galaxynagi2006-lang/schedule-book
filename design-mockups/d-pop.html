@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>案D ポップ・ブロック</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 390px; height: 844px; overflow: hidden;
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+    background: #fff7e0; color: #111;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+  }
+  .wrap { padding: 50px 18px 0; display: flex; flex-direction: column; gap: 14px; }
+  .box { border: 3px solid #111; border-radius: 18px; box-shadow: 5px 5px 0 #111; background: #fff; }
+
+  .title { display: flex; justify-content: space-between; align-items: center; }
+  .title h1 { font-size: 24px; font-weight: 900; }
+  .title span { font-size: 13px; font-weight: 800; background: #111; color: #fff7e0; padding: 5px 10px; border-radius: 10px; }
+
+  .jobs { display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px; }
+  .today { background: #60a5fa; padding: 14px 16px; }
+  .today .lb { font-size: 12px; font-weight: 800; }
+  .today .big { font-size: 42px; font-weight: 900; line-height: 1.1; }
+  .today .tm { font-size: 15px; font-weight: 800; }
+  .tmr { padding: 14px 12px; display: flex; flex-direction: column; justify-content: space-between; }
+  .tmr .lb { font-size: 12px; font-weight: 800; }
+  .tmr .big { font-size: 28px; font-weight: 900; color: #9ca3af; }
+
+  .sum { background: #c4b5fd; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 14px; }
+  .sum b { font-size: 22px; font-weight: 900; }
+
+  .task { padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .check { width: 26px; height: 26px; border: 3px solid #111; border-radius: 8px; background: #fff; flex-shrink: 0; }
+  .t-body { flex: 1; min-width: 0; }
+  .t-name { font-size: 15px; font-weight: 900; }
+  .t-meta { font-size: 11.5px; font-weight: 600; color: #374151; margin-top: 2px; white-space: nowrap; }
+  .count { text-align: center; border: 3px solid #111; border-radius: 12px; padding: 4px 6px; width: 96px; flex-shrink: 0; white-space: nowrap; }
+  .count b { display: block; font-size: 17px; font-weight: 900; line-height: 1.2; }
+  .done { padding: 12px 16px; font-size: 14px; font-weight: 800; color: #6b7280; background: #f3f4f6; }
+  .count small { font-size: 10px; font-weight: 800; }
+  .red { background: #f87171; }
+  .yellow { background: #fde047; }
+  .green { background: #86efac; }
+
+  .add { position: absolute; left: 18px; right: 18px; bottom: 30px; background: #111; color: #fff7e0; border-radius: 18px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 900; box-shadow: 5px 5px 0 #f87171; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title"><h1>My Schedule</h1><span>10/20 火</span></div>
+
+    <div class="jobs">
+      <div class="box today">
+        <div class="lb">今日のバイト</div>
+        <div class="big">あり！</div>
+        <div class="tm">18:00〜22:00</div>
+      </div>
+      <div class="box tmr">
+        <div class="lb">明日のバイト</div>
+        <div class="big">なし</div>
+      </div>
+    </div>
+
+    <div class="box sum"><span>未完了 3件 の残り作業</span><b>3時間45分</b></div>
+
+    <div class="box task">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-name">知能メディアレポート</div>
+        <div class="t-meta">今日 23:59 まで ・ 約120分</div>
+      </div>
+      <div class="count red"><b>8:31</b><small>のこり</small></div>
+    </div>
+    <div class="box task">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-name">プログラミング演習課題</div>
+        <div class="t-meta">10/22 10:40 まで ・ 約45分</div>
+      </div>
+      <div class="count yellow"><b>1日19h</b><small>のこり</small></div>
+    </div>
+    <div class="box task">
+      <div class="check"></div>
+      <div class="t-body">
+        <div class="t-name">英語 小テスト対策</div>
+        <div class="t-meta">10/24 09:00 まで ・ 約60分</div>
+      </div>
+      <div class="count green"><b>3日21h</b><small>のこり</small></div>
+    </div>
+    <div class="box done">✅ 完了済み 2件 ›</div>
+  </div>
+  <div class="add">＋ 追加する</div>
+</body>
+</html>

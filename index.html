@@ -739,9 +739,20 @@
       return minutes > 0 ? minutes : null;
     }
 
+    // 一定時間たっても応答がなければ打ち切る（AIが応答しないままアプリが止まるのを防ぐ）
+    async function fetchWithTimeout(url, options, timeoutMs) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     // ★Gemini：404・503エラー時に自動で別モデル（2.5-flash / 2.0-flash / flash-latest）へ切り替える
-    //   parts: 送る内容（テキスト・画像）、generationConfig: 出力形式の指定など
-    async function callGemini(apiKey, parts, generationConfig = {}) {
+    //   parts: 送る内容（テキスト・画像）、generationConfig: 出力形式の指定など、timeoutMs: 1回あたりの待ち時間
+    async function callGemini(apiKey, parts, generationConfig = {}, timeoutMs = 90000) {
       // 試行するモデルの優先順位リスト（404や503発生時に自動切り替え）
       const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
       let lastError = '';
@@ -750,14 +761,14 @@
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
         try {
-          const response = await fetch(url, {
+          const response = await fetchWithTimeout(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'x-goog-api-key': apiKey
             },
             body: JSON.stringify({ contents: [{ parts }], generationConfig })
-          });
+          }, timeoutMs);
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => null);
@@ -777,7 +788,7 @@
           lastError = '返答が空でした';
         } catch (err) {
           console.error(`通信エラー (${model}):`, err);
-          lastError = '通信エラー';
+          lastError = err.name === 'AbortError' ? '応答がありませんでした' : '通信エラー';
         }
       }
 
@@ -785,8 +796,8 @@
     }
 
     // ★Claude：Messages API をブラウザから直接呼び出す（キーは利用者自身のものをブラウザに保存）
-    //   content: 送る内容（テキスト・画像）、options: max_tokens や output_config など
-    async function callClaude(apiKey, content, options = {}) {
+    //   content: 送る内容（テキスト・画像）、options: max_tokens や output_config など、timeoutMs: 待ち時間
+    async function callClaude(apiKey, content, options = {}, timeoutMs = 90000) {
       const model = document.getElementById('claude-model').value;
       const headers = {
         'Content-Type': 'application/json',
@@ -807,11 +818,11 @@
       }
 
       try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers,
           body: JSON.stringify(body)
-        });
+        }, timeoutMs);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
@@ -834,12 +845,12 @@
         return text ? { text, model: data.model || model } : { error: '返答が空でした' };
       } catch (err) {
         console.error('通信エラー (Claude):', err);
-        return { error: '通信エラー' };
+        return { error: err.name === 'AbortError' ? '応答がありませんでした' : '通信エラー' };
       }
     }
 
     async function estimateWithGemini(apiKey, prompt) {
-      const result = await callGemini(apiKey, [{ text: prompt }]);
+      const result = await callGemini(apiKey, [{ text: prompt }], {}, 20000);
       if (result.error) return result;
       const minutes = parseMinutes(result.text);
       return minutes ? { minutes, model: result.model } : { error: '数値を読み取れませんでした' };
@@ -847,7 +858,7 @@
 
     async function estimateWithClaude(apiKey, prompt) {
       // 数値を答えるだけなので考える量は少なめに
-      const result = await callClaude(apiKey, prompt, { output_config: { effort: 'low' } });
+      const result = await callClaude(apiKey, prompt, { output_config: { effort: 'low' } }, 30000);
       if (result.error) return result;
       const minutes = parseMinutes(result.text);
       return minutes ? { minutes, model: result.model } : { error: '数値を読み取れませんでした' };
@@ -1039,7 +1050,7 @@
             <div class="task-body">
               <div class="task-name">${task.source === 'manaba' ? '📩 ' : ''}${escapeHtml(task.name)}</div>
               ${task.detail ? `<div class="task-detail">${escapeHtml(task.detail)}</div>` : ''}
-              <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ 約${estMinutes}分</div>
+              <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
               ${safeManabaUrl(task.url) ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener">manabaで開く ›</a>` : ''}
             </div>
             <div class="task-side">
@@ -1363,7 +1374,8 @@
         statusEl.textContent = `⚠️ ${gcalLastError}`;
       } else {
         statusEl.textContent = (lastSync ? `前回の同期: ${formatDateTime(new Date(lastSync))}` : '未同期') +
-          (manabaLastError ? ` ／ ⚠️ ${manabaLastError}` : '');
+          (manabaLastError ? ` ／ ⚠️ ${manabaLastError}` : '') +
+          (manabaLastInfo ? ` ／ 📩 manaba 締切前 ${manabaLastInfo.upcoming}件（メール${manabaLastInfo.received}件）` : '');
       }
     }
 
@@ -1486,6 +1498,7 @@
 
     // ---------- manaba の課題（Gmail のお知らせメールから Apps Script 経由で受け取る） ----------
     let manabaLastError = '';
+    let manabaLastInfo = null;   // { received: 届いた課題メール数, upcoming: 締切前の課題数 }
 
     // manaba の課題ページのURLだけをリンクにする（メール由来の文字列なので念のため確認）
     function safeManabaUrl(url) {
@@ -1515,14 +1528,15 @@
         // アプリで削除した課題・締切を過ぎた課題（提出済みの可能性が高い）は取り込まない
         if (hiddenIds.has(a.id) || new Date(datetime) <= now) continue;
 
-        const estimate = await estimateWithCurrentAI(name, a.kind ? `manabaの${a.kind}` : '');
+        // まず60分で登録し、所要時間はあとからAIで推定する（estimatePending）
         tasks.push(normalizeTask({
           id: generateTaskId(),
           name,
           type: 'task',
-          detail: '',
+          detail: a.kind ? `manabaの${a.kind}` : '',
           datetime,
-          estimatedMinutes: estimate.minutes || 60,
+          estimatedMinutes: 60,
+          estimatePending: true,
           source: 'manaba',
           externalId: a.id,
           url: safeManabaUrl(a.url),
@@ -1535,7 +1549,38 @@
         saveTasks();
         renderTasks();
       }
+      manabaLastInfo = {
+        received: assignments.length,
+        upcoming: tasks.filter(t => t.source === 'manaba' && !t.completed && new Date(t.datetime) > now).length
+      };
+      estimatePendingTasks();   // 待たずに裏で進める
       return { added, updated };
+    }
+
+    // 「推定待ち」の課題の所要時間を1件ずつAIで推定して更新する
+    let estimatingTasks = false;
+
+    async function estimatePendingTasks() {
+      if (estimatingTasks) return;
+      estimatingTasks = true;
+      try {
+        let task;
+        while ((task = tasks.find(t => t.estimatePending))) {
+          const result = await estimateWithCurrentAI(task.name, task.detail);
+          if (result.noKey) {
+            // キーがなければ60分のまま確定する
+            tasks.forEach(t => { delete t.estimatePending; });
+          } else {
+            if (result.minutes) task.estimatedMinutes = result.minutes;
+            else console.warn(`所要時間の推定に失敗（${task.name}）:`, result.error);
+            delete task.estimatePending;   // 失敗しても60分のまま確定し、何度もAIを呼ばない
+          }
+          saveTasks();
+          renderTasks();
+        }
+      } finally {
+        estimatingTasks = false;
+      }
     }
 
     function loadGcalSettings() {
@@ -2410,6 +2455,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     // 起動時・30分ごと・アプリに戻ってきたとき（前回から10分以上たっていれば）にカレンダーを同期
     loadGcalSettings();
     loadShiftSettings();
+    estimatePendingTasks();
     syncGoogleCalendar();
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);
     document.addEventListener('visibilitychange', () => {

@@ -70,6 +70,7 @@
     .task-name { font-size: 15px; font-weight: 700; word-break: break-all; }
     .task-detail { font-size: 12px; color: var(--text-sub); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .task-meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .task-link { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--primary-color); font-weight: 600; text-decoration: none; }
     .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
     .task-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .count-num { font-size: 17px; font-weight: 800; white-space: nowrap; }
@@ -699,20 +700,12 @@
         return val;
       }
 
-      const providerId = currentProvider();
-      const provider = AI_PROVIDERS[providerId];
-      const apiKey = document.getElementById('api-key-input').value.trim() || localStorage.getItem(provider.keyStorage);
-      if (!apiKey) {
+      const provider = AI_PROVIDERS[currentProvider()];
+      const result = await estimateWithCurrentAI(name, detail);
+      if (result.noKey) {
         showStatus(`※${provider.label}のAPIキー未設定のためデフォルト値(60分)を適用しました`, "info");
         return 60;
       }
-
-      const contentPrompt = detail ? `【課題名】${name}\n【詳細】${detail}` : `【課題名】${name}`;
-      const prompt = `以下の課題内容から、大学生が完了するのに必要な推定作業時間（分単位の数値）を答えてください。説明文や単位は含めず、数字のみを出力してください。\n\n${contentPrompt}`;
-
-      const result = providerId === 'claude'
-        ? await estimateWithClaude(apiKey, prompt)
-        : await estimateWithGemini(apiKey, prompt);
 
       if (result.minutes) {
         showStatus(`🤖 AI解析成功 (${result.model}): 推定 ${result.minutes}分`, "info");
@@ -721,6 +714,22 @@
 
       showStatus(`⚠️ ${provider.label}での解析に失敗したため、標準値(60分)で登録しました。${result.error ? `（${result.error}）` : ''}`, "error");
       return 60;
+    }
+
+    // 選択中のAIで所要時間を推定する（画面には何も表示しない）
+    //   返り値: { minutes, model } / { error } / キー未設定なら { noKey: true }
+    async function estimateWithCurrentAI(name, detail) {
+      const providerId = currentProvider();
+      const provider = AI_PROVIDERS[providerId];
+      const apiKey = document.getElementById('api-key-input').value.trim() || localStorage.getItem(provider.keyStorage);
+      if (!apiKey) return { noKey: true };
+
+      const contentPrompt = detail ? `【課題名】${name}\n【詳細】${detail}` : `【課題名】${name}`;
+      const prompt = `以下の課題内容から、大学生が完了するのに必要な推定作業時間（分単位の数値）を答えてください。説明文や単位は含めず、数字のみを出力してください。\n\n${contentPrompt}`;
+
+      return providerId === 'claude'
+        ? estimateWithClaude(apiKey, prompt)
+        : estimateWithGemini(apiKey, prompt);
     }
 
     // AIの返答から最初の数値（分）を取り出す
@@ -1028,9 +1037,10 @@
           <div class="task-row">
             <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="完了にする">
             <div class="task-body">
-              <div class="task-name">${escapeHtml(task.name)}</div>
+              <div class="task-name">${task.source === 'manaba' ? '📩 ' : ''}${escapeHtml(task.name)}</div>
               ${task.detail ? `<div class="task-detail">${escapeHtml(task.detail)}</div>` : ''}
               <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ 約${estMinutes}分</div>
+              ${safeManabaUrl(task.url) ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener">manabaで開く ›</a>` : ''}
             </div>
             <div class="task-side">
               <div class="count-num c-${level}">${countdownText}</div>
@@ -1321,11 +1331,11 @@
     function deleteTask(id) {
       const target = tasks.find(t => t.id === id);
       // カレンダーから取り込んだ予定は、次の同期で復活しないように記録しておく
-      if (target && target.source === 'gcal') {
+      if (target && (target.source === 'gcal' || target.source === 'manaba')) {
         const hiddenIds = loadGcalHiddenIds();
         hiddenIds.push(target.externalId);
         localStorage.setItem(GCAL_HIDDEN_STORAGE, JSON.stringify(hiddenIds));
-        showStatus('📅 この予定は今後の同期でも取り込みません', 'info');
+        showStatus(target.source === 'manaba' ? '📩 この課題は今後の同期でも取り込みません' : '📅 この予定は今後の同期でも取り込みません', 'info');
       }
       tasks = tasks.filter(t => t.id !== id);
       saveTasks();
@@ -1352,7 +1362,8 @@
       } else if (gcalLastError) {
         statusEl.textContent = `⚠️ ${gcalLastError}`;
       } else {
-        statusEl.textContent = lastSync ? `前回の同期: ${formatDateTime(new Date(lastSync))}` : '未同期';
+        statusEl.textContent = (lastSync ? `前回の同期: ${formatDateTime(new Date(lastSync))}` : '未同期') +
+          (manabaLastError ? ` ／ ⚠️ ${manabaLastError}` : '');
       }
     }
 
@@ -1431,12 +1442,16 @@
       return { added, updated, removed };
     }
 
+    let gcalSyncing = false;   // 同期が重ならないようにする（同じ課題の二重取り込みを防ぐ）
+
     async function syncGoogleCalendar(manual = false) {
       const url = localStorage.getItem(GCAL_URL_STORAGE);
       if (!url) {
         if (manual) showStatus('📅 先に Apps Script のURLを入力してください', 'error');
         return;
       }
+      if (gcalSyncing) return;
+      gcalSyncing = true;
 
       try {
         // 追加ヘッダーを付けない単純なGETにする（Apps Script はこの形でしか他サイトから読めない）
@@ -1447,17 +1462,80 @@
         if (!Array.isArray(data.events)) throw new Error('予定の形式が正しくありません');
 
         const result = applyCalendarEvents(data);
+        const manaba = Array.isArray(data.assignments)
+          ? await applyManabaAssignments(data.assignments)
+          : { added: 0, updated: 0 };
         gcalLastError = '';
+        manabaLastError = data.assignmentsError ? 'manabaのメールを読めませんでした（Gmailの許可を確認）' : '';
         localStorage.setItem(GCAL_LAST_SYNC_STORAGE, new Date().toISOString());
-        if (manual || result.added + result.updated + result.removed > 0) {
-          showStatus(`📅 同期しました（追加 ${result.added}件・更新 ${result.updated}件・削除 ${result.removed}件）`, 'info');
+
+        if (manaba.added > 0) {
+          showStatus(`📩 manabaから新しい課題を${manaba.added}件取り込みました`, 'info');
+        } else if (manual || result.added + result.updated + result.removed > 0) {
+          showStatus(`📅 同期しました（バイト 追加 ${result.added}件・更新 ${result.updated}件・削除 ${result.removed}件${Array.isArray(data.assignments) ? ` ／ manaba 新着 ${manaba.added}件` : ''}）`, 'info');
         }
       } catch (err) {
         console.error('Googleカレンダー同期エラー:', err);
         gcalLastError = '同期に失敗しました（URLと公開設定「全員」を確認）';
         if (manual) showStatus(`📅 ${gcalLastError}`, 'error');
+      } finally {
+        gcalSyncing = false;
       }
       updateGcalStatus();
+    }
+
+    // ---------- manaba の課題（Gmail のお知らせメールから Apps Script 経由で受け取る） ----------
+    let manabaLastError = '';
+
+    // manaba の課題ページのURLだけをリンクにする（メール由来の文字列なので念のため確認）
+    function safeManabaUrl(url) {
+      return /^https:\/\/[a-z0-9-]+\.manaba\.jp\/ct\/[\w-]+$/i.test(url || '') ? url : '';
+    }
+
+    // 締切前の新しい課題を追加し、締切が変わった課題は更新する
+    async function applyManabaAssignments(assignments) {
+      const hiddenIds = new Set(loadGcalHiddenIds());
+      const now = new Date();
+      let added = 0, updated = 0;
+
+      for (const a of assignments) {
+        if (!a || !a.id || !a.title || !a.deadline) continue;
+        const datetime = String(a.deadline).replace(' ', 'T').slice(0, 16);   // "2026-10-21 00:00:00" → "2026-10-21T00:00"
+        if (isNaN(new Date(datetime).getTime())) continue;
+        const name = a.course ? `${a.course}：${a.title}` : a.title;
+
+        const existing = tasks.find(t => t.externalId === a.id);
+        if (existing) {
+          if (!existing.completed && existing.datetime !== datetime) {
+            existing.datetime = datetime;   // 締切の延長など
+            updated++;
+          }
+          continue;
+        }
+        // アプリで削除した課題・締切を過ぎた課題（提出済みの可能性が高い）は取り込まない
+        if (hiddenIds.has(a.id) || new Date(datetime) <= now) continue;
+
+        const estimate = await estimateWithCurrentAI(name, a.kind ? `manabaの${a.kind}` : '');
+        tasks.push(normalizeTask({
+          id: generateTaskId(),
+          name,
+          type: 'task',
+          detail: '',
+          datetime,
+          estimatedMinutes: estimate.minutes || 60,
+          source: 'manaba',
+          externalId: a.id,
+          url: safeManabaUrl(a.url),
+          createdAt: new Date().toISOString()
+        }));
+        added++;
+      }
+
+      if (added + updated > 0) {
+        saveTasks();
+        renderTasks();
+      }
+      return { added, updated };
     }
 
     function loadGcalSettings() {

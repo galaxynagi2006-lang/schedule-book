@@ -215,6 +215,30 @@
     .api-settings summary { font-size: 12px; color: var(--text-sub); cursor: pointer; font-weight: 600; }
     .btn-clear { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
+    /* ========== シフト表からの一括登録 ========== */
+    .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 16px; }
+    .shift-settings { background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
+    .shift-settings summary { font-size: 13px; font-weight: 700; color: var(--text-sub); cursor: pointer; }
+    .field-note { font-size: 11px; color: var(--text-sub); }
+    .shift-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 10px; background: #f1f5f9; margin-bottom: 12px; }
+
+    .shift-checks { margin: 16px 0 10px; display: flex; flex-direction: column; gap: 6px; }
+    .shift-checks div { font-size: 13px; padding: 7px 10px; border-radius: 8px; }
+    .check-ok { background: #d1fae5; color: #065f46; }
+    .check-warn { background: #fef3c7; color: #92400e; }
+    .check-error { background: #fee2e2; color: #991b1b; }
+
+    .shift-row { display: flex; align-items: center; gap: 6px; padding: 6px 4px; border-bottom: 1px solid #f3f4f6; }
+    .shift-row.warn { background: #fffbeb; }
+    .shift-row.excluded { opacity: 0.45; }
+    .shift-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--primary-color); }
+    .shift-row .form-control { padding: 6px 6px; font-size: 16px; border-radius: 8px; min-width: 0; }
+    .shift-row select { flex: 1.25; padding-right: 2px; }
+    .shift-row input[type="time"] { flex: 1; text-align: center; }
+    .shift-row input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
+    .shift-dash { color: var(--text-sub); flex-shrink: 0; }
+    .shift-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+
     /* 通知トースト */
     .status-msg {
       position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
@@ -302,6 +326,7 @@
       <span>予定・課題を追加</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
+    <button type="button" class="btn-secondary" onclick="openShiftSheet()">📷 シフト表の写真からバイトを一括登録</button>
     <form id="add-schedule-form">
       <div class="form-group">
         <label for="task-name">タイトル・件名</label>
@@ -381,6 +406,48 @@
     </form>
   </section>
 
+  <!-- シフト表の写真から一括登録（ボトムシート） -->
+  <section class="sheet" id="shift-sheet" aria-label="シフト表から登録">
+    <div class="sheet-head">
+      <span>📷 シフト表から登録</span>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
+    </div>
+
+    <details class="shift-settings" id="shift-settings">
+      <summary>⚙️ シフト表の設定</summary>
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="shift-name">シフト表に書かれている自分の名前</label>
+        <input type="text" id="shift-name" class="form-control" placeholder="例: 上野 凪斗" onchange="saveShiftSettings()">
+      </div>
+      <div class="form-group">
+        <label for="shift-title">カレンダーに登録する予定名</label>
+        <input type="text" id="shift-title" class="form-control" value="バイト" onchange="saveShiftSettings()">
+        <span class="field-note">※「バイト」を含めると、カレンダー連携でアプリにも自動で取り込まれます</span>
+      </div>
+      <div class="form-group">
+        <label for="gcal-token">カレンダー書き込み用の合言葉</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="gcal-token" class="form-control" placeholder="未設定（アプリ内にだけ登録）" autocomplete="off" onchange="saveShiftSettings()">
+          <button type="button" class="btn-clear" style="white-space: nowrap;" onclick="generateGcalToken()">合言葉を作る</button>
+        </div>
+        <span class="field-note">※ Apps Script の WRITE_TOKEN にも同じ文字列を貼り付けて、新バージョンでデプロイしてください</span>
+      </div>
+    </details>
+
+    <div class="form-group">
+      <label for="shift-month">シフト表の年月</label>
+      <input type="month" id="shift-month" class="form-control">
+    </div>
+    <div class="form-group">
+      <label for="shift-file">シフト表の写真</label>
+      <input type="file" id="shift-file" class="form-control" accept="image/*" onchange="previewShiftImage()">
+    </div>
+    <img id="shift-preview" class="shift-preview" alt="選んだシフト表" hidden>
+    <button type="button" class="btn-submit" id="shift-analyze-btn" onclick="analyzeShiftImage()">AIで読み取る</button>
+
+    <div id="shift-result"></div>
+  </section>
+
   <div id="status-display" class="status-msg"></div>
 
   <script>
@@ -393,6 +460,9 @@
     const GCAL_HIDDEN_STORAGE = 'smart_schedule_gcal_hidden';      // アプリ側で削除した取り込み予定
     const GCAL_LAST_SYNC_STORAGE = 'smart_schedule_gcal_last_sync';
     const GCAL_SYNC_INTERVAL_MIN = 30;
+    const GCAL_TOKEN_STORAGE = 'smart_schedule_gcal_token';        // カレンダー書き込み用の合言葉
+    const SHIFT_NAME_STORAGE = 'smart_schedule_shift_name';
+    const SHIFT_TITLE_STORAGE = 'smart_schedule_shift_title';
 
     // AIごとの設定（APIキーはAIごとに別々に保存する）
     const AI_PROVIDERS = {
@@ -536,6 +606,15 @@
     function closeSheet() {
       document.getElementById('sheet-overlay').classList.remove('open');
       document.getElementById('add-sheet').classList.remove('open');
+      document.getElementById('shift-sheet').classList.remove('open');
+    }
+
+    function openShiftSheet() {
+      document.getElementById('add-sheet').classList.remove('open');
+      document.getElementById('sheet-overlay').classList.add('open');
+      document.getElementById('shift-sheet').classList.add('open');
+      // 名前が未設定なら設定欄を開いておく
+      document.getElementById('shift-settings').open = !document.getElementById('shift-name').value;
     }
 
     function toggleJobTimeInput() {
@@ -607,7 +686,8 @@
     }
 
     // ★Gemini：404・503エラー時に自動で別モデル（2.5-flash / 2.0-flash / flash-latest）へ切り替える
-    async function estimateWithGemini(apiKey, prompt) {
+    //   parts: 送る内容（テキスト・画像）、generationConfig: 出力形式の指定など
+    async function callGemini(apiKey, parts, generationConfig = {}) {
       // 試行するモデルの優先順位リスト（404や503発生時に自動切り替え）
       const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
       let lastError = '';
@@ -622,19 +702,25 @@
               'Content-Type': 'application/json',
               'x-goog-api-key': apiKey
             },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            body: JSON.stringify({ contents: [{ parts }], generationConfig })
           });
 
-          // 404(存在しない)・503(混雑)・429(制限) の場合はポップアップを出さず次のモデルを試す
           if (!response.ok) {
-            console.warn(`モデル ${model} でエラー (${response.status})。次のモデルへ切り替えます...`);
+            const errorData = await response.json().catch(() => null);
+            // キーの誤りはモデルを変えても直らないので、すぐに知らせる
+            if (errorData?.error?.details?.some(d => d.reason === 'API_KEY_INVALID')) {
+              return { error: `APIキーが正しくありません・${response.status}` };
+            }
+            // 404(存在しない)・503(混雑)・429(制限) の場合はポップアップを出さず次のモデルを試す
+            console.warn(`モデル ${model} でエラー (${response.status})。次のモデルへ切り替えます...`, errorData);
             lastError = `エラー ${response.status}`;
             continue;
           }
 
           const data = await response.json();
-          const minutes = parseMinutes(data.candidates?.[0]?.content?.parts?.[0]?.text);
-          if (minutes) return { minutes, model };
+          const text = (data.candidates?.[0]?.content?.parts || []).map(part => part.text || '').join('');
+          if (text) return { text, model };
+          lastError = '返答が空でした';
         } catch (err) {
           console.error(`通信エラー (${model}):`, err);
           lastError = '通信エラー';
@@ -645,7 +731,8 @@
     }
 
     // ★Claude：Messages API をブラウザから直接呼び出す（キーは利用者自身のものをブラウザに保存）
-    async function estimateWithClaude(apiKey, prompt) {
+    //   content: 送る内容（テキスト・画像）、options: max_tokens や output_config など
+    async function callClaude(apiKey, content, options = {}) {
       const model = document.getElementById('claude-model').value;
       const headers = {
         'Content-Type': 'application/json',
@@ -656,8 +743,8 @@
       const body = {
         model,
         max_tokens: 1024,
-        output_config: { effort: 'low' },   // 数値を答えるだけなので考える量は少なめに
-        messages: [{ role: 'user', content: prompt }]
+        ...options,
+        messages: [{ role: 'user', content }]
       };
       // Opus / Sonnet は、安全判定で回答を断られたときにサーバー側で別モデルへ自動で切り替える
       if (model !== 'claude-haiku-5-5') {
@@ -684,15 +771,32 @@
           console.warn('Claudeが回答を辞退しました', data.stop_details);
           return { error: '回答が辞退されました' };
         }
+        if (data.stop_reason === 'max_tokens') {
+          return { error: '返答が途中で切れました' };
+        }
 
         // 考えた過程（thinkingブロック）を除き、テキストの返答だけを読む
         const text = (data.content || []).filter(block => block.type === 'text').map(block => block.text).join('');
-        const minutes = parseMinutes(text);
-        return minutes ? { minutes, model: data.model || model } : { error: '数値を読み取れませんでした' };
+        return text ? { text, model: data.model || model } : { error: '返答が空でした' };
       } catch (err) {
         console.error('通信エラー (Claude):', err);
         return { error: '通信エラー' };
       }
+    }
+
+    async function estimateWithGemini(apiKey, prompt) {
+      const result = await callGemini(apiKey, [{ text: prompt }]);
+      if (result.error) return result;
+      const minutes = parseMinutes(result.text);
+      return minutes ? { minutes, model: result.model } : { error: '数値を読み取れませんでした' };
+    }
+
+    async function estimateWithClaude(apiKey, prompt) {
+      // 数値を答えるだけなので考える量は少なめに
+      const result = await callClaude(apiKey, prompt, { output_config: { effort: 'low' } });
+      if (result.error) return result;
+      const minutes = parseMinutes(result.text);
+      return minutes ? { minutes, model: result.model } : { error: '数値を読み取れませんでした' };
     }
 
     // ---------- 共通ヘルパー ----------
@@ -1306,6 +1410,486 @@
       updateGcalStatus();
     }
 
+    // ---------- シフト表の写真から一括登録 ----------
+    // AIに返してもらう形（Claude の構造化出力の JSON Schema。Gemini 用には toGeminiSchema で変換）
+    const SHIFT_SCHEMA = {
+      type: 'object',
+      properties: {
+        name_found: { type: 'boolean' },
+        day1_weekday: { type: 'string' },
+        shifts: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              day: { type: 'integer' },
+              start: { type: 'string' },
+              end: { type: 'string' }
+            },
+            required: ['day', 'start', 'end'],
+            additionalProperties: false
+          }
+        },
+        weekly_totals: { type: 'array', items: { type: 'string' } },
+        monthly_total: { type: 'string' },
+        uncertain_days: { type: 'array', items: { type: 'integer' } }
+      },
+      required: ['name_found', 'day1_weekday', 'shifts', 'weekly_totals', 'monthly_total', 'uncertain_days'],
+      additionalProperties: false
+    };
+
+    let shiftImage = null;      // 縮小した写真 { mediaType, data, dataUrl }
+    let shiftAnalysis = null;   // AIの読み取り結果
+    let shiftTarget = null;     // 対象の年月 { year, month }
+    let shiftMonthNote = null;  // 年月の判定についてのメッセージ { level, text }
+    let shiftRows = [];         // 確認画面の行 { day, start, end, include, uncertain, warn }（年月は shiftTarget）
+
+    function loadShiftSettings() {
+      document.getElementById('shift-name').value = localStorage.getItem(SHIFT_NAME_STORAGE) || '';
+      document.getElementById('shift-title').value = localStorage.getItem(SHIFT_TITLE_STORAGE) || 'バイト';
+      document.getElementById('gcal-token').value = localStorage.getItem(GCAL_TOKEN_STORAGE) || '';
+      const now = new Date();
+      document.getElementById('shift-month').value = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`;
+    }
+
+    function saveShiftSettings() {
+      localStorage.setItem(SHIFT_NAME_STORAGE, document.getElementById('shift-name').value.trim());
+      localStorage.setItem(SHIFT_TITLE_STORAGE, document.getElementById('shift-title').value.trim() || 'バイト');
+      localStorage.setItem(GCAL_TOKEN_STORAGE, document.getElementById('gcal-token').value.trim());
+      if (shiftAnalysis) renderShiftResult();   // 登録先（カレンダー / アプリ）の表示を更新
+    }
+
+    // 推測されにくいランダムな合言葉（32文字）を作る
+    function generateGcalToken() {
+      const tokenInput = document.getElementById('gcal-token');
+      if (tokenInput.value && !confirm('今の合言葉を新しいものに置き換えますか？\n（Apps Script 側の WRITE_TOKEN も貼り替えが必要です）')) return;
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      tokenInput.value = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+      saveShiftSettings();
+      tokenInput.select();
+      showStatus('合言葉を作りました。Apps Script の WRITE_TOKEN に貼り付けてください', 'info');
+    }
+
+    // 写真を縮小して JPEG にする（通信量と料金を抑える。細かい表なので長辺2000px程度は残す）
+    async function prepareImage(file, maxEdge = 2000) {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      return { mediaType: 'image/jpeg', data: dataUrl.split(',')[1], dataUrl };
+    }
+
+    async function previewShiftImage() {
+      const file = document.getElementById('shift-file').files[0];
+      const previewEl = document.getElementById('shift-preview');
+      shiftImage = null;
+      previewEl.hidden = true;
+      if (!file) return;
+      try {
+        shiftImage = await prepareImage(file);
+        previewEl.src = shiftImage.dataUrl;
+        previewEl.hidden = false;
+      } catch (err) {
+        console.error('画像の読み込みエラー:', err);
+        showStatus('画像を読み込めませんでした。別の写真で試してください', 'error');
+      }
+    }
+
+    function buildShiftPrompt(name, year, month) {
+      return `これはアルバイト先の月間シフト表の写真です。${year}年${month}月分です。
+表の中から「${name}」さんの行だけを読み取ってください（名前の空白の有無や字体の違いは無視してかまいません）。
+
+表の読み方:
+- 上の見出しに日付（1〜末日）と曜日が並んでいる。
+- 1人につき「出勤時刻」「退勤時刻」「残業」の段がある。同じ日付の列で、出勤時刻の段と退勤時刻の段にある4桁の数字（例: 上が 1800、下が 2200）が、その日の出勤・退勤時刻。
+- ○ や ●、空欄、数字のない文字（「出張」など）の日は出勤ではない。
+- 日付の列のあいだにある「40週」「計」などの列は週の合計時間で、日付ではない。
+- 合計時間は「8.00」「13.30」のように「時間.分」の形で書かれている。
+
+返す内容:
+- name_found: 「${name}」さんの行が見つかったか
+- day1_weekday: 見出しで1日の下に書かれている曜日（例: "木"）
+- shifts: 出勤している日ごとに day（日付の数字）、start（出勤時刻の4桁 例 "1800"）、end（退勤時刻の4桁 例 "2200"）
+- weekly_totals: その人の行の週合計の欄を左から順に、書かれている文字のまま（例: "20.00"）
+- monthly_total: その人の行の月計の欄の文字のまま（例: "76.00"）
+- uncertain_days: 写真が不鮮明などで読み取りに自信がない日付の数字（なければ空の配列）`;
+    }
+
+    // JSON Schema を Gemini の responseSchema の形（型名が大文字）に変換する
+    function toGeminiSchema(schema) {
+      const converted = { type: schema.type.toUpperCase() };
+      if (schema.properties) {
+        converted.properties = {};
+        Object.entries(schema.properties).forEach(([key, value]) => {
+          converted.properties[key] = toGeminiSchema(value);
+        });
+        converted.required = schema.required;
+      }
+      if (schema.items) converted.items = toGeminiSchema(schema.items);
+      return converted;
+    }
+
+    // 返答の文字列を JSON として読む（```json で囲まれていても読めるようにする）
+    function parseJsonText(text) {
+      return JSON.parse(text.trim().replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, ''));
+    }
+
+    async function analyzeShiftImage() {
+      const name = document.getElementById('shift-name').value.trim();
+      const [year, month] = document.getElementById('shift-month').value.split('-').map(Number);
+      const providerId = currentProvider();
+      const provider = AI_PROVIDERS[providerId];
+      const apiKey = localStorage.getItem(provider.keyStorage);
+
+      if (!name) {
+        document.getElementById('shift-settings').open = true;
+        showStatus('設定で、シフト表に書かれている自分の名前を入力してください', 'error');
+        return;
+      }
+      if (!year || !month) {
+        showStatus('シフト表の年月を選んでください', 'error');
+        return;
+      }
+      if (!shiftImage) {
+        showStatus('シフト表の写真を選んでください', 'error');
+        return;
+      }
+      if (!apiKey) {
+        showStatus(`${provider.label}のAPIキーが未設定です。「予定・課題を追加」のAI設定で入力してください`, 'error');
+        return;
+      }
+
+      const analyzeBtn = document.getElementById('shift-analyze-btn');
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = '読み取り中…（30秒〜1分ほどかかります）';
+
+      const prompt = buildShiftPrompt(name, year, month);
+      const result = providerId === 'claude'
+        ? await callClaude(apiKey, [
+            { type: 'image', source: { type: 'base64', media_type: shiftImage.mediaType, data: shiftImage.data } },
+            { type: 'text', text: prompt }
+          ], {
+            max_tokens: 16000,
+            output_config: { format: { type: 'json_schema', schema: SHIFT_SCHEMA } }
+          })
+        : await callGemini(apiKey, [
+            { inlineData: { mimeType: shiftImage.mediaType, data: shiftImage.data } },
+            { text: prompt }
+          ], {
+            responseMimeType: 'application/json',
+            responseSchema: toGeminiSchema(SHIFT_SCHEMA)
+          });
+
+      analyzeBtn.disabled = false;
+      analyzeBtn.textContent = 'AIで読み取る';
+
+      if (result.error) {
+        showStatus(`読み取りに失敗しました（${result.error}）`, 'error');
+        return;
+      }
+
+      let analysis;
+      try {
+        analysis = parseJsonText(result.text);
+      } catch (err) {
+        console.error('AIの返答:', result.text);
+        showStatus('AIの返答を読み取れませんでした。もう一度試してください', 'error');
+        return;
+      }
+
+      applyShiftAnalysis(analysis, year, month);
+      showStatus(`🤖 読み取りました（${result.model}）。内容を確認してください`, 'info');
+    }
+
+    // "1800" / "18:00" / "900" → "18:00" / "09:00"
+    function hhmmToTime(value) {
+      const digits = String(value || '').replace(/[^0-9]/g, '');
+      if (digits.length < 3 || digits.length > 4) return '';
+      const h = Number(digits.slice(0, -2));
+      const m = Number(digits.slice(-2));
+      if (h > 29 || m > 59) return '';
+      return `${pad2(h % 24)}:${pad2(m)}`;
+    }
+
+    // 表の合計時間 "13.30"（13時間30分）→ 810分。小数1桁などは時間の小数として扱う
+    function parseTableHours(value) {
+      const match = String(value || '').match(/(\d+)(?:[.:](\d+))?/);
+      if (!match) return null;
+      const hours = Number(match[1]);
+      const fraction = match[2] || '';
+      if (fraction.length === 2) return hours * 60 + Number(fraction);
+      return Math.round((hours + Number(`0.${fraction || 0}`)) * 60);
+    }
+
+    function shiftRowMinutes(row) {
+      const [sh, sm] = row.start.split(':').map(Number);
+      const [eh, em] = row.end.split(':').map(Number);
+      let minutes = (eh * 60 + em) - (sh * 60 + sm);
+      if (minutes <= 0) minutes += 24 * 60;   // 日付をまたぐシフト
+      return minutes;
+    }
+
+    function isValidShiftRow(row) {
+      return row.include && row.day && row.start && row.end;
+    }
+
+    // その月の何週目か（表と同じく、日曜日で週が区切られる）
+    function shiftWeekIndex(year, month, day) {
+      let index = 0;
+      for (let d = 1; d < day; d++) {
+        if (new Date(year, month - 1, d).getDay() === 0) index++;
+      }
+      return index;
+    }
+
+    function applyShiftAnalysis(analysis, year, month) {
+      shiftAnalysis = analysis;
+      shiftTarget = { year, month };
+      shiftMonthNote = null;
+
+      // 1日の曜日から年月を確かめ、前後の月と合う場合はそちらに合わせる
+      if (analysis.day1_weekday) {
+        const candidates = [0, 1, -1].map(offset => {
+          const d = new Date(year, month - 1 + offset, 1);
+          return { year: d.getFullYear(), month: d.getMonth() + 1, weekday: WEEKDAYS[d.getDay()] };
+        });
+        const match = candidates.find(c => analysis.day1_weekday.includes(c.weekday));
+        if (!match) {
+          shiftMonthNote = { level: 'warn', text: `表の1日の曜日（${escapeHtml(analysis.day1_weekday)}）が前後の月と合いません。年月を確認してください` };
+        } else if (match.year !== year || match.month !== month) {
+          shiftTarget = { year: match.year, month: match.month };
+          document.getElementById('shift-month').value = `${match.year}-${pad2(match.month)}`;
+          shiftMonthNote = { level: 'warn', text: `1日の曜日（${escapeHtml(analysis.day1_weekday)}）から ${match.year}年${match.month}月分 と判断しました` };
+        } else {
+          shiftMonthNote = { level: 'ok', text: `1日の曜日（${escapeHtml(analysis.day1_weekday)}）が ${year}年${month}月 と一致しました` };
+        }
+      }
+
+      const daysInMonth = new Date(shiftTarget.year, shiftTarget.month, 0).getDate();
+      const uncertainDays = new Set(analysis.uncertain_days || []);
+      shiftRows = (analysis.shifts || [])
+        .filter(s => s.day >= 1 && s.day <= daysInMonth)
+        .map(s => ({
+          day: s.day,
+          start: hhmmToTime(s.start),
+          end: hhmmToTime(s.end),
+          include: true,
+          uncertain: uncertainDays.has(s.day),
+          warn: false
+        }))
+        .sort((a, b) => a.day - b.day);
+
+      renderShiftResult();
+    }
+
+    // 読み取った時間を表の週計・月計と照合する（合わない週の行は黄色にする）
+    function computeShiftChecks() {
+      const checks = [];
+      const { year, month } = shiftTarget;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const name = document.getElementById('shift-name').value.trim();
+
+      if (shiftAnalysis.name_found === false) {
+        checks.push({ level: 'error', text: `「${escapeHtml(name)}」さんの行が見つかりませんでした。設定の名前と表の表記を確認してください` });
+      }
+      if (shiftMonthNote) checks.push(shiftMonthNote);
+
+      shiftRows.forEach(row => { row.warn = row.uncertain; });
+      const inMonthRows = shiftRows.filter(isValidShiftRow);
+      const totalMinutes = inMonthRows.reduce((sum, row) => sum + shiftRowMinutes(row), 0);
+
+      // 月計との照合
+      const monthlyTotal = parseTableHours(shiftAnalysis.monthly_total);
+      if (monthlyTotal !== null) {
+        checks.push(monthlyTotal === totalMinutes
+          ? { level: 'ok', text: `出勤 ${inMonthRows.length}日・合計 ${formatMinutes(totalMinutes)}（月計 ${escapeHtml(shiftAnalysis.monthly_total)} と一致）` }
+          : { level: 'warn', text: `出勤 ${inMonthRows.length}日・合計 ${formatMinutes(totalMinutes)} ですが、表の月計は ${escapeHtml(shiftAnalysis.monthly_total)} です。抜けや読み間違いがないか確認してください（休憩が引かれている場合も合わないことがあります）` });
+      } else {
+        checks.push({ level: 'warn', text: `出勤 ${inMonthRows.length}日・合計 ${formatMinutes(totalMinutes)}（月計を読み取れなかったため照合していません）` });
+      }
+
+      // 週計との照合
+      const weeklyTotals = (shiftAnalysis.weekly_totals || []).map(parseTableHours);
+      const weekCount = shiftWeekIndex(year, month, daysInMonth) + 1;
+      if (weeklyTotals.length === weekCount) {
+        const sums = Array(weekCount).fill(0);
+        inMonthRows.forEach(row => {
+          sums[shiftWeekIndex(year, month, row.day)] += shiftRowMinutes(row);
+        });
+        const badWeeks = weeklyTotals
+          .map((total, i) => (total !== null && total !== sums[i] ? i : -1))
+          .filter(i => i >= 0);
+        if (badWeeks.length === 0) {
+          checks.push({ level: 'ok', text: '週ごとの合計もすべて表と一致しました' });
+        } else {
+          const labels = badWeeks.map(i => {
+            const days = [];
+            for (let d = 1; d <= daysInMonth; d++) if (shiftWeekIndex(year, month, d) === i) days.push(d);
+            return `${month}/${days[0]}〜${month}/${days[days.length - 1]}`;
+          });
+          checks.push({ level: 'warn', text: `${labels.join('・')} の週の合計が表と合いません（黄色の行と、抜けている日がないか確認してください）` });
+          shiftRows.forEach(row => {
+            if (badWeeks.includes(shiftWeekIndex(year, month, row.day))) row.warn = true;
+          });
+        }
+      } else if (weeklyTotals.length > 0) {
+        checks.push({ level: 'warn', text: '週ごとの合計の欄を正しく読み取れなかったため、週ごとの照合はしていません' });
+      }
+
+      const uncertainDays = shiftRows.filter(row => row.uncertain).map(row => `${row.day}日`);
+      if (uncertainDays.length > 0) {
+        checks.push({ level: 'warn', text: `AIが読み取りに自信がない日: ${uncertainDays.join('・')}（黄色の行）` });
+      }
+      return checks;
+    }
+
+    function renderShiftResult() {
+      const resultEl = document.getElementById('shift-result');
+      if (!shiftAnalysis) {
+        resultEl.innerHTML = '';
+        return;
+      }
+
+      const checks = computeShiftChecks();
+      const registerCount = shiftRows.filter(isValidShiftRow).length;
+      const writesCalendar = !!(localStorage.getItem(GCAL_URL_STORAGE) && localStorage.getItem(GCAL_TOKEN_STORAGE));
+
+      const { year, month } = shiftTarget;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const dayOptions = selectedDay => Array.from({ length: daysInMonth }, (_, i) => i + 1)
+        .map(d => `<option value="${d}"${d === selectedDay ? ' selected' : ''}>${d}日(${WEEKDAYS[new Date(year, month - 1, d).getDay()]})</option>`)
+        .join('');
+
+      const rowsHtml = shiftRows.map((row, i) => `
+          <div class="shift-row${row.warn ? ' warn' : ''}${row.include ? '' : ' excluded'}">
+            <input type="checkbox" ${row.include ? 'checked' : ''} onchange="updateShiftRow(${i}, 'include', this.checked)" aria-label="この日を登録する">
+            <select class="form-control" onchange="updateShiftRow(${i}, 'day', Number(this.value))" aria-label="日付">${dayOptions(row.day)}</select>
+            <input type="time" class="form-control" value="${row.start}" onchange="updateShiftRow(${i}, 'start', this.value)" aria-label="出勤時刻">
+            <span class="shift-dash">–</span>
+            <input type="time" class="form-control" value="${row.end}" onchange="updateShiftRow(${i}, 'end', this.value)" aria-label="退勤時刻">
+          </div>
+        `).join('');
+
+      resultEl.innerHTML = `
+        <div class="shift-checks">${checks.map(c => `<div class="check-${c.level}">${c.level === 'ok' ? '✓' : c.level === 'warn' ? '⚠️' : '✕'} ${c.text}</div>`).join('')}</div>
+        <div>${rowsHtml || '<div class="empty-message">出勤日を読み取れませんでした</div>'}</div>
+        <div class="shift-actions">
+          <button type="button" class="btn-clear" onclick="addShiftRow()">＋ 日を追加</button>
+          <button type="button" class="btn-submit" id="shift-register-btn" onclick="registerShifts()" ${registerCount === 0 ? 'disabled' : ''}>
+            ${writesCalendar ? '📅 Googleカレンダーに' : 'アプリに'}登録（${registerCount}件）
+          </button>
+          ${writesCalendar ? '' : '<span class="field-note">※カレンダーにも書き込むには、設定で合言葉を入れてください</span>'}
+        </div>
+      `;
+    }
+
+    function updateShiftRow(index, field, value) {
+      shiftRows[index][field] = value;
+      if (field !== 'include') shiftRows[index].uncertain = false;   // 手で直した行は確認済みとみなす
+      renderShiftResult();
+    }
+
+    function addShiftRow() {
+      const last = shiftRows[shiftRows.length - 1];
+      shiftRows.push({
+        day: last ? Math.min(last.day + 1, new Date(shiftTarget.year, shiftTarget.month, 0).getDate()) : 1,
+        start: last ? last.start : '18:00',
+        end: last ? last.end : '22:00',
+        include: true,
+        uncertain: false,
+        warn: false
+      });
+      renderShiftResult();
+    }
+
+    function resetShiftImport() {
+      shiftImage = null;
+      shiftAnalysis = null;
+      shiftRows = [];
+      document.getElementById('shift-file').value = '';
+      document.getElementById('shift-preview').hidden = true;
+      renderShiftResult();
+    }
+
+    function generateTaskId() {
+      let id = Date.now();
+      while (tasks.some(t => t.id === id)) id++;
+      return id;
+    }
+
+    async function registerShifts() {
+      const title = localStorage.getItem(SHIFT_TITLE_STORAGE) || 'バイト';
+      const { year, month } = shiftTarget;
+      const shifts = shiftRows.filter(isValidShiftRow).map(row => {
+        const date = `${year}-${pad2(month)}-${pad2(row.day)}`;
+        const start = new Date(`${date}T${row.start}`);
+        const end = new Date(`${date}T${row.end}`);
+        if (end <= start) end.setDate(end.getDate() + 1);   // 日付をまたぐシフト
+        return { start, end };
+      });
+      if (shifts.length === 0) return;
+
+      const url = localStorage.getItem(GCAL_URL_STORAGE);
+      const token = localStorage.getItem(GCAL_TOKEN_STORAGE);
+      const registerBtn = document.getElementById('shift-register-btn');
+      registerBtn.disabled = true;
+      registerBtn.textContent = '登録中…';
+
+      try {
+        if (url && token) {
+          // Apps Script に書き込みを依頼（text/plain の単純なPOSTにすると他サイトからでも送れる）
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              token,
+              title,
+              shifts: shifts.map(s => ({ start: s.start.toISOString(), end: s.end.toISOString() }))
+            })
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json().catch(() => {
+            throw new Error('Apps Script が古い可能性があります。新バージョンでデプロイしてください');
+          });
+          if (data.error) throw new Error(data.error);
+
+          await syncGoogleCalendar();
+          showStatus(`📅 Googleカレンダーに${data.created}件登録しました${data.skipped ? `（登録済みの${data.skipped}件はスキップ）` : ''}`, 'info');
+        } else {
+          let added = 0;
+          shifts.forEach(s => {
+            const datetime = toLocalInputValue(s.start);
+            const endTime = formatHM(s.end);
+            if (tasks.some(t => t.type === 'job' && t.datetime === datetime && t.endTime === endTime)) return;
+            tasks.push(normalizeTask({
+              id: generateTaskId(),
+              name: title,
+              type: 'job',
+              detail: '',
+              datetime,
+              endTime,
+              estimatedMinutes: 60,
+              createdAt: new Date().toISOString()
+            }));
+            added++;
+          });
+          saveTasks();
+          renderTasks();
+          showStatus(`アプリに${added}件登録しました（合言葉が未設定のため、カレンダーには書き込んでいません）`, 'info');
+        }
+        resetShiftImport();
+        closeSheet();
+      } catch (err) {
+        console.error('シフト登録エラー:', err);
+        const message = err instanceof TypeError ? '通信エラー。Apps Script のURLとデプロイを確認してください' : err.message;
+        showStatus(`登録に失敗しました（${message}）`, 'error');
+        renderShiftResult();
+      }
+    }
+
     function escapeHtml(str) {
       return String(str).replace(/[&<>"']/g, function(m) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
@@ -1317,6 +1901,7 @@
 
     // 起動時・30分ごと・アプリに戻ってきたとき（前回から10分以上たっていれば）にカレンダーを同期
     loadGcalSettings();
+    loadShiftSettings();
     syncGoogleCalendar();
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);
     document.addEventListener('visibilitychange', () => {

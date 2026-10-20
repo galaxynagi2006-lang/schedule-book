@@ -112,6 +112,11 @@
     .completed-section summary::-webkit-details-marker { display: none; }
     .completed-section summary::before { content: "› "; }
     .completed-section[open] summary::before { content: "⌄ "; }
+    .job-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+    .job-row-date { font-weight: 700; white-space: nowrap; }
+    .job-row-name { flex: 1; min-width: 0; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-row .delete-btn { font-size: 15px; }
+
     .completed-row { opacity: 0.6; }
     .completed-row .task-name { text-decoration: line-through; }
     .completed-meta { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
@@ -242,6 +247,8 @@
           </div>
           <div class="job-name" id="today-job-name"></div>
           <div class="tomorrow-row"><span>明日のアルバイト</span><b id="tomorrow-job-status">なし</b></div>
+          <!-- 今後のアルバイト一覧（削除用・折りたたみ） -->
+          <div id="job-list-container"></div>
         </section>
 
         <!-- 未完了課題の件数・残り合計時間 -->
@@ -331,11 +338,27 @@
 
       <button type="submit" class="btn-submit" id="submit-btn">登録する</button>
 
-      <!-- Gemini APIキー設定エリア -->
+      <!-- AI設定エリア（Gemini / Claude の切り替え） -->
       <details class="api-settings" id="api-settings">
-        <summary>⚙️ Gemini APIキー設定（自動推測用）</summary>
+        <summary>⚙️ AI設定（所要時間の自動推測）</summary>
         <div class="form-group" style="margin-top: 8px;">
-          <input type="text" id="api-key-input" class="form-control" placeholder="APIキーを入力してください" onchange="saveApiKey()">
+          <label for="ai-provider">使用するAI</label>
+          <select id="ai-provider" class="form-control" onchange="changeProvider()">
+            <option value="gemini">Gemini（Google・無料枠あり）</option>
+            <option value="claude">Claude（Anthropic・従量課金）</option>
+          </select>
+        </div>
+        <div class="form-group" id="claude-model-group" style="display:none;">
+          <label for="claude-model">Claudeのモデル</label>
+          <select id="claude-model" class="form-control" onchange="saveClaudeModel()">
+            <option value="claude-opus-5-5">Claude Opus 5.5（高性能）</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5（バランス）</option>
+            <option value="claude-haiku-5-5">Claude Haiku 5.5（最安・高速）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="api-key-input" id="api-key-label">Gemini APIキー</label>
+          <input type="text" id="api-key-input" class="form-control" placeholder="APIキーを入力してください" autocomplete="off" onchange="saveApiKey()">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
             <span style="font-size: 0.7rem; color: var(--text-sub);">※入力するとブラウザに保存されます。</span>
             <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
@@ -349,7 +372,16 @@
 
   <script>
     const STORAGE_KEY = 'smart_schedule_items';
-    const API_KEY_STORAGE = 'smart_schedule_gemini_key';
+    const API_KEY_STORAGE = 'smart_schedule_gemini_key';     // Gemini（以前からのキー名をそのまま使う）
+    const CLAUDE_KEY_STORAGE = 'smart_schedule_claude_key';
+    const AI_PROVIDER_STORAGE = 'smart_schedule_ai_provider';
+    const CLAUDE_MODEL_STORAGE = 'smart_schedule_claude_model';
+
+    // AIごとの設定（APIキーはAIごとに別々に保存する）
+    const AI_PROVIDERS = {
+      gemini: { label: 'Gemini', keyStorage: API_KEY_STORAGE, placeholder: 'Gemini APIキー（AIza...）' },
+      claude: { label: 'Claude', keyStorage: CLAUDE_KEY_STORAGE, placeholder: 'Claude APIキー（sk-ant-...）' }
+    };
 
     const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
     const DEFAULT_JOB_HOURS = 4;          // 終了時刻が未登録のバイトは4時間とみなす
@@ -415,24 +447,48 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
     }
 
+    function currentProvider() {
+      return document.getElementById('ai-provider').value;
+    }
+
     function saveApiKey() {
       const key = document.getElementById('api-key-input').value.trim();
-      localStorage.setItem(API_KEY_STORAGE, key);
+      localStorage.setItem(AI_PROVIDERS[currentProvider()].keyStorage, key);
     }
 
     function clearApiKey() {
-      localStorage.removeItem(API_KEY_STORAGE);
+      const provider = AI_PROVIDERS[currentProvider()];
+      localStorage.removeItem(provider.keyStorage);
       document.getElementById('api-key-input').value = '';
-      showStatus("APIキーを消去しました。", "info");
+      showStatus(`${provider.label}のAPIキーを消去しました。`, "info");
+    }
+
+    // 選択中のAIに合わせて、モデル欄の表示・キー入力欄の中身を切り替える
+    function refreshAiSettingsView() {
+      const provider = AI_PROVIDERS[currentProvider()];
+      const keyInput = document.getElementById('api-key-input');
+      document.getElementById('claude-model-group').style.display = currentProvider() === 'claude' ? 'flex' : 'none';
+      document.getElementById('api-key-label').textContent = `${provider.label} APIキー`;
+      keyInput.placeholder = provider.placeholder;
+      keyInput.value = localStorage.getItem(provider.keyStorage) || '';
+    }
+
+    function changeProvider() {
+      localStorage.setItem(AI_PROVIDER_STORAGE, currentProvider());
+      refreshAiSettingsView();
+    }
+
+    function saveClaudeModel() {
+      localStorage.setItem(CLAUDE_MODEL_STORAGE, document.getElementById('claude-model').value);
     }
 
     function loadApiKey() {
-      const savedKey = localStorage.getItem(API_KEY_STORAGE);
-      if (savedKey) {
-        document.getElementById('api-key-input').value = savedKey;
-      }
+      document.getElementById('ai-provider').value = localStorage.getItem(AI_PROVIDER_STORAGE) || 'gemini';
+      const savedModel = localStorage.getItem(CLAUDE_MODEL_STORAGE);
+      if (savedModel) document.getElementById('claude-model').value = savedModel;
+      refreshAiSettingsView();
       // キー未設定のときだけ設定欄を開いておく
-      document.getElementById('api-settings').open = !savedKey;
+      document.getElementById('api-settings').open = !document.getElementById('api-key-input').value;
     }
 
     // 画面下にトースト表示（数秒で消える）
@@ -494,8 +550,7 @@
       }
     }
 
-    // ★Google AI Studio公式仕様に準拠した認証通信処理
-    // ★404・503エラー時に自動で最新モデル（2.5-flash / 2.0-flash / flash-latest）へ切り替える処理
+    // 所要時間の推定：手動指定 → 選択中のAI（Gemini / Claude）→ 失敗時は60分
     async function estimateTaskMinutes(name, detail, manualMinutes) {
       if (manualMinutes && !isNaN(parseInt(manualMinutes, 10))) {
         const val = parseInt(manualMinutes, 10);
@@ -503,20 +558,45 @@
         return val;
       }
 
-      let apiKey = document.getElementById('api-key-input').value.trim() || localStorage.getItem(API_KEY_STORAGE);
+      const providerId = currentProvider();
+      const provider = AI_PROVIDERS[providerId];
+      const apiKey = document.getElementById('api-key-input').value.trim() || localStorage.getItem(provider.keyStorage);
       if (!apiKey) {
-        showStatus("※APIキー未設定のためデフォルト値(60分)を適用しました", "info");
+        showStatus(`※${provider.label}のAPIキー未設定のためデフォルト値(60分)を適用しました`, "info");
         return 60;
       }
-
-      // 試行するモデルの優先順位リスト（404や503発生時に自動切り替え）
-      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
 
       const contentPrompt = detail ? `【課題名】${name}\n【詳細】${detail}` : `【課題名】${name}`;
       const prompt = `以下の課題内容から、大学生が完了するのに必要な推定作業時間（分単位の数値）を答えてください。説明文や単位は含めず、数字のみを出力してください。\n\n${contentPrompt}`;
 
+      const result = providerId === 'claude'
+        ? await estimateWithClaude(apiKey, prompt)
+        : await estimateWithGemini(apiKey, prompt);
+
+      if (result.minutes) {
+        showStatus(`🤖 AI解析成功 (${result.model}): 推定 ${result.minutes}分`, "info");
+        return result.minutes;
+      }
+
+      showStatus(`⚠️ ${provider.label}での解析に失敗したため、標準値(60分)で登録しました。${result.error ? `（${result.error}）` : ''}`, "error");
+      return 60;
+    }
+
+    // AIの返答から最初の数値（分）を取り出す
+    function parseMinutes(text) {
+      const match = (text || '').match(/\d+/);
+      const minutes = match ? parseInt(match[0], 10) : 0;
+      return minutes > 0 ? minutes : null;
+    }
+
+    // ★Gemini：404・503エラー時に自動で別モデル（2.5-flash / 2.0-flash / flash-latest）へ切り替える
+    async function estimateWithGemini(apiKey, prompt) {
+      // 試行するモデルの優先順位リスト（404や503発生時に自動切り替え）
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+      let lastError = '';
+
       for (const model of models) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
         try {
           const response = await fetch(url, {
@@ -531,25 +611,71 @@
           // 404(存在しない)・503(混雑)・429(制限) の場合はポップアップを出さず次のモデルを試す
           if (!response.ok) {
             console.warn(`モデル ${model} でエラー (${response.status})。次のモデルへ切り替えます...`);
+            lastError = `エラー ${response.status}`;
             continue;
           }
 
           const data = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-          const match = text.match(/\d+/);
-
-          if (match) {
-            const minutes = parseInt(match[0], 10);
-            showStatus(`🤖 AI解析成功 (${model}): 推定 ${minutes}分`, "info");
-            return minutes;
-          }
+          const minutes = parseMinutes(data.candidates?.[0]?.content?.parts?.[0]?.text);
+          if (minutes) return { minutes, model };
         } catch (err) {
           console.error(`通信エラー (${model}):`, err);
+          lastError = '通信エラー';
         }
       }
 
-      showStatus("⚠️️ AI解析に失敗したため、標準値(60分)で登録しました。", "error");
-      return 60;
+      return { error: lastError };
+    }
+
+    // ★Claude：Messages API をブラウザから直接呼び出す（キーは利用者自身のものをブラウザに保存）
+    async function estimateWithClaude(apiKey, prompt) {
+      const model = document.getElementById('claude-model').value;
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      };
+      const body = {
+        model,
+        max_tokens: 1024,
+        output_config: { effort: 'low' },   // 数値を答えるだけなので考える量は少なめに
+        messages: [{ role: 'user', content: prompt }]
+      };
+      // Opus / Sonnet は、安全判定で回答を断られたときにサーバー側で別モデルへ自動で切り替える
+      if (model !== 'claude-haiku-5-5') {
+        headers['anthropic-beta'] = 'server-side-fallback-2026-07-01';
+        body.fallbacks = 'default';
+      }
+
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          console.warn(`Claude APIエラー (${response.status})`, errorData);
+          const reason = { 401: 'APIキーが正しくありません', 429: '利用上限に達しました', 529: '混雑しています' }[response.status];
+          return { error: reason ? `${reason}・${response.status}` : `エラー ${response.status}` };
+        }
+
+        const data = await response.json();
+        if (data.stop_reason === 'refusal') {
+          console.warn('Claudeが回答を辞退しました', data.stop_details);
+          return { error: '回答が辞退されました' };
+        }
+
+        // 考えた過程（thinkingブロック）を除き、テキストの返答だけを読む
+        const text = (data.content || []).filter(block => block.type === 'text').map(block => block.text).join('');
+        const minutes = parseMinutes(text);
+        return minutes ? { minutes, model: data.model || model } : { error: '数値を読み取れませんでした' };
+      } catch (err) {
+        console.error('通信エラー (Claude):', err);
+        return { error: '通信エラー' };
+      }
     }
 
     // ---------- 共通ヘルパー ----------
@@ -671,15 +797,51 @@
         tomorrowJobs.length > 0 ? `あり ${tomorrowJobs.map(j => formatJobRange(j)).join(' / ')}` : 'なし';
     }
 
+    // 今後のアルバイト一覧（終了前のものだけ表示。終わったバイトは分析用に記録として残す）
+    let jobListOpen = false;
+
+    function renderJobList(now) {
+      const containerEl = document.getElementById('job-list-container');
+      const upcomingJobs = tasks
+        .filter(t => t.type === 'job' && getJobRange(t).end > now)
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+      if (upcomingJobs.length === 0) {
+        containerEl.innerHTML = '';
+        return;
+      }
+
+      const rowsHtml = upcomingJobs.map(job => {
+        const start = new Date(job.datetime);
+        return `
+          <div class="job-row">
+            <span class="job-row-date">${start.getMonth() + 1}/${start.getDate()}（${WEEKDAYS[start.getDay()]}） ${formatJobRange(job)}</span>
+            <span class="job-row-name">${escapeHtml(job.name)}</span>
+            <button class="delete-btn" onclick="deleteTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを削除">✕</button>
+          </div>
+        `;
+      }).join('');
+
+      containerEl.innerHTML = `
+        <details class="completed-section" id="job-list-details" ${jobListOpen ? 'open' : ''}>
+          <summary>今後のアルバイト ${upcomingJobs.length}件</summary>
+          <div>${rowsHtml}</div>
+        </details>
+      `;
+      document.getElementById('job-list-details').addEventListener('toggle', e => {
+        jobListOpen = e.target.open;
+      });
+    }
+
     // 未完了課題の件数・残り合計時間
     function updateSummary(activeTasks) {
       const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
       const hours = Math.floor(totalMinutes / 60);
       const mins = totalMinutes % 60;
       document.getElementById('summary-count').innerHTML = `${activeTasks.length}<small>件</small>`;
-      document.getElementById('summary-time').innerHTML = hours > 0
-        ? `${hours}<small>時間</small>${mins}<small>分</small>`
-        : `${mins}<small>分</small>`;
+      document.getElementById('summary-time').innerHTML = hours === 0
+        ? `${mins}<small>分</small>`
+        : `${hours}<small>時間</small>${mins > 0 ? `${mins}<small>分</small>` : ''}`;
     }
 
     function renderTaskList(activeTasks, now) {
@@ -920,6 +1082,7 @@
 
       document.getElementById('list-date').textContent = formatDateHeading(now);
       updateJobSection(now);
+      renderJobList(now);
       updateSummary(activeTasks);
       renderTaskList(activeTasks, now);
       renderCompletedSection(completedTasks);

@@ -365,6 +365,19 @@
           </div>
         </div>
       </details>
+
+      <!-- Googleカレンダー連携（Apps Script 経由でバイト予定を取り込む） -->
+      <details class="api-settings" id="gcal-settings">
+        <summary>📅 Googleカレンダー連携（バイト予定の取り込み）</summary>
+        <div class="form-group" style="margin-top: 8px;">
+          <label for="gcal-url">Apps Script のウェブアプリURL</label>
+          <input type="url" id="gcal-url" class="form-control" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" onchange="saveGcalUrl()">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px;">
+            <span id="gcal-status" style="font-size: 0.7rem; color: var(--text-sub);">未設定</span>
+            <button type="button" class="btn-clear" onclick="syncGoogleCalendar(true)">今すぐ同期</button>
+          </div>
+        </div>
+      </details>
     </form>
   </section>
 
@@ -376,6 +389,10 @@
     const CLAUDE_KEY_STORAGE = 'smart_schedule_claude_key';
     const AI_PROVIDER_STORAGE = 'smart_schedule_ai_provider';
     const CLAUDE_MODEL_STORAGE = 'smart_schedule_claude_model';
+    const GCAL_URL_STORAGE = 'smart_schedule_gcal_url';
+    const GCAL_HIDDEN_STORAGE = 'smart_schedule_gcal_hidden';      // アプリ側で削除した取り込み予定
+    const GCAL_LAST_SYNC_STORAGE = 'smart_schedule_gcal_last_sync';
+    const GCAL_SYNC_INTERVAL_MIN = 30;
 
     // AIごとの設定（APIキーはAIごとに別々に保存する）
     const AI_PROVIDERS = {
@@ -816,7 +833,7 @@
         return `
           <div class="job-row">
             <span class="job-row-date">${start.getMonth() + 1}/${start.getDate()}（${WEEKDAYS[start.getDay()]}） ${formatJobRange(job)}</span>
-            <span class="job-row-name">${escapeHtml(job.name)}</span>
+            <span class="job-row-name">${job.source === 'gcal' ? '📅 ' : ''}${escapeHtml(job.name)}</span>
             <button class="delete-btn" onclick="deleteTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを削除">✕</button>
           </div>
         `;
@@ -1143,9 +1160,150 @@
     }
 
     function deleteTask(id) {
+      const target = tasks.find(t => t.id === id);
+      // カレンダーから取り込んだ予定は、次の同期で復活しないように記録しておく
+      if (target && target.source === 'gcal') {
+        const hiddenIds = loadGcalHiddenIds();
+        hiddenIds.push(target.externalId);
+        localStorage.setItem(GCAL_HIDDEN_STORAGE, JSON.stringify(hiddenIds));
+        showStatus('📅 この予定は今後の同期でも取り込みません', 'info');
+      }
       tasks = tasks.filter(t => t.id !== id);
       saveTasks();
       renderTasks();
+    }
+
+    // ---------- Googleカレンダー連携（Apps Script のウェブアプリから取得） ----------
+    let gcalLastError = '';
+
+    function loadGcalHiddenIds() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(GCAL_HIDDEN_STORAGE) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function updateGcalStatus() {
+      const statusEl = document.getElementById('gcal-status');
+      const lastSync = localStorage.getItem(GCAL_LAST_SYNC_STORAGE);
+      if (!localStorage.getItem(GCAL_URL_STORAGE)) {
+        statusEl.textContent = '未設定';
+      } else if (gcalLastError) {
+        statusEl.textContent = `⚠️ ${gcalLastError}`;
+      } else {
+        statusEl.textContent = lastSync ? `前回の同期: ${formatDateTime(new Date(lastSync))}` : '未同期';
+      }
+    }
+
+    function saveGcalUrl() {
+      const url = document.getElementById('gcal-url').value.trim();
+      if (!url) {
+        localStorage.removeItem(GCAL_URL_STORAGE);
+        updateGcalStatus();
+        return;
+      }
+      if (!url.startsWith('https://script.google.com/')) {
+        showStatus('📅 https://script.google.com/ で始まるURLを入力してください', 'error');
+        return;
+      }
+      localStorage.setItem(GCAL_URL_STORAGE, url);
+      syncGoogleCalendar(true);
+    }
+
+    function eventToJobFields(event) {
+      return {
+        name: event.title,
+        datetime: toLocalInputValue(new Date(event.start)),
+        endTime: formatHM(new Date(event.end))
+      };
+    }
+
+    // 取得した予定をアルバイトとして追加・更新・削除する（手入力のバイトには触れない）
+    function applyCalendarEvents(data) {
+      const hiddenIds = new Set(loadGcalHiddenIds());
+      const rangeFrom = new Date(data.from).getTime();
+      const rangeTo = new Date(data.to).getTime();
+      const incoming = new Map(data.events.filter(e => !hiddenIds.has(e.id)).map(e => [e.id, e]));
+      let added = 0, updated = 0, removed = 0;
+
+      tasks = tasks.filter(t => {
+        if (t.source !== 'gcal') return true;
+        const event = incoming.get(t.externalId);
+        if (event) {
+          const fields = eventToJobFields(event);
+          if (fields.name !== t.name || fields.datetime !== t.datetime || fields.endTime !== t.endTime) {
+            Object.assign(t, fields);
+            updated++;
+          }
+          incoming.delete(t.externalId);
+          return true;
+        }
+        // 取得範囲内なのにカレンダーから消えた予定は削除（範囲外の過去分は記録として残す）
+        const start = new Date(t.datetime).getTime();
+        if (start >= rangeFrom && start <= rangeTo) {
+          removed++;
+          return false;
+        }
+        return true;
+      });
+
+      let nextId = Date.now();
+      incoming.forEach(event => {
+        while (tasks.some(t => t.id === nextId)) nextId++;
+        tasks.push(normalizeTask({
+          id: nextId,
+          type: 'job',
+          detail: '',
+          estimatedMinutes: 60,
+          source: 'gcal',
+          externalId: event.id,
+          createdAt: new Date().toISOString(),
+          ...eventToJobFields(event)
+        }));
+        added++;
+      });
+
+      if (added + updated + removed > 0) {
+        saveTasks();
+        renderTasks();
+      }
+      return { added, updated, removed };
+    }
+
+    async function syncGoogleCalendar(manual = false) {
+      const url = localStorage.getItem(GCAL_URL_STORAGE);
+      if (!url) {
+        if (manual) showStatus('📅 先に Apps Script のURLを入力してください', 'error');
+        return;
+      }
+
+      try {
+        // 追加ヘッダーを付けない単純なGETにする（Apps Script はこの形でしか他サイトから読めない）
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        if (!Array.isArray(data.events)) throw new Error('予定の形式が正しくありません');
+
+        const result = applyCalendarEvents(data);
+        gcalLastError = '';
+        localStorage.setItem(GCAL_LAST_SYNC_STORAGE, new Date().toISOString());
+        if (manual || result.added + result.updated + result.removed > 0) {
+          showStatus(`📅 同期しました（追加 ${result.added}件・更新 ${result.updated}件・削除 ${result.removed}件）`, 'info');
+        }
+      } catch (err) {
+        console.error('Googleカレンダー同期エラー:', err);
+        gcalLastError = '同期に失敗しました（URLと公開設定「全員」を確認）';
+        if (manual) showStatus(`📅 ${gcalLastError}`, 'error');
+      }
+      updateGcalStatus();
+    }
+
+    function loadGcalSettings() {
+      document.getElementById('gcal-url').value = localStorage.getItem(GCAL_URL_STORAGE) || '';
+      updateGcalStatus();
     }
 
     function escapeHtml(str) {
@@ -1156,6 +1314,17 @@
 
     renderTasks();
     setInterval(renderTasks, 60000);
+
+    // 起動時・30分ごと・アプリに戻ってきたとき（前回から10分以上たっていれば）にカレンダーを同期
+    loadGcalSettings();
+    syncGoogleCalendar();
+    setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);
+    document.addEventListener('visibilitychange', () => {
+      const lastSync = new Date(localStorage.getItem(GCAL_LAST_SYNC_STORAGE) || 0).getTime();
+      if (document.visibilityState === 'visible' && Date.now() - lastSync > 10 * 60000) {
+        syncGoogleCalendar();
+      }
+    });
   </script>
 </body>
 </html>

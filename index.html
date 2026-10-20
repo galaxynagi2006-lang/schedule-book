@@ -2,438 +2,361 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>スマートスケジュール帳</title>
   <style>
     :root {
       --primary-color: #2563eb;
-      --bg-color: #f8fafc;
-      --card-bg: #ffffff;
-      --text-main: #0f172a;
-      --text-sub: #64748b;
-      --alert-red: #ef4444;
-      --alert-yellow: #f59e0b;
-      --alert-green: #10b981;
+      --accent-color: #4338ca;
+      --bg-color: #ffffff;
+      --bg-sub: #f6f7fb;
+      --text-main: #111827;
+      --text-sub: #6b7280;
+      --line: #e5e7eb;
+      --alert-red: #dc2626;
+      --alert-yellow: #d97706;
+      --alert-green: #059669;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Segoe UI", Roboto, sans-serif;
     }
 
     body {
       background-color: var(--bg-color);
       color: var(--text-main);
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 12px;
+      font-variant-numeric: tabular-nums;
     }
 
     .app-container {
-      width: 100%;
       max-width: 414px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      margin: 0 auto;
+      padding-bottom: calc(160px + env(safe-area-inset-bottom)); /* タブバーと＋ボタンに隠れないように */
     }
 
-    header {
-      text-align: center;
-      padding: 8px 0;
-    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
 
-    header h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--text-main);
-    }
+    /* ========== タブ1：リスト（案A） ========== */
+    .list-wrap { padding: calc(24px + env(safe-area-inset-top)) 24px 0; }
 
-    .card {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-      border: 1px solid #e2e8f0;
-    }
+    .date-label { font-size: 13px; color: var(--text-sub); letter-spacing: 0.04em; }
+    .page-title { font-size: 22px; font-weight: 700; margin-top: 2px; }
 
-    /* ① 今日のバイト（特大表示） */
-    .card-today-job {
-      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-      border: 2px solid #bfdbfe;
-      text-align: center;
-      padding: 20px 16px;
-    }
+    .label { font-size: 12px; color: var(--text-sub); font-weight: 600; letter-spacing: 0.08em; }
 
-    .job-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--text-sub);
-      margin-bottom: 6px;
-    }
+    .job-section { margin-top: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+    .job-main { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; }
+    .job-status-large { font-size: 44px; font-weight: 800; color: var(--primary-color); line-height: 1; }
+    .job-status-large.none { color: #9ca3af; }
+    .job-time { font-size: 22px; font-weight: 700; }
+    .job-name { font-size: 13px; color: var(--text-sub); margin-top: 6px; }
+    .tomorrow-row { display: flex; justify-content: space-between; margin-top: 14px; font-size: 14px; color: var(--text-sub); }
+    .tomorrow-row b { color: var(--text-main); }
 
-    .job-status-large {
-      font-size: 2.25rem;
-      font-weight: 800;
-      color: var(--primary-color);
-      margin: 4px 0;
-    }
+    .summary { display: flex; gap: 28px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+    .stat-num { font-size: 26px; font-weight: 800; }
+    .stat-num small { font-size: 13px; font-weight: 600; margin-left: 2px; }
+    .stat-label { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
 
-    .job-time {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #1e40af;
-    }
+    .list-head { margin-top: 22px; margin-bottom: 2px; }
 
-    /* ② 明日のバイト（小表示） */
-    .card-tomorrow-job {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background-color: #f1f5f9;
-    }
+    .task-row { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid #f3f4f6; }
+    .task-body { flex: 1; min-width: 0; }
+    .task-name { font-size: 15px; font-weight: 700; word-break: break-all; }
+    .task-detail { font-size: 12px; color: var(--text-sub); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+    .task-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .count-num { font-size: 17px; font-weight: 800; white-space: nowrap; }
+    .count-unit { font-size: 11px; color: var(--text-sub); }
+    .c-red { color: var(--alert-red); }
+    .c-yellow { color: var(--alert-yellow); }
+    .c-green { color: var(--alert-green); }
+    .bg-red { background: var(--alert-red); }
+    .bg-yellow { background: var(--alert-yellow); }
+    .bg-green { background: var(--alert-green); }
 
-    .job-status-small {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text-main);
+    .task-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border: 2px solid #d1d5db;
+      border-radius: 50%;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: grid;
+      place-content: center;
     }
-
-    /* ③④ 課題リスト & カウントダウン */
-    .section-title {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .task-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .task-item {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      border-left: 5px solid var(--alert-green);
-      transition: all 0.3s ease;
-    }
-
-    .task-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    .task-name {
-      font-size: 1rem;
-      font-weight: 700;
-    }
-
-    .task-detail-preview {
-      font-size: 0.8rem;
-      color: var(--text-sub);
-      margin-top: 2px;
-    }
-
-    .task-meta {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-top: 4px;
-    }
-
-    .task-deadline {
-      font-size: 0.8rem;
-      color: var(--text-sub);
-    }
-
-    .ai-estimate-tag {
-      font-size: 0.75rem;
-      background-color: #e0e7ff;
-      color: #3730a3;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-
-    .countdown-badge {
-      align-self: flex-end;
-      font-size: 0.85rem;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 20px;
-      background-color: #e2e8f0;
-      color: #334155;
-    }
-
-    .urgent-red {
-      background-color: #fee2e2;
-      color: #991b1b;
-    }
-
-    .urgent-yellow {
-      background-color: #fef3c7;
-      color: #92400e;
-    }
-
-    .urgent-green {
-      background-color: #d1fae5;
-      color: #065f46;
-    }
+    .task-checkbox:checked { background: var(--alert-green); border-color: var(--alert-green); }
+    .task-checkbox:checked::after { content: "✓"; color: #fff; font-size: 13px; font-weight: 800; }
 
     .delete-btn {
       background: none;
       border: none;
-      color: #94a3b8;
-      font-size: 1.1rem;
+      color: #cbd5e1;
+      font-size: 14px;
       cursor: pointer;
-      padding: 0 4px;
+      padding: 2px 0 2px 6px;
+    }
+    .delete-btn:hover { color: var(--alert-red); }
+
+    .empty-message { text-align: center; color: var(--text-sub); font-size: 14px; padding: 28px 0; }
+
+    .completed-section { margin-top: 14px; }
+    .completed-section summary { font-size: 13px; color: #9ca3af; cursor: pointer; font-weight: 600; list-style: none; }
+    .completed-section summary::-webkit-details-marker { display: none; }
+    .completed-section summary::before { content: "› "; }
+    .completed-section[open] summary::before { content: "⌄ "; }
+    .completed-row { opacity: 0.6; }
+    .completed-row .task-name { text-decoration: line-through; }
+    .completed-meta { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
+
+    /* ========== タブ2：タイムライン（案C） ========== */
+    .tl-head { background: #fff; padding: calc(24px + env(safe-area-inset-top)) 20px 14px; border-bottom: 1px solid var(--line); }
+    .tl-date { font-size: 20px; font-weight: 800; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .pill { font-size: 12px; font-weight: 700; padding: 7px 10px; border-radius: 999px; white-space: nowrap; }
+    .pill-job { background: var(--primary-color); color: #fff; }
+    .pill-none { background: #f1f5f9; color: #64748b; }
+    .pill-sum { background: #eef2ff; color: var(--accent-color); }
+
+    #tab-timeline { background: var(--bg-sub); min-height: 100vh; }
+    .tl-body { padding: 16px 20px 0; }
+    .tl-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; }
+    .tl-title span:last-child { color: var(--accent-color); }
+
+    .tl-grid { position: relative; }
+    .tl-hour { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9ca3af; transform: translateY(-50%); }
+    .tl-hour::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
+    .tl-hour span { width: 38px; }
+
+    .tl-block { position: absolute; left: 46px; right: 0; border-radius: 12px; padding: 7px 12px; font-size: 11px; overflow: hidden; }
+    .tl-block b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tl-block.compact { padding: 2px 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .tl-block.compact b { display: inline; font-size: 12px; }
+    .b-job { background: var(--primary-color); color: #fff; }
+    .b-red { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+    .b-yellow { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+    .b-green { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
+    .b-move { background: repeating-linear-gradient(135deg, #f8fafc, #f8fafc 6px, #eef2f7 6px, #eef2f7 12px); color: #94a3b8; border: 1px dashed #cbd5e1; }
+
+    .tl-now { position: absolute; left: 40px; right: 0; border-top: 2px solid #ef4444; z-index: 2; }
+    .tl-now::before { content: ""; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
+    .tl-now span { position: absolute; right: 0; top: -17px; font-size: 10px; font-weight: 700; color: #ef4444; background: var(--bg-sub); padding-left: 4px; }
+    .tl-deadline { position: absolute; left: 46px; right: 0; border-top: 2px dotted #ef4444; z-index: 1; }
+    .tl-deadline span { position: absolute; right: 0; top: 2px; font-size: 10px; font-weight: 700; color: #ef4444; }
+
+    .tl-card { margin: 18px 20px 0; background: #fff; border-radius: 14px; padding: 12px 14px; border: 1px solid var(--line); }
+    .tl-card-title { font-size: 12px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
+    .tl-card-title.warn { color: var(--alert-red); }
+    .tl-card-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 4px 0; }
+    .tl-card-row span:last-child { font-weight: 700; white-space: nowrap; }
+
+    /* ========== 下部タブバー・追加ボタン ========== */
+    .tab-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+      display: flex; justify-content: center;
+      background: rgba(255, 255, 255, 0.96);
+      border-top: 1px solid var(--line);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .tab-bar-inner { display: flex; width: 100%; max-width: 414px; }
+    .tab-btn {
+      flex: 1; border: none; background: none; cursor: pointer;
+      padding: 10px 0 12px; font-size: 11px; font-weight: 700; color: #9ca3af;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .tab-btn .tab-icon { font-size: 20px; filter: grayscale(1); opacity: 0.6; }
+    .tab-btn.active { color: var(--text-main); }
+    .tab-btn.active .tab-icon { filter: none; opacity: 1; }
+
+    .fab {
+      position: fixed; z-index: 11;
+      right: max(24px, calc(50vw - 207px + 24px));
+      bottom: calc(80px + env(safe-area-inset-bottom));
+      width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--text-main); color: #fff; font-size: 30px; font-weight: 300; line-height: 1;
+      box-shadow: 0 8px 20px rgba(17, 24, 39, 0.25);
     }
 
-    .delete-btn:hover {
-      color: var(--alert-red);
+    /* ========== 追加フォーム（ボトムシート） ========== */
+    .sheet-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .sheet-overlay.open { opacity: 1; pointer-events: auto; }
+    .sheet {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+      max-width: 414px; margin: 0 auto; max-height: 88vh; overflow-y: auto;
+      background: #fff; border-radius: 20px 20px 0 0;
+      padding: 18px 20px calc(24px + env(safe-area-inset-bottom));
+      transform: translateY(100%); transition: transform 0.25s ease;
     }
+    .sheet.open { transform: translateY(0); }
+    .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .sheet-head span { font-size: 17px; font-weight: 800; }
+    .sheet-close { border: none; background: #f1f5f9; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; color: #475569; }
 
-    .empty-message {
-      text-align: center;
-      color: var(--text-sub);
-      font-size: 0.9rem;
-      padding: 20px 0;
-    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; background: #fff; }
+    textarea.form-control { resize: vertical; }
+    .btn-submit { width: 100%; background: var(--text-main); color: #fff; border: none; padding: 13px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .btn-submit:disabled { opacity: 0.6; }
 
-    /* ⑤ 追加フォーム & 設定 */
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
+    .api-settings { margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
+    .api-settings summary { font-size: 12px; color: var(--text-sub); cursor: pointer; font-weight: 600; }
+    .btn-clear { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
-    .form-group label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-sub);
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 0.95rem;
-    }
-
-    textarea.form-control {
-      resize: vertical;
-    }
-
-    .btn-submit {
-      width: 100%;
-      background-color: var(--primary-color);
-      color: #ffffff;
-      border: none;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .api-settings {
-      margin-top: 8px;
-      border-top: 1px dashed #cbd5e1;
-      padding-top: 12px;
-    }
-
-    .api-settings summary {
-      font-size: 0.8rem;
-      color: var(--text-sub);
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .btn-clear {
-      background-color: #cbd5e1;
-      color: #334155;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      cursor: pointer;
-      margin-top: 6px;
-    }
-
+    /* 通知トースト */
     .status-msg {
-      font-size: 0.75rem;
-      margin-top: 4px;
-      padding: 6px 10px;
-      border-radius: 6px;
+      position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
+      bottom: calc(150px + env(safe-area-inset-bottom));
+      width: calc(100% - 48px); max-width: 366px;
+      font-size: 13px; font-weight: 600; padding: 10px 14px; border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
       display: none;
     }
-    .status-msg.error {
-      background-color: #fee2e2;
-      color: #991b1b;
-      display: block;
-    }
-    .status-msg.info {
-      background-color: #e0f2fe;
-      color: #0369a1;
-      display: block;
-    }
-    /* 残り合計時間バッジ */
-    .badge-summary {
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
-      color: white;
-      padding: 10px 16px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
-    }
-
-    /* 完了済みセクション */
-    .completed-section {
-      margin-top: 12px;
-      background-color: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 10px 14px;
-    }
-
-    .completed-section summary {
-      font-weight: 600;
-      color: #64748b;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-
-    .completed-card {
-      opacity: 0.65;
-      text-decoration: line-through;
-      background-color: #f1f5f9 !important;
-    }
-
-    .task-checkbox {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      cursor: pointer;
-      accent-color: var(--primary-color);
-      margin-top: 2px;
-    }
-
-    .task-main {
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-    }
-
-    .completed-meta {
-      font-size: 0.75rem;
-      color: var(--text-sub);
-      margin-top: 4px;
-    }
+    .status-msg.info { background: #e0f2fe; color: #0369a1; display: block; }
+    .status-msg.error { background: #fee2e2; color: #991b1b; display: block; }
   </style>
 </head>
 <body>
 
   <div class="app-container">
-    <header>
-      <h1>My Schedule</h1>
-    </header>
 
-    <!-- ① 今日のバイト（特大表示） -->
-    <div class="card card-today-job" id="today-job-card">
-      <div class="job-title">本日のアルバイト</div>
-      <div class="job-status-large" id="today-job-status">なし</div>
-      <div class="job-time" id="today-job-time" style="display:none;"></div>
-    </div>
+    <!-- ===== タブ1：リスト ===== -->
+    <main class="tab-panel active" id="tab-list">
+      <div class="list-wrap">
+        <div class="date-label" id="list-date"></div>
+        <div class="page-title">今日の予定</div>
 
-    <!-- ② 明日のバイト（小表示） -->
-    <div class="card card-tomorrow-job">
-      <span class="job-title" style="margin:0;">明日のアルバイト</span>
-      <span class="job-status-small" id="tomorrow-job-status">なし</span>
-    </div>
-
-    <!-- 未完了課題の残り合計時間バッジ -->
-    <div class="badge-summary" id="summary-badge" style="display:none;"></div>
-
-    <!-- ③④ 課題リスト & カウントダウン -->
-    <section>
-      <div class="section-title">
-        <span>直近の課題</span>
-        <span style="font-size: 0.75rem; color: var(--text-sub);">優先度順</span>
-      </div>
-      <div class="task-list" id="task-list">
-        <!-- JavaScriptで動的に生成されます -->
-      </div>
-      <!-- 完了済み課題（折りたたみ） -->
-      <div id="completed-container"></div>
-    </section>
-
-    <!-- ⑤ 予定追加フォーム -->
-    <section class="card">
-      <div class="section-title">新しい予定・課題の追加</div>
-      <form id="add-schedule-form">
-        <div class="form-group">
-          <label for="task-name">タイトル・件名</label>
-          <input type="text" id="task-name" class="form-control" placeholder="例: 知能メディアレポート / アルバイト" required>
-        </div>
-
-        <div class="form-group">
-          <label for="task-type">種別</label>
-          <select id="task-type" class="form-control" onchange="toggleJobTimeInput()">
-            <option value="task">課題</option>
-            <option value="job">アルバイト</option>
-          </select>
-        </div>
-
-        <div class="form-group" id="detail-group">
-          <label for="task-detail">課題の詳細・指示内容</label>
-          <textarea id="task-detail" class="form-control" rows="2" placeholder="例: manabaの指示文（2000字程度、参考文献要）"></textarea>
-        </div>
-
-        <div class="form-group" id="manual-est-group">
-          <label for="task-manual-minutes">所要時間（分） <span style="font-size:0.75rem; font-weight:normal; color:var(--text-sub);">※空欄時はAIが自動推測</span></label>
-          <input type="number" id="task-manual-minutes" class="form-control" placeholder="例: 90（手動指定する場合）" min="5" step="5">
-        </div>
-
-        <div class="form-group">
-          <label for="task-datetime">日時・締め切り</label>
-          <input type="datetime-local" id="task-datetime" class="form-control" required>
-        </div>
-
-        <button type="submit" class="btn-submit" id="submit-btn">登録する</button>
-
-        <div id="status-display" class="status-msg"></div>
-
-        <!-- Gemini APIキー設定エリア -->
-        <details class="api-settings" open>
-          <summary>⚙️ Gemini APIキー設定（自動推測用）</summary>
-          <div class="form-group" style="margin-top: 8px;">
-            <input type="text" id="api-key-input" class="form-control" placeholder="APIキーを入力してください" onchange="saveApiKey()">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-              <span style="font-size: 0.7rem; color: var(--text-sub);">※入力するとブラウザに保存されます。</span>
-              <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
-            </div>
+        <!-- ① 今日のバイト（特大表示）／② 明日のバイト -->
+        <section class="job-section">
+          <div class="label">本日のアルバイト</div>
+          <div class="job-main">
+            <span class="job-status-large" id="today-job-status">なし</span>
+            <span class="job-time" id="today-job-time"></span>
           </div>
-        </details>
-      </form>
-    </section>
+          <div class="job-name" id="today-job-name"></div>
+          <div class="tomorrow-row"><span>明日のアルバイト</span><b id="tomorrow-job-status">なし</b></div>
+        </section>
+
+        <!-- 未完了課題の件数・残り合計時間 -->
+        <section class="summary">
+          <div><div class="stat-num" id="summary-count">0<small>件</small></div><div class="stat-label">未完了の課題</div></div>
+          <div><div class="stat-num" id="summary-time">0<small>分</small></div><div class="stat-label">残り作業の合計</div></div>
+        </section>
+
+        <!-- ③④ 課題リスト & カウントダウン -->
+        <div class="list-head label">課題（優先度順）</div>
+        <div id="task-list"></div>
+
+        <!-- 完了済み課題（折りたたみ） -->
+        <div id="completed-container"></div>
+      </div>
+    </main>
+
+    <!-- ===== タブ2：タイムライン ===== -->
+    <main class="tab-panel" id="tab-timeline">
+      <div class="tl-head">
+        <div class="tl-date" id="tl-date"></div>
+        <div class="pills" id="tl-pills"></div>
+      </div>
+      <div class="tl-body">
+        <div class="tl-title"><span>今日のタイムライン</span><span>⏱ 自動配置</span></div>
+        <div class="tl-grid" id="tl-grid"></div>
+      </div>
+      <div id="tl-extra"></div>
+    </main>
   </div>
+
+  <!-- 追加ボタン -->
+  <button class="fab" type="button" onclick="openSheet()" aria-label="予定・課題を追加">＋</button>
+
+  <!-- 下部タブバー -->
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" type="button" data-tab="tab-list" onclick="switchTab('tab-list')">
+        <span class="tab-icon">📋</span>リスト
+      </button>
+      <button class="tab-btn" type="button" data-tab="tab-timeline" onclick="switchTab('tab-timeline')">
+        <span class="tab-icon">🕒</span>タイムライン
+      </button>
+    </div>
+  </nav>
+
+  <!-- ⑤ 予定追加フォーム（ボトムシート） -->
+  <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+  <section class="sheet" id="add-sheet" aria-label="予定・課題の追加">
+    <div class="sheet-head">
+      <span>予定・課題を追加</span>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
+    </div>
+    <form id="add-schedule-form">
+      <div class="form-group">
+        <label for="task-name">タイトル・件名</label>
+        <input type="text" id="task-name" class="form-control" placeholder="例: 知能メディアレポート / カフェ" required>
+      </div>
+
+      <div class="form-group">
+        <label for="task-type">種別</label>
+        <select id="task-type" class="form-control" onchange="toggleJobTimeInput()">
+          <option value="task">課題</option>
+          <option value="job">アルバイト</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="detail-group">
+        <label for="task-detail">課題の詳細・指示内容</label>
+        <textarea id="task-detail" class="form-control" rows="2" placeholder="例: manabaの指示文（2000字程度、参考文献要）"></textarea>
+      </div>
+
+      <div class="form-group" id="manual-est-group">
+        <label for="task-manual-minutes">所要時間（分） <span style="font-size:0.75rem; font-weight:normal;">※空欄時はAIが自動推測</span></label>
+        <input type="number" id="task-manual-minutes" class="form-control" placeholder="例: 90（手動指定する場合）" min="5" step="5">
+      </div>
+
+      <div class="form-group">
+        <label for="task-datetime" id="datetime-label">日時・締め切り</label>
+        <input type="datetime-local" id="task-datetime" class="form-control" required>
+      </div>
+
+      <div class="form-group" id="end-time-group" style="display:none;">
+        <label for="job-end-time">終了時刻</label>
+        <input type="time" id="job-end-time" class="form-control" value="22:00">
+      </div>
+
+      <button type="submit" class="btn-submit" id="submit-btn">登録する</button>
+
+      <!-- Gemini APIキー設定エリア -->
+      <details class="api-settings" id="api-settings">
+        <summary>⚙️ Gemini APIキー設定（自動推測用）</summary>
+        <div class="form-group" style="margin-top: 8px;">
+          <input type="text" id="api-key-input" class="form-control" placeholder="APIキーを入力してください" onchange="saveApiKey()">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+            <span style="font-size: 0.7rem; color: var(--text-sub);">※入力するとブラウザに保存されます。</span>
+            <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
+          </div>
+        </div>
+      </details>
+    </form>
+  </section>
+
+  <div id="status-display" class="status-msg"></div>
 
   <script>
     const STORAGE_KEY = 'smart_schedule_items';
     const API_KEY_STORAGE = 'smart_schedule_gemini_key';
+
+    const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+    const DEFAULT_JOB_HOURS = 4;          // 終了時刻が未登録のバイトは4時間とみなす
+    const MOVE_BUFFER_MIN = 30;           // バイト前後の移動・休憩時間
+    const TASK_GAP_MIN = 10;              // 課題と課題の間の休憩
+    const MIN_CHUNK_MIN = 15;             // これより短いスキマには課題を入れない
+    const HOUR_PX = 50;                   // タイムライン1時間あたりの高さ
 
     // Date を datetime-local 形式（ローカル時刻の "YYYY-MM-DDTHH:mm"）に変換
     // ※toISOString() はUTCになるため、日本時間では9時間ずれてしまう
@@ -508,27 +431,54 @@
       if (savedKey) {
         document.getElementById('api-key-input').value = savedKey;
       }
+      // キー未設定のときだけ設定欄を開いておく
+      document.getElementById('api-settings').open = !savedKey;
     }
 
+    // 画面下にトースト表示（数秒で消える）
+    let statusTimer = null;
     function showStatus(msg, type = "info") {
       const statusEl = document.getElementById('status-display');
       statusEl.textContent = msg;
       statusEl.className = `status-msg ${type}`;
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => { statusEl.className = 'status-msg'; }, 4000);
     }
 
     let tasks = loadTasks();
     loadApiKey();
 
+    // ---------- タブ・シート ----------
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      window.scrollTo(0, 0);
+    }
+
+    function openSheet() {
+      document.getElementById('sheet-overlay').classList.add('open');
+      document.getElementById('add-sheet').classList.add('open');
+    }
+
+    function closeSheet() {
+      document.getElementById('sheet-overlay').classList.remove('open');
+      document.getElementById('add-sheet').classList.remove('open');
+    }
+
     function toggleJobTimeInput() {
       const type = document.getElementById('task-type').value;
       const detailGroup = document.getElementById('detail-group');
       const manualEstGroup = document.getElementById('manual-est-group');
+      const endTimeGroup = document.getElementById('end-time-group');
+      const datetimeLabel = document.getElementById('datetime-label');
       const datetimeInput = document.getElementById('task-datetime');
 
       if (type === 'job') {
         detailGroup.style.display = 'none';
         manualEstGroup.style.display = 'none';
-        
+        endTimeGroup.style.display = 'flex';
+        datetimeLabel.textContent = '開始日時';
+
         let baseDate = datetimeInput.value ? new Date(datetimeInput.value) : new Date();
         if (isNaN(baseDate.getTime())) baseDate = new Date();
 
@@ -539,6 +489,8 @@
       } else {
         detailGroup.style.display = 'flex';
         manualEstGroup.style.display = 'flex';
+        endTimeGroup.style.display = 'none';
+        datetimeLabel.textContent = '日時・締め切り';
       }
     }
 
@@ -559,7 +511,7 @@
 
       // 試行するモデルの優先順位リスト（404や503発生時に自動切り替え）
       const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
-      
+
       const contentPrompt = detail ? `【課題名】${name}\n【詳細】${detail}` : `【課題名】${name}`;
       const prompt = `以下の課題内容から、大学生が完了するのに必要な推定作業時間（分単位の数値）を答えてください。説明文や単位は含めず、数字のみを出力してください。\n\n${contentPrompt}`;
 
@@ -569,7 +521,7 @@
         try {
           const response = await fetch(url, {
             method: 'POST',
-            headers: { 
+            headers: {
               'Content-Type': 'application/json',
               'x-goog-api-key': apiKey
             },
@@ -600,41 +552,30 @@
       return 60;
     }
 
-    function updateJobCards() {
-      const todayStr = new Date().toDateString();
-      const tomorrow = new Date();
+    // ---------- 共通ヘルパー ----------
+    function pad2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function formatHM(date) {
+      return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+    }
+
+    function formatDateTime(date) {
+      return `${date.getMonth() + 1}月${date.getDate()}日 ${formatHM(date)}`;
+    }
+
+    function formatDateHeading(date) {
+      return `${date.getMonth() + 1}月${date.getDate()}日（${WEEKDAYS[date.getDay()]}）`;
+    }
+
+    // 締切の表示（今日 / 明日 / 月/日）
+    function formatDeadline(date, now) {
+      const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toDateString();
-
-      const todayJobs = tasks.filter(t => t.type === 'job' && new Date(t.datetime).toDateString() === todayStr);
-      const tomorrowJobs = tasks.filter(t => t.type === 'job' && new Date(t.datetime).toDateString() === tomorrowStr);
-
-      const todayStatusEl = document.getElementById('today-job-status');
-      const todayTimeEl = document.getElementById('today-job-time');
-      const tomorrowStatusEl = document.getElementById('tomorrow-job-status');
-
-      if (todayJobs.length > 0) {
-        todayStatusEl.textContent = "あり";
-        todayStatusEl.style.color = "var(--primary-color)";
-        const times = todayJobs.map(j => {
-          const d = new Date(j.datetime);
-          return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-        }).join(', ');
-        todayTimeEl.textContent = `${times} 〜 （${todayJobs[0].name}）`;
-        todayTimeEl.style.display = "block";
-      } else {
-        todayStatusEl.textContent = "なし";
-        todayStatusEl.style.color = "var(--text-sub)";
-        todayTimeEl.style.display = "none";
-      }
-
-      if (tomorrowJobs.length > 0) {
-        tomorrowStatusEl.textContent = "あり";
-        tomorrowStatusEl.style.color = "var(--primary-color)";
-      } else {
-        tomorrowStatusEl.textContent = "なし";
-        tomorrowStatusEl.style.color = "var(--text-sub)";
-      }
+      if (date.toDateString() === now.toDateString()) return `今日 ${formatHM(date)}`;
+      if (date.toDateString() === tomorrow.toDateString()) return `明日 ${formatHM(date)}`;
+      return `${date.getMonth() + 1}/${date.getDate()} ${formatHM(date)}`;
     }
 
     // 分数を「〇時間〇分」に整形
@@ -653,22 +594,123 @@
       return formatMinutes(m);
     }
 
-    function formatDateTime(date) {
-      const hours = String(date.getHours()).padStart(2, '0');
-      const mins = String(date.getMinutes()).padStart(2, '0');
-      return `${date.getMonth() + 1}月${date.getDate()}日 ${hours}:${mins}`;
+    // 締切までの残り時間（カウントダウン）
+    function formatCountdown(diffMs) {
+      if (diffMs <= 0) return '期限切れ';
+      return formatMargin(Math.floor(diffMs / (1000 * 60)));
     }
 
-    // 未完了課題の残り合計時間バッジ
-    function updateSummaryBadge(activeTasks) {
-      const badge = document.getElementById('summary-badge');
+    // 切迫度（残り時間 ÷ 所要時間）。小さいほど優先
+    function urgencyRatio(task, now) {
+      const diffMinutes = (new Date(task.datetime) - now) / (1000 * 60);
+      return diffMinutes / (task.estimatedMinutes || 60);
+    }
+
+    // 危険度の判定： red（🚨）/ yellow（⚠️）/ green
+    function urgencyLevel(task, now) {
+      const diffMs = new Date(task.datetime) - now;
+      if (diffMs <= 0) return 'red';
+      const diffHours = diffMs / (1000 * 60 * 60);
+      const ratio = urgencyRatio(task, now);
+      if (ratio < 2.0 || diffHours < 12) return 'red';
+      if (ratio < 5.0 || diffHours < 36) return 'yellow';
+      return 'green';
+    }
+
+    // バイトの開始・終了日時（終了時刻が未登録なら開始＋4時間）
+    function getJobRange(job) {
+      const start = new Date(job.datetime);
+      let end;
+      if (job.endTime) {
+        const [h, m] = job.endTime.split(':').map(Number);
+        end = new Date(start);
+        end.setHours(h, m, 0, 0);
+        if (end <= start) end.setDate(end.getDate() + 1); // 日付をまたぐシフト
+      } else {
+        end = new Date(start.getTime() + DEFAULT_JOB_HOURS * 3600 * 1000);
+      }
+      return { start, end };
+    }
+
+    function formatJobRange(job, separator = ' – ') {
+      const { start, end } = getJobRange(job);
+      return `${formatHM(start)}${separator}${formatHM(end)}`;
+    }
+
+    function jobsOn(date) {
+      const dayStr = date.toDateString();
+      return tasks
+        .filter(t => t.type === 'job' && new Date(t.datetime).toDateString() === dayStr)
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+    }
+
+    // ---------- タブ1：リスト ----------
+    function updateJobSection(now) {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const todayJobs = jobsOn(now);
+      const tomorrowJobs = jobsOn(tomorrow);
+
+      const statusEl = document.getElementById('today-job-status');
+      const timeEl = document.getElementById('today-job-time');
+      const nameEl = document.getElementById('today-job-name');
+
+      if (todayJobs.length > 0) {
+        statusEl.textContent = 'あり';
+        statusEl.classList.remove('none');
+        timeEl.textContent = todayJobs.map(j => formatJobRange(j)).join(' / ');
+        nameEl.textContent = todayJobs.map(j => j.name).join(' / ');
+      } else {
+        statusEl.textContent = 'なし';
+        statusEl.classList.add('none');
+        timeEl.textContent = '';
+        nameEl.textContent = '';
+      }
+
+      document.getElementById('tomorrow-job-status').textContent =
+        tomorrowJobs.length > 0 ? `あり ${tomorrowJobs.map(j => formatJobRange(j)).join(' / ')}` : 'なし';
+    }
+
+    // 未完了課題の件数・残り合計時間
+    function updateSummary(activeTasks) {
+      const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      document.getElementById('summary-count').innerHTML = `${activeTasks.length}<small>件</small>`;
+      document.getElementById('summary-time').innerHTML = hours > 0
+        ? `${hours}<small>時間</small>${mins}<small>分</small>`
+        : `${mins}<small>分</small>`;
+    }
+
+    function renderTaskList(activeTasks, now) {
+      const taskListEl = document.getElementById('task-list');
+
       if (activeTasks.length === 0) {
-        badge.style.display = 'none';
+        taskListEl.innerHTML = '<div class="empty-message">未完了の課題はありません 🎉</div>';
         return;
       }
-      const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
-      badge.textContent = `⏱ 未完了 ${activeTasks.length}件 ・ 残り作業 合計 ${formatMinutes(totalMinutes)}`;
-      badge.style.display = 'block';
+
+      taskListEl.innerHTML = activeTasks.map(task => {
+        const targetDate = new Date(task.datetime);
+        const level = urgencyLevel(task, now);
+        const estMinutes = task.estimatedMinutes || 60;
+        const countdownText = formatCountdown(targetDate - now);
+
+        return `
+          <div class="task-row">
+            <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="完了にする">
+            <div class="task-body">
+              <div class="task-name">${escapeHtml(task.name)}</div>
+              ${task.detail ? `<div class="task-detail">${escapeHtml(task.detail)}</div>` : ''}
+              <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ 約${estMinutes}分</div>
+            </div>
+            <div class="task-side">
+              <div class="count-num c-${level}">${countdownText}</div>
+              <div class="count-unit">${targetDate > now ? '残り' : ''}<button class="delete-btn" onclick="deleteTask(${task.id})" aria-label="削除">✕</button></div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     // 完了済み課題の折りたたみ表示（60秒ごとの再描画でも開閉状態を保つ）
@@ -682,7 +724,7 @@
       }
 
       const sorted = [...completedTasks].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-      const cardsHtml = sorted.map(task => {
+      const rowsHtml = sorted.map(task => {
         let completedText = '';
         if (task.completedAt) {
           const completedDate = new Date(task.completedAt);
@@ -694,25 +736,21 @@
         }
 
         return `
-          <div class="card task-item completed-card" style="border-left-color: #cbd5e1;">
-            <div class="task-header">
-              <div class="task-main">
-                <input type="checkbox" class="task-checkbox" checked onchange="toggleComplete(${task.id})" aria-label="未完了に戻す">
-                <div>
-                  <div class="task-name">${escapeHtml(task.name)}</div>
-                  <div class="completed-meta">${completedText}</div>
-                </div>
-              </div>
-              <button class="delete-btn" onclick="deleteTask(${task.id})">✕</button>
+          <div class="task-row completed-row">
+            <input type="checkbox" class="task-checkbox" checked onchange="toggleComplete(${task.id})" aria-label="未完了に戻す">
+            <div class="task-body">
+              <div class="task-name">${escapeHtml(task.name)}</div>
+              <div class="completed-meta">${completedText}</div>
             </div>
+            <button class="delete-btn" onclick="deleteTask(${task.id})" aria-label="削除">✕</button>
           </div>
         `;
       }).join('');
 
       containerEl.innerHTML = `
         <details class="completed-section" id="completed-details" ${completedSectionOpen ? 'open' : ''}>
-          <summary>✅ 完了済み（${completedTasks.length}件）</summary>
-          <div class="task-list" style="margin-top: 10px;">${cardsHtml}</div>
+          <summary>完了済み ${completedTasks.length}件</summary>
+          <div>${rowsHtml}</div>
         </details>
       `;
       document.getElementById('completed-details').addEventListener('toggle', e => {
@@ -720,95 +758,172 @@
       });
     }
 
-    function renderTasks() {
-      updateJobCards();
+    // ---------- タブ2：タイムライン ----------
+    // 今日の空き時間に、優先度の高い課題（🚨・⚠️）を前から順に詰めて配置する
+    function planToday(activeTasks, now, dayEnd) {
+      const jobRanges = tasks
+        .filter(t => t.type === 'job')
+        .map(getJobRange)
+        .filter(r => r.end > now && r.start < dayEnd);
 
-      const taskListEl = document.getElementById('task-list');
-      taskListEl.innerHTML = '';
+      // バイト前後の移動時間も含めて「埋まっている時間」とする
+      const busy = jobRanges
+        .map(r => [r.start.getTime() - MOVE_BUFFER_MIN * 60000, r.end.getTime() + MOVE_BUFFER_MIN * 60000])
+        .sort((a, b) => a[0] - b[0]);
 
-      const now = new Date();
-      const taskOnlyList = tasks.filter(t => t.type === 'task' && !t.completed);
-      const completedTasks = tasks.filter(t => t.type === 'task' && t.completed);
-
-      updateSummaryBadge(taskOnlyList);
-      renderCompletedSection(completedTasks);
-
-      taskOnlyList.sort((a, b) => {
-        const diffA = new Date(a.datetime) - now;
-        const diffB = new Date(b.datetime) - now;
-        const ratioA = (diffA / (1000 * 60)) / (a.estimatedMinutes || 60);
-        const ratioB = (diffB / (1000 * 60)) / (b.estimatedMinutes || 60);
-        return ratioA - ratioB;
-      });
-
-      if (taskOnlyList.length === 0) {
-        taskListEl.innerHTML = '<div class="card empty-message">未完了の課題はありません 🎉</div>';
-        return;
+      // 次の15分刻みから計画を始める
+      const quarter = 15 * 60000;
+      let cursor = Math.ceil(now.getTime() / quarter) * quarter;
+      const slots = [];
+      for (const [bs, be] of busy) {
+        if (bs > cursor) slots.push({ start: cursor, end: Math.min(bs, dayEnd.getTime()) });
+        cursor = Math.max(cursor, be);
       }
+      if (cursor < dayEnd.getTime()) slots.push({ start: cursor, end: dayEnd.getTime() });
 
-      taskOnlyList.forEach(task => {
-        const targetDate = new Date(task.datetime);
-        const diffMs = targetDate - now;
-        const diffMinutes = diffMs / (1000 * 60);
-        const estMinutes = task.estimatedMinutes || 60;
+      const blocks = [];
+      const shortage = [];
+      const later = [];
 
-        let countdownText = "";
-        let borderClass = "var(--alert-green)";
-        let badgeClass = "urgent-green";
-
-        if (diffMs <= 0) {
-          countdownText = "期限切れ";
-          borderClass = "var(--alert-red)";
-          badgeClass = "urgent-red";
-        } else {
-          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-          const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-          const urgencyRatio = diffMinutes / estMinutes;
-
-          if (urgencyRatio < 2.0 || diffHours < 12) {
-            countdownText = `🚨 あと ${diffHours}時間 ${diffMins}分`;
-            borderClass = "var(--alert-red)";
-            badgeClass = "urgent-red";
-          } else if (urgencyRatio < 5.0 || diffHours < 36) {
-            const diffDays = Math.floor(diffHours / 24);
-            const remainHours = diffHours % 24;
-            countdownText = `⚠️ あと ${diffDays > 0 ? diffDays + '日 ' : ''}${remainHours}時間`;
-            borderClass = "var(--alert-yellow)";
-            badgeClass = "urgent-yellow";
-          } else {
-            const diffDays = Math.floor(diffHours / 24);
-            const remainHours = diffHours % 24;
-            countdownText = `あと ${diffDays}日 ${remainHours}時間`;
-            borderClass = "var(--alert-green)";
-            badgeClass = "urgent-green";
-          }
+      for (const task of activeTasks) {
+        const level = urgencyLevel(task, now);
+        if (level === 'green') {
+          later.push(task);
+          continue;
         }
 
-        const formattedDate = formatDateTime(targetDate);
+        const deadline = new Date(task.datetime).getTime();
+        let remaining = (task.estimatedMinutes || 60) * 60000;
+        const parts = [];
 
-        const cardHtml = `
-          <div class="card task-item" style="border-left-color: ${borderClass};">
-            <div class="task-header">
-              <div class="task-main">
-                <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="完了にする">
-                <div>
-                  <div class="task-name">${escapeHtml(task.name)}</div>
-                  ${task.detail ? `<div class="task-detail-preview">${escapeHtml(task.detail)}</div>` : ''}
-                  <div class="task-meta">
-                    <span class="task-deadline">締切: ${formattedDate}</span>
-                    <span class="ai-estimate-tag">🤖 所要推定: ${estMinutes}分</span>
-                  </div>
-                </div>
-              </div>
-              <button class="delete-btn" onclick="deleteTask(${task.id})">✕</button>
-            </div>
-            <div class="countdown-badge ${badgeClass}">${countdownText}</div>
-          </div>
-        `;
+        for (const slot of slots) {
+          if (remaining <= 0) break;
+          // 締切を過ぎている課題は今日中にとにかく片付ける
+          const limit = deadline > now.getTime() ? Math.min(slot.end, deadline) : slot.end;
+          const usable = limit - slot.start;
+          if (usable < MIN_CHUNK_MIN * 60000) continue;
+          const take = Math.min(usable, remaining);
+          parts.push({ start: slot.start, end: slot.start + take });
+          slot.start += take + TASK_GAP_MIN * 60000;
+          remaining -= take;
+        }
 
-        taskListEl.insertAdjacentHTML('beforeend', cardHtml);
+        parts.forEach((p, i) => blocks.push({
+          task, level,
+          start: new Date(p.start),
+          end: new Date(p.end),
+          partLabel: parts.length > 1 ? `（${i + 1}/${parts.length}）` : ''
+        }));
+
+        if (remaining > 0) shortage.push({ task, minutes: Math.round(remaining / 60000) });
+      }
+
+      return { jobRanges, blocks, shortage, later };
+    }
+
+    function renderTimeline(activeTasks, now) {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const todayJobs = jobsOn(now);
+      const tomorrowJobs = jobsOn(tomorrow);
+      const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
+
+      document.getElementById('tl-date').textContent = formatDateHeading(now);
+      document.getElementById('tl-pills').innerHTML = `
+        ${todayJobs.length > 0
+          ? todayJobs.map(j => `<span class="pill pill-job">バイト ${formatJobRange(j, '–')}</span>`).join('')
+          : '<span class="pill pill-none">今日のバイト なし</span>'}
+        <span class="pill pill-none">明日${tomorrowJobs.length > 0 ? 'あり' : 'なし'}</span>
+        <span class="pill pill-sum">残り ${formatMinutes(totalMinutes)}</span>
+      `;
+
+      // 表示範囲：いまの時刻（正時）〜 24:00
+      const tlStart = new Date(now);
+      tlStart.setMinutes(0, 0, 0);
+      const dayEnd = new Date(now);
+      dayEnd.setHours(24, 0, 0, 0);
+      const hours = Math.round((dayEnd - tlStart) / 3600000);
+      const toY = t => ((t - tlStart) / 3600000) * HOUR_PX;
+      const clip = t => new Date(Math.min(Math.max(t, tlStart), dayEnd));
+
+      const { jobRanges, blocks, shortage, later } = planToday(activeTasks, now, dayEnd);
+
+      let html = '';
+      for (let h = 0; h <= hours; h++) {
+        html += `<div class="tl-hour" style="top:${h * HOUR_PX}px"><span>${pad2((tlStart.getHours() + h) % 24 || (h > 0 ? 24 : 0))}:00</span></div>`;
+      }
+
+      const block = (cls, start, end, title, sub) => {
+        const s = clip(start), e = clip(end);
+        if (e <= s) return '';
+        const top = toY(s);
+        const height = Math.max(toY(e) - top, 16);
+        const compact = height < 44;
+        return `<div class="tl-block ${cls}${compact ? ' compact' : ''}" style="top:${top}px; height:${height}px;">
+          <b>${title}</b>${sub ? `<span>${sub}</span>` : ''}
+        </div>`;
+      };
+
+      jobRanges.forEach(r => {
+        const job = tasks.find(t => t.type === 'job' && new Date(t.datetime).getTime() === r.start.getTime());
+        const moveMs = MOVE_BUFFER_MIN * 60000;
+        html += block('b-move', new Date(r.start - moveMs), r.start, '移動', '');
+        html += block('b-job', r.start, r.end, `アルバイト${job ? `（${escapeHtml(job.name)}）` : ''}`, `${formatHM(r.start)}–${formatHM(r.end)}`);
+        html += block('b-move', r.end, new Date(r.end.getTime() + moveMs), '移動', '');
       });
+
+      blocks.forEach(b => {
+        html += block(`b-${b.level}`, b.start, b.end,
+          `${escapeHtml(b.task.name)}${b.partLabel}`,
+          `${formatHM(b.start)}–${formatHM(b.end)} ・ ${Math.round((b.end - b.start) / 60000)}分`);
+      });
+
+      // 今日が締切の課題に締切ラインを引く
+      activeTasks.forEach(task => {
+        const d = new Date(task.datetime);
+        if (d > now && d <= dayEnd) {
+          html += `<div class="tl-deadline" style="top:${toY(d)}px"><span>${escapeHtml(task.name)} 締切 ${formatHM(d)}</span></div>`;
+        }
+      });
+
+      html += `<div class="tl-now" style="top:${toY(now)}px"><span>いま ${formatHM(now)}</span></div>`;
+
+      const gridEl = document.getElementById('tl-grid');
+      gridEl.style.height = `${hours * HOUR_PX}px`;
+      gridEl.innerHTML = html;
+
+      // 時間が足りない課題・今日やらなくてよい課題
+      let extra = '';
+      if (shortage.length > 0) {
+        extra += `<div class="tl-card"><div class="tl-card-title warn">⚠️ 今日の空き時間では足りません</div>
+          ${shortage.map(s => `<div class="tl-card-row"><span>${escapeHtml(s.task.name)}</span><span class="c-red">あと${formatMinutes(s.minutes)}不足</span></div>`).join('')}
+        </div>`;
+      }
+      if (later.length > 0) {
+        extra += `<div class="tl-card"><div class="tl-card-title">今日やらなくてOK</div>
+          ${later.map(t => `<div class="tl-card-row"><span>${escapeHtml(t.name)}（約${t.estimatedMinutes || 60}分）</span><span class="c-green">あと${formatCountdown(new Date(t.datetime) - now)}</span></div>`).join('')}
+        </div>`;
+      }
+      if (activeTasks.length === 0) {
+        extra += '<div class="tl-card"><div class="tl-card-title">未完了の課題はありません 🎉</div></div>';
+      }
+      document.getElementById('tl-extra').innerHTML = extra;
+    }
+
+    // ---------- 全体の再描画 ----------
+    function renderTasks() {
+      const now = new Date();
+      const activeTasks = tasks
+        .filter(t => t.type === 'task' && !t.completed)
+        .sort((a, b) => urgencyRatio(a, now) - urgencyRatio(b, now));
+      const completedTasks = tasks.filter(t => t.type === 'task' && t.completed);
+
+      document.getElementById('list-date').textContent = formatDateHeading(now);
+      updateJobSection(now);
+      updateSummary(activeTasks);
+      renderTaskList(activeTasks, now);
+      renderCompletedSection(completedTasks);
+      renderTimeline(activeTasks, now);
     }
 
     document.getElementById('add-schedule-form').addEventListener('submit', async function(e) {
@@ -823,10 +938,13 @@
       const detail = document.getElementById('task-detail').value;
       const manualMinutes = document.getElementById('task-manual-minutes').value;
       const datetime = document.getElementById('task-datetime').value;
+      const endTime = document.getElementById('job-end-time').value;
 
       let estimatedMinutes = 60;
       if (type === 'task') {
         estimatedMinutes = await estimateTaskMinutes(name, detail, manualMinutes);
+      } else {
+        showStatus(`アルバイト（${name}）を登録しました`, "info");
       }
 
       const newTask = normalizeTask({
@@ -836,7 +954,8 @@
         detail,
         datetime,
         estimatedMinutes,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        ...(type === 'job' && endTime ? { endTime } : {})
       });
 
       tasks.push(newTask);
@@ -847,6 +966,7 @@
       toggleJobTimeInput();
       submitBtn.disabled = false;
       submitBtn.textContent = '登録する';
+      closeSheet();
     });
 
     // 完了 ⇔ 未完了の切り替え（完了日時を記録する）
@@ -866,7 +986,7 @@
     }
 
     function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, function(m) {
+      return String(str).replace(/[&<>"']/g, function(m) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
       });
     }

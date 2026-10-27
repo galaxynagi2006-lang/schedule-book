@@ -225,6 +225,25 @@
     .api-settings summary { font-size: 12px; color: var(--text-sub); cursor: pointer; font-weight: 600; }
     .btn-clear { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
+    /* ========== 設定タブ ========== */
+    .settings-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 14px; }
+    .settings-card h2 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+    .settings-card .form-group:last-child { margin-bottom: 0; }
+    .secret-field { display: flex; gap: 8px; }
+    .secret-field .form-control { flex: 1; min-width: 0; }
+    .secret { -webkit-text-security: disc; }
+    .secret.revealed { -webkit-text-security: none; }
+    .field-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
+    .field-row .btn-clear, .secret-field .btn-clear { white-space: nowrap; flex-shrink: 0; }
+    .kind-options { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 6px; }
+    .check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0; }
+    .check-row input, .kind-options input { width: 18px; height: 18px; accent-color: var(--primary-color); }
+    .backup-actions { display: flex; flex-direction: column; gap: 8px; }
+    .backup-import { display: block; text-align: center; margin-bottom: 0; }
+    .hidden-note { font-size: 12px; color: var(--text-sub); padding: 10px 0 0; }
+    .hidden-note a { color: var(--primary-color); font-weight: 600; cursor: pointer; }
+    .shift-name-note { margin-bottom: 12px; }
+
     /* ========== シフト表からの一括登録 ========== */
     .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
     #add-schedule-form { margin-top: 6px; }
@@ -321,6 +340,7 @@
         <!-- ③④ 課題リスト & カウントダウン -->
         <div class="list-head label">課題（優先度順）</div>
         <div id="task-list"></div>
+        <div id="hidden-kinds-note"></div>
 
         <!-- 完了済み課題（折りたたみ） -->
         <div id="completed-container"></div>
@@ -339,6 +359,120 @@
       </div>
       <div id="tl-extra"></div>
     </main>
+
+    <!-- ===== タブ3：設定 ===== -->
+    <main class="tab-panel" id="tab-settings">
+      <div class="list-wrap">
+        <div class="page-title">⚙️ 設定</div>
+
+        <section class="settings-card">
+          <h2>🤖 AI（所要時間の推定・画像の読み取り）</h2>
+          <div class="form-group">
+            <label for="ai-provider">使用するAI</label>
+            <select id="ai-provider" class="form-control" onchange="changeProvider()">
+              <option value="gemini">Gemini（Google・無料枠あり）</option>
+              <option value="claude">Claude（Anthropic・従量課金）</option>
+            </select>
+          </div>
+          <div class="form-group" id="claude-model-group" style="display:none;">
+            <label for="claude-model">Claudeのモデル</label>
+            <select id="claude-model" class="form-control" onchange="saveClaudeModel()">
+              <option value="claude-opus-5-5">Claude Opus 5.5（高性能）</option>
+              <option value="claude-sonnet-5-5">Claude Sonnet 5.5（バランス）</option>
+              <option value="claude-haiku-5-5">Claude Haiku 5.5（最安・高速）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="api-key-input" id="api-key-label">Gemini APIキー</label>
+            <div class="secret-field">
+              <input type="text" id="api-key-input" class="form-control secret" placeholder="APIキーを入力してください" autocomplete="off" spellcheck="false" onchange="saveApiKey()">
+              <button type="button" class="btn-clear" onclick="toggleSecret('api-key-input', this)">表示</button>
+            </div>
+            <div class="field-row">
+              <span class="field-note">※入力するとこのブラウザに保存されます</span>
+              <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-card" id="gcal-settings">
+          <h2>📅 Google連携（バイト予定・manaba の課題・通知）</h2>
+          <details class="setup-guide">
+            <summary>はじめての連携の手順（約5分・最初の1回だけ）</summary>
+            <ol>
+              <li><span id="gcal-template-step">下のボタンからテンプレートを開き、「コピーを作成」を押す</span>
+                <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>📄 テンプレートをコピーする</a></li>
+              <li>コピーしたスプレッドシートのメニュー「<b>スケジュール帳</b>」→「<b>① 初期設定</b>」を押し、表示される許可を「許可」する</li>
+              <li>「拡張機能」→「Apps Script」→ 右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」、実行：<b>自分</b>／アクセス：<b>全員</b> で「デプロイ」</li>
+              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>URL</b>と<b>合言葉</b>を、下の2つの欄に貼る</li>
+            </ol>
+            <p class="field-note">データはあなたの Google アカウントの中だけで処理され、ほかの人（アプリの開発者を含む）には送られません。</p>
+          </details>
+          <div class="form-group" style="margin-top: 10px;">
+            <label for="gcal-url">ウェブアプリのURL</label>
+            <div class="secret-field">
+              <input type="text" id="gcal-url" class="form-control secret" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false" onchange="saveGcalUrl()">
+              <button type="button" class="btn-clear" onclick="toggleSecret('gcal-url', this)">表示</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="gcal-token">合言葉（読み取り・書き込みの両方に使う）</label>
+            <div class="secret-field">
+              <input type="text" id="gcal-token" class="form-control secret" placeholder="② アプリに登録する情報 の合言葉" autocomplete="off" spellcheck="false" onchange="saveShiftSettings()">
+              <button type="button" class="btn-clear" onclick="toggleSecret('gcal-token', this)">表示</button>
+            </div>
+            <div class="field-row">
+              <span class="field-note">※テンプレートを使わない場合は「作る」で作り、Apps Script の WRITE_TOKEN にも同じ文字列を入れる</span>
+              <button type="button" class="btn-clear" onclick="generateGcalToken()">作る</button>
+            </div>
+          </div>
+          <div class="field-row">
+            <span id="gcal-status" class="field-note">未設定</span>
+            <button type="button" class="btn-clear" onclick="syncGoogleCalendar(true)">今すぐ同期</button>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <h2>📷 シフト表</h2>
+          <div class="form-group">
+            <label for="shift-name">シフト表に書かれている自分の名前</label>
+            <input type="text" id="shift-name" class="form-control" placeholder="例: 上野 凪斗" onchange="saveShiftSettings()">
+          </div>
+          <div class="form-group">
+            <label for="shift-title">カレンダーに登録する予定名</label>
+            <input type="text" id="shift-title" class="form-control" value="バイト" onchange="saveShiftSettings()">
+            <span class="field-note">※「バイト」を含めると、Google連携でアプリにも自動で取り込まれます</span>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <h2>🏫 時間割</h2>
+          <div class="field-row">
+            <span class="field-note" id="class-summary">未登録</span>
+            <button type="button" class="btn-clear" onclick="openClassSheet()">登録・編集する</button>
+          </div>
+        </section>
+
+        <section class="settings-card">
+          <h2>👁 表示する課題の種類（manaba から取り込んだ課題）</h2>
+          <div class="kind-options" id="kind-options"></div>
+          <span class="field-note">※チェックを外した種類は、リスト・タイムライン・残り時間の合計に出しません（手入力の課題は常に表示）</span>
+        </section>
+
+        <section class="settings-card">
+          <h2>💾 データのバックアップ</h2>
+          <p class="field-note">課題・完了の記録・時間割・設定は、このブラウザの中にだけ保存されています。ブラウザのデータを消したり機種変更したりする前に、書き出しておいてください。</p>
+          <p class="field-note" id="backup-info"></p>
+          <label class="check-row"><input type="checkbox" id="backup-secrets"> APIキー・連携のURL・合言葉も含める（ファイルの扱いに注意）</label>
+          <div class="backup-actions">
+            <button type="button" class="btn-submit" onclick="exportBackup()">書き出す（ファイルに保存）</button>
+            <label class="btn-secondary backup-import">読み込む（復元）
+              <input type="file" accept="application/json,.json" onchange="importBackup(this)" hidden>
+            </label>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
 
   <!-- 追加ボタン -->
@@ -352,6 +486,9 @@
       </button>
       <button class="tab-btn" type="button" data-tab="tab-timeline" onclick="switchTab('tab-timeline')">
         <span class="tab-icon">🕒</span>タイムライン
+      </button>
+      <button class="tab-btn" type="button" data-tab="tab-settings" onclick="switchTab('tab-settings')">
+        <span class="tab-icon">⚙️</span>設定
       </button>
     </div>
   </nav>
@@ -401,57 +538,6 @@
 
       <button type="submit" class="btn-submit" id="submit-btn">登録する</button>
 
-      <!-- AI設定エリア（Gemini / Claude の切り替え） -->
-      <details class="api-settings" id="api-settings">
-        <summary>⚙️ AI設定（所要時間の自動推測）</summary>
-        <div class="form-group" style="margin-top: 8px;">
-          <label for="ai-provider">使用するAI</label>
-          <select id="ai-provider" class="form-control" onchange="changeProvider()">
-            <option value="gemini">Gemini（Google・無料枠あり）</option>
-            <option value="claude">Claude（Anthropic・従量課金）</option>
-          </select>
-        </div>
-        <div class="form-group" id="claude-model-group" style="display:none;">
-          <label for="claude-model">Claudeのモデル</label>
-          <select id="claude-model" class="form-control" onchange="saveClaudeModel()">
-            <option value="claude-opus-5-5">Claude Opus 5.5（高性能）</option>
-            <option value="claude-sonnet-5-5">Claude Sonnet 5.5（バランス）</option>
-            <option value="claude-haiku-5-5">Claude Haiku 5.5（最安・高速）</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="api-key-input" id="api-key-label">Gemini APIキー</label>
-          <input type="text" id="api-key-input" class="form-control" placeholder="APIキーを入力してください" autocomplete="off" onchange="saveApiKey()">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-            <span style="font-size: 0.7rem; color: var(--text-sub);">※入力するとブラウザに保存されます。</span>
-            <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
-          </div>
-        </div>
-      </details>
-
-      <!-- Googleカレンダー連携（Apps Script 経由でバイト予定を取り込む） -->
-      <details class="api-settings" id="gcal-settings">
-        <summary>📅 Googleカレンダー連携（バイト予定・manaba の課題・通知）</summary>
-        <details class="setup-guide">
-          <summary>はじめての連携の手順（約5分・最初の1回だけ）</summary>
-          <ol>
-            <li><span id="gcal-template-step">下のボタンからテンプレートを開き、「コピーを作成」を押す</span>
-              <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>📄 テンプレートをコピーする</a></li>
-            <li>コピーしたスプレッドシートのメニュー「<b>スケジュール帳</b>」→「<b>① 初期設定</b>」を押し、表示される許可を「許可」する</li>
-            <li>「拡張機能」→「Apps Script」→ 右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」、実行：<b>自分</b>／アクセス：<b>全員</b> で「デプロイ」</li>
-            <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」のURLを下の欄に、合言葉を「📷 シフト表から登録」の設定に貼る</li>
-          </ol>
-          <p class="field-note">データはあなたの Google アカウントの中だけで処理され、ほかの人（アプリの開発者を含む）には送られません。</p>
-        </details>
-        <div class="form-group" style="margin-top: 8px;">
-          <label for="gcal-url">Apps Script のウェブアプリURL</label>
-          <input type="url" id="gcal-url" class="form-control" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" onchange="saveGcalUrl()">
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px;">
-            <span id="gcal-status" style="font-size: 0.7rem; color: var(--text-sub);">未設定</span>
-            <button type="button" class="btn-clear" onclick="syncGoogleCalendar(true)">今すぐ同期</button>
-          </div>
-        </div>
-      </details>
     </form>
   </section>
 
@@ -477,27 +563,7 @@
       <span>📷 シフト表から登録</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
-
-    <details class="shift-settings" id="shift-settings">
-      <summary>⚙️ シフト表の設定</summary>
-      <div class="form-group" style="margin-top: 10px;">
-        <label for="shift-name">シフト表に書かれている自分の名前</label>
-        <input type="text" id="shift-name" class="form-control" placeholder="例: 上野 凪斗" onchange="saveShiftSettings()">
-      </div>
-      <div class="form-group">
-        <label for="shift-title">カレンダーに登録する予定名</label>
-        <input type="text" id="shift-title" class="form-control" value="バイト" onchange="saveShiftSettings()">
-        <span class="field-note">※「バイト」を含めると、カレンダー連携でアプリにも自動で取り込まれます</span>
-      </div>
-      <div class="form-group">
-        <label for="gcal-token">カレンダー書き込み用の合言葉</label>
-        <div style="display: flex; gap: 8px;">
-          <input type="text" id="gcal-token" class="form-control" placeholder="未設定（アプリ内にだけ登録）" autocomplete="off" onchange="saveShiftSettings()">
-          <button type="button" class="btn-clear" style="white-space: nowrap;" onclick="generateGcalToken()">合言葉を作る</button>
-        </div>
-        <span class="field-note">※ Apps Script の WRITE_TOKEN にも同じ文字列を貼り付けて、新バージョンでデプロイしてください</span>
-      </div>
-    </details>
+    <p class="field-note shift-name-note" id="shift-name-note"></p>
 
     <div class="form-group">
       <label for="shift-month">シフト表の年月</label>
@@ -529,6 +595,9 @@
     const SHIFT_NAME_STORAGE = 'smart_schedule_shift_name';
     const SHIFT_TITLE_STORAGE = 'smart_schedule_shift_title';
     const MANABA_SUBMITTED_STORAGE = 'smart_schedule_manaba_submitted';   // 処理済みの提出メール
+    const HIDDEN_KINDS_STORAGE = 'smart_schedule_hidden_kinds';           // 表示しない manaba の課題の種類
+    const LAST_BACKUP_STORAGE = 'smart_schedule_last_backup';
+    const MANABA_KINDS = ['レポート', '小テスト', 'アンケート', 'プロジェクト', 'その他'];
     const CLASS_STORAGE = 'smart_schedule_classes';               // 時間割（授業）
     // 連携用テンプレート（Apps Script 入りのスプレッドシート）の「コピーを作成」リンク。
     // 例: https://docs.google.com/spreadsheets/d/〇〇〇/copy（空のあいだは手順の文章だけを表示する）
@@ -644,8 +713,12 @@
       const savedModel = localStorage.getItem(CLAUDE_MODEL_STORAGE);
       if (savedModel) document.getElementById('claude-model').value = savedModel;
       refreshAiSettingsView();
-      // キー未設定のときだけ設定欄を開いておく
-      document.getElementById('api-settings').open = !document.getElementById('api-key-input').value;
+    }
+
+    // URL・合言葉・APIキーは「●●●●」で隠して表示し、ボタンで切り替える（画面を映しても漏れないように）
+    function toggleSecret(inputId, button) {
+      const revealed = document.getElementById(inputId).classList.toggle('revealed');
+      button.textContent = revealed ? '隠す' : '表示';
     }
 
     // 画面下にトースト表示（数秒で消える）
@@ -665,6 +738,11 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      document.querySelector('.fab').hidden = tabId === 'tab-settings';
+      if (tabId === 'tab-settings') {
+        updateClassSummary();
+        updateBackupInfo();
+      }
       window.scrollTo(0, 0);
     }
 
@@ -684,8 +762,19 @@
       document.getElementById('add-sheet').classList.remove('open');
       document.getElementById('sheet-overlay').classList.add('open');
       document.getElementById('shift-sheet').classList.add('open');
-      // 名前が未設定なら設定欄を開いておく
-      document.getElementById('shift-settings').open = !document.getElementById('shift-name').value;
+      const name = document.getElementById('shift-name').value.trim();
+      document.getElementById('shift-name-note').innerHTML = name
+        ? `シフト表の名前：<b>${escapeHtml(name)}</b>（⚙️ 設定タブで変更できます）`
+        : '⚠️ 先に ⚙️ 設定タブの「シフト表」で、シフト表に書かれている自分の名前を入力してください';
+    }
+
+    // 設定タブの指定の欄を開いて、そこへ移動する
+    function goToSetting(inputId) {
+      closeSheet();
+      switchTab('tab-settings');
+      const input = document.getElementById(inputId);
+      input.scrollIntoView({ block: 'center' });
+      input.focus();
     }
 
     function toggleJobTimeInput() {
@@ -1295,10 +1384,68 @@
     }
 
     // ---------- 全体の再描画 ----------
+    // ---------- 表示する課題の種類（manaba の課題のみ） ----------
+    function loadHiddenKinds() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(HIDDEN_KINDS_STORAGE) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    // 課題の種類。manaba の課題URL（course_〇_report_〇 など）や詳細の「manabaの〇〇」から判断する。手入力の課題は null
+    function taskKind(task) {
+      if (task.source !== 'manaba') return null;
+      let kind = task.kind;
+      if (!kind) {
+        const urlKind = (String(task.externalId).match(/_(report|query|survey|project)_/) || [])[1];
+        kind = { report: 'レポート', query: '小テスト', survey: 'アンケート', project: 'プロジェクト' }[urlKind] ||
+          (String(task.detail).match(/^manabaの(.+)$/) || [])[1];
+      }
+      return MANABA_KINDS.includes(kind) ? kind : 'その他';
+    }
+
+    function isTaskVisible(task) {
+      const kind = taskKind(task);
+      return !kind || !loadHiddenKinds().includes(kind);
+    }
+
+    function renderKindOptions() {
+      const hidden = loadHiddenKinds();
+      document.getElementById('kind-options').innerHTML = MANABA_KINDS.map(kind => `
+        <label class="check-row"><input type="checkbox" ${hidden.includes(kind) ? '' : 'checked'} onchange="setKindVisible('${kind}', this.checked)"> ${kind}</label>
+      `).join('');
+    }
+
+    function setKindVisible(kind, visible) {
+      const hidden = new Set(loadHiddenKinds());
+      if (visible) hidden.delete(kind); else hidden.add(kind);
+      localStorage.setItem(HIDDEN_KINDS_STORAGE, JSON.stringify([...hidden]));
+      renderTasks();
+      if (visible) estimatePendingTasks();   // 表示に戻した課題の所要時間を推定する
+    }
+
+    function renderHiddenNote(now) {
+      const hiddenTasks = tasks.filter(t => t.type === 'task' && !t.completed && !isTaskVisible(t) && new Date(t.datetime) > now);
+      const counts = {};
+      hiddenTasks.forEach(t => { counts[taskKind(t)] = (counts[taskKind(t)] || 0) + 1; });
+      const text = Object.entries(counts).map(([kind, n]) => `${kind} ${n}件`).join('・');
+      document.getElementById('hidden-kinds-note').innerHTML = text
+        ? `<div class="hidden-note">${text}を非表示にしています（<a onclick="switchTab('tab-settings')">⚙️ 設定で変更</a>）</div>`
+        : '';
+    }
+
+    function updateClassSummary() {
+      document.getElementById('class-summary').textContent = classData
+        ? `${classData.termLabel || '登録済み'}・${classData.classes.length}件`
+        : '未登録';
+    }
+
     function renderTasks() {
       const now = new Date();
       const activeTasks = tasks
-        .filter(t => t.type === 'task' && !t.completed)
+        .filter(t => t.type === 'task' && !t.completed && isTaskVisible(t))
         .sort((a, b) => urgencyRatio(a, now) - urgencyRatio(b, now));
       const completedTasks = tasks.filter(t => t.type === 'task' && t.completed);
 
@@ -1307,6 +1454,7 @@
       renderJobList(now);
       updateSummary(activeTasks);
       renderTaskList(activeTasks, now);
+      renderHiddenNote(now);
       renderCompletedSection(completedTasks);
       renderTimeline(activeTasks, now);
     }
@@ -1491,10 +1639,18 @@
       gcalSyncing = true;
 
       try {
-        // 追加ヘッダーを付けない単純なGETにする（Apps Script はこの形でしか他サイトから読めない）
-        const response = await fetch(url);
+        // 追加ヘッダーを付けない単純なGETにする（Apps Script はこの形でしか他サイトから読めない）。
+        // 合言葉はURLの末尾に付けて送る（Apps Script 側で一致したときだけ予定と課題を返す）
+        const token = localStorage.getItem(GCAL_TOKEN_STORAGE);
+        const requestUrl = token ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : url;
+        const response = await fetch(requestUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
+        if (data.needToken) {
+          const tokenError = new Error(data.error);
+          tokenError.isTokenError = true;
+          throw tokenError;
+        }
         if (data.error) throw new Error(data.error);
         if (!Array.isArray(data.events)) throw new Error('予定の形式が正しくありません');
 
@@ -1506,7 +1662,7 @@
         if (Array.isArray(data.assignments)) {
           manabaLastInfo = {
             received: data.assignments.length,
-            upcoming: tasks.filter(t => t.source === 'manaba' && !t.completed && new Date(t.datetime) > new Date()).length
+            upcoming: tasks.filter(t => t.source === 'manaba' && !t.completed && isTaskVisible(t) && new Date(t.datetime) > new Date()).length
           };
         }
         estimatePendingTasks();   // 提出済みで完了にした課題は推定しない。待たずに裏で進める
@@ -1524,7 +1680,9 @@
         }
       } catch (err) {
         console.error('Googleカレンダー同期エラー:', err);
-        gcalLastError = '同期に失敗しました（URLと公開設定「全員」を確認）';
+        gcalLastError = err.isTokenError
+          ? '合言葉が一致しません（⚙️ 設定の合言葉を確認）'
+          : '同期に失敗しました（URLと公開設定「全員」を確認）';
         if (manual) showStatus(`📅 ${gcalLastError}`, 'error');
       } finally {
         gcalSyncing = false;
@@ -1573,6 +1731,7 @@
           datetime,
           estimatedMinutes: 60,
           estimatePending: true,
+          kind: a.kind || '',
           source: 'manaba',
           externalId: a.id,
           url: safeManabaUrl(a.url),
@@ -1637,7 +1796,7 @@
       estimatingTasks = true;
       try {
         let task;
-        while ((task = tasks.find(t => t.estimatePending))) {
+        while ((task = tasks.find(t => t.estimatePending && !t.completed && isTaskVisible(t)))) {
           const result = await estimateWithCurrentAI(task.name, task.detail);
           if (result.noKey) {
             // キーがなければ60分のまま確定する
@@ -2030,6 +2189,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       resetClassImage();
       closeSheet();
       renderTasks();
+      updateClassSummary();
       showStatus(`🏫 時間割を保存しました（${classes.length}件）。タイムラインに表示されます`, 'info');
     }
 
@@ -2040,6 +2200,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       resetClassImage();
       closeSheet();
       renderTasks();
+      updateClassSummary();
       showStatus('🏫 時間割を削除しました', 'info');
     }
 
@@ -2178,8 +2339,8 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       const apiKey = localStorage.getItem(provider.keyStorage);
 
       if (!name) {
-        document.getElementById('shift-settings').open = true;
-        showStatus('設定で、シフト表に書かれている自分の名前を入力してください', 'error');
+        goToSetting('shift-name');
+        showStatus('シフト表に書かれている自分の名前を入力してください', 'error');
         return;
       }
       if (!year || !month) {
@@ -2414,7 +2575,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
           <button type="button" class="btn-submit" id="shift-register-btn" onclick="registerShifts()" ${registerCount === 0 ? 'disabled' : ''}>
             ${writesCalendar ? '📅 Googleカレンダーに' : 'アプリに'}登録（${registerCount}件）
           </button>
-          ${writesCalendar ? '' : '<span class="field-note">※カレンダーにも書き込むには、設定で合言葉を入れてください</span>'}
+          ${writesCalendar ? '' : '<span class="field-note">※カレンダーにも書き込むには、⚙️ 設定タブの「Google連携」でURLと合言葉を入れてください</span>'}
         </div>
       `;
     }
@@ -2529,12 +2690,88 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       });
     }
 
+    // ---------- データのバックアップ（書き出し・読み込み） ----------
+    const BACKUP_APP_ID = 'smart-schedule-book';
+    const STORAGE_PREFIX = 'smart_schedule_';
+    // 人に渡ると困る情報。書き出しに含めるかを選べるようにする
+    const SECRET_STORAGE_KEYS = [API_KEY_STORAGE, CLAUDE_KEY_STORAGE, GCAL_URL_STORAGE, GCAL_TOKEN_STORAGE];
+
+    function appStorageKeys() {
+      return Object.keys(localStorage).filter(key => key.startsWith(STORAGE_PREFIX) && key !== LAST_BACKUP_STORAGE);
+    }
+
+    function updateBackupInfo() {
+      const last = localStorage.getItem(LAST_BACKUP_STORAGE);
+      const taskCount = tasks.filter(t => t.type === 'task').length;
+      const doneCount = tasks.filter(t => t.type === 'task' && t.completed).length;
+      document.getElementById('backup-info').textContent =
+        `保存中のデータ：課題 ${taskCount}件（うち完了 ${doneCount}件）・バイト ${tasks.filter(t => t.type === 'job').length}件 ／ ` +
+        (last ? `前回の書き出し：${formatDateTime(new Date(last))}` : 'まだ書き出していません');
+    }
+
+    function exportBackup() {
+      const includeSecrets = document.getElementById('backup-secrets').checked;
+      const data = {};
+      appStorageKeys().forEach(key => {
+        if (!includeSecrets && SECRET_STORAGE_KEYS.includes(key)) return;
+        data[key] = localStorage.getItem(key);
+      });
+      const backup = { app: BACKUP_APP_ID, version: 1, exportedAt: new Date().toISOString(), includesSecrets: includeSecrets, data };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `schedule-backup-${toLocalInputValue(new Date()).slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+
+      localStorage.setItem(LAST_BACKUP_STORAGE, backup.exportedAt);
+      updateBackupInfo();
+      showStatus(`💾 バックアップを書き出しました（${Object.keys(data).length}項目${includeSecrets ? '・APIキーなどを含む' : ''}）`, 'info');
+    }
+
+    async function importBackup(input) {
+      const file = input.files[0];
+      input.value = '';
+      if (!file) return;
+
+      let backup;
+      try {
+        backup = JSON.parse(await file.text());
+      } catch (err) {
+        showStatus('ファイルを読み取れませんでした（バックアップのファイルか確認してください）', 'error');
+        return;
+      }
+      if (!backup || backup.app !== BACKUP_APP_ID || typeof backup.data !== 'object') {
+        showStatus('このアプリのバックアップファイルではありません', 'error');
+        return;
+      }
+
+      const exportedAt = backup.exportedAt ? formatDateTime(new Date(backup.exportedAt)) : '日時不明';
+      if (!confirm(`${exportedAt} のバックアップで、今のデータを置き換えます。\n（今の課題・設定は消えます。必要なら先に書き出してください）\nよろしいですか？`)) return;
+
+      // バックアップに含まれない秘密の情報（APIキーなど）は、今のものを残す
+      appStorageKeys().forEach(key => {
+        if (SECRET_STORAGE_KEYS.includes(key) && !(key in backup.data)) return;
+        localStorage.removeItem(key);
+      });
+      Object.entries(backup.data).forEach(([key, value]) => {
+        if (key.startsWith(STORAGE_PREFIX) && typeof value === 'string') localStorage.setItem(key, value);
+      });
+      showStatus('💾 バックアップを読み込みました。再読み込みします…', 'info');
+      setTimeout(() => location.reload(), 800);
+    }
+
     renderTasks();
     setInterval(renderTasks, 60000);
 
     // 起動時・30分ごと・アプリに戻ってきたとき（前回から10分以上たっていれば）にカレンダーを同期
     loadGcalSettings();
     loadShiftSettings();
+    renderKindOptions();
+    updateClassSummary();
     estimatePendingTasks();
     syncGoogleCalendar();
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);

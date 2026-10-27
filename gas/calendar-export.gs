@@ -8,7 +8,7 @@
  *     （設定シートの作成・合言葉の作成・自動実行（通知）の設定をまとめて行う）
  *  3. 「拡張機能」→「Apps Script」→「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」
  *       次のユーザーとして実行：自分 ／ アクセスできるユーザー：全員 → 「デプロイ」
- *  4. メニュー「スケジュール帳」→「② アプリに登録する情報」に表示されるURLと合言葉を、アプリに貼り付ける
+ *  4. メニュー「スケジュール帳」→「② アプリに登録する情報」のURLと合言葉を、アプリの「⚙️ 設定」→「Google連携」に貼る
  *  設定（バイトのキーワード、通知の時刻など）は、シート「設定」の「値」の列を書き換えるだけで変えられる。
  *
  * ■ 単体のスクリプトとして使う場合（以前からの方法）
@@ -17,6 +17,7 @@
  *
  * ■ できること
  *  - アプリ用（doGet）: カレンダーのバイト予定と、manaba の課題・提出状況をアプリに渡す
+ *    （合言葉 WRITE_TOKEN が設定されていれば、アプリから同じ合言葉が送られたときだけ渡す）
  *  - シフト表の書き込み（doPost）: 合言葉（WRITE_TOKEN）が一致したときだけカレンダーに予定を作る
  *  - 1時間ごと: manaba の締切をカレンダーに「📩 締切：〜」として登録（提出したら ✅）、バイト前の確認メール
  *  - 毎朝: 今日のバイトと締切が近い課題のまとめメール
@@ -24,7 +25,7 @@
  *
  * ■ 注意
  *  - データは使う人それぞれの Google アカウントの中だけで処理され、アプリの開発者には送られない。
- *  - ウェブアプリのURLを知っている人は、バイトの予定と課題の一覧を見られる。URLは人に教えないこと。
+ *  - 合言葉を設定していない場合、ウェブアプリのURLを知っている人はバイトの予定と課題の一覧を見られる。
  *  - コードを変更したら「デプロイを管理」→ 編集（鉛筆）→ バージョン「新バージョン」で更新する（URLは変わらない）。
  *  - 配布用のテンプレートでは「① 初期設定」を実行しないこと（合言葉などがコピー先に引き継がれてしまう）。
  */
@@ -40,6 +41,7 @@ const DEFAULT_CONFIG = {
   MANABA_ENABLED: true,                     // manaba の課題メール（Gmail）を読むか
   MANABA_QUERY: 'from:manaba subject:公開のお知らせ newer_than:45d',
   MANABA_SUBMIT_QUERY: 'from:manaba subject:提出のお知らせ newer_than:45d',
+  MANABA_HIDE_KINDS: [],                    // メール・カレンダーに出さない課題の種類（例: アンケート）
 
   TIME_ZONE: 'Asia/Tokyo',
   NOTIFY_EMAIL: '',                         // 通知の送り先。空なら自分のアドレス
@@ -58,6 +60,7 @@ const SETTING_NOTES = {
   CALENDAR_ID: 'バイト専用のカレンダーがあればそのID（Googleカレンダーの設定 →「カレンダーの統合」）。空ならメイン',
   WRITE_TOKEN: 'シフト表をカレンダーに書き込むときの合言葉（「① 初期設定」で自動で作られる。アプリにも同じものを入れる）',
   MANABA_ENABLED: 'manaba の課題メールを読むか（TRUE / FALSE）',
+  MANABA_HIDE_KINDS: 'まとめメール・バイト前のメール・カレンダーに出さない課題の種類（例: アンケート。カンマ区切り。空なら全部出す）',
   MORNING_HOUR: 'まとめメールを送る時刻（0〜23時）。変えたら「① 初期設定」をもう一度押す',
   SUMMARY_DAYS: 'まとめメールに載せる締切の範囲（日）',
   JOB_REMINDER_MIN: 'バイト開始の何分前に確認メールを送るか',
@@ -135,7 +138,13 @@ function getJobEvents(calendar, from, to) {
     }));
 }
 
-function doGet() {
+function doGet(e) {
+  // 合言葉が設定されていれば、読み取りにも必要（URLだけが漏れても予定や課題を見られないように）
+  const token = e && e.parameter ? e.parameter.token : '';
+  if (CONFIG.WRITE_TOKEN && token !== CONFIG.WRITE_TOKEN) {
+    return toJson({ error: '合言葉が一致しません（アプリの ⚙️ 設定 → Google連携 の合言葉を確認）', needToken: true });
+  }
+
   const calendar = getCalendar();
 
   if (!calendar) {
@@ -409,7 +418,7 @@ function showConnectionInfo() {
       .warn { color: #92400e; background: #fef3c7; padding: 6px 8px; border-radius: 6px; }
       .note { color: #6b7280; font-size: 12px; }
     </style>
-    <h3>1. ウェブアプリのURL（アプリの「📅 Googleカレンダー連携」に貼る）</h3>
+    <h3>1. ウェブアプリのURL（アプリの「⚙️ 設定」→「Google連携」のURLの欄に貼る）</h3>
     ${urlBlock}
     <ol>
       <li>メニュー「拡張機能」→「Apps Script」を開く</li>
@@ -417,9 +426,10 @@ function showConnectionInfo() {
       <li>次のユーザーとして実行：<b>自分</b> ／ アクセスできるユーザー：<b>全員</b> →「デプロイ」</li>
       <li>表示された「ウェブアプリ」のURL（…/exec で終わる）をコピーする</li>
     </ol>
-    <h3>2. 合言葉（アプリのシフト表の設定「カレンダー書き込み用の合言葉」に貼る）</h3>
+    <h3>2. 合言葉（アプリの「⚙️ 設定」→「Google連携」の合言葉の欄に貼る）</h3>
     <input readonly value="${escape(config.WRITE_TOKEN)}" onclick="this.select()">
-    <p class="note">URLと合言葉は人に教えないでください。設定はシート「設定」の「値」で変えられます。
+    <p class="note">合言葉は、アプリが予定や課題を読むときと、シフト表を書き込むときの両方に使います。
+    URLと合言葉は人に教えないでください。設定はシート「設定」の「値」で変えられます。
     自動実行（毎朝${escape(config.MORNING_HOUR)}時のまとめメール・1時間ごとの更新）は設定済みです。</p>`;
   SpreadsheetApp.getUi().showModalDialog(
     HtmlService.createHtmlOutput(html).setWidth(560).setHeight(470),
@@ -478,7 +488,8 @@ function morningSummary(arg) {
 
 /** 課題メールと提出メールから、全課題（提出済みかどうか付き）と締切前の未提出課題を作る */
 function loadManabaStatus(now) {
-  return computeManabaStatus(getManabaAssignments(), getManabaSubmissions(), now);
+  const assignments = getManabaAssignments().filter(a => !CONFIG.MANABA_HIDE_KINDS.includes(a.kind));
+  return computeManabaStatus(assignments, getManabaSubmissions(), now);
 }
 
 function computeManabaStatus(assignments, submissions, now) {

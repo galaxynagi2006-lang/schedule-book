@@ -459,7 +459,8 @@ function showConnectionInfo() {
   const html = `${style}
     <h3>📱 スマホで使う場合：カメラでQRコードを読み取る</h3>
     <div class="qr" id="qr">QRコードを作成中…</div>
-    <p class="note center">読み取るとアプリが開き、連携が自動で登録されます</p>
+    <p class="note center">読み取るとアプリが開き、連携が自動で登録されます。<br>
+    ホーム画面に追加したアプリで使うときは、アプリの「⚙️ 設定」→「📷 QRコードを読み取る」で読み取ってください</p>
     <h3>💻 このパソコンで使う場合</h3>
     <p class="center"><a class="btn" href="${escape(link)}" target="_blank" rel="noopener">このパソコンのアプリに登録する</a></p>
     <details>

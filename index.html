@@ -277,6 +277,11 @@
     .hidden-note { font-size: 12px; color: var(--text-sub); padding: 10px 0 0; }
     .hidden-note a { color: var(--primary-color); font-weight: 600; cursor: pointer; }
     .shift-name-note { margin-bottom: 12px; }
+    .check-guide { padding-left: 18px; margin: 6px 0 8px; font-size: 12px; line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
+    .center { text-align: center; }
+    .qr-box { width: min(280px, 100%); margin: 0 auto 10px; }
+    .qr-box svg { display: block; width: 100%; height: auto; }
+    .qr-video { display: block; width: 100%; max-height: 50vh; object-fit: cover; border-radius: 12px; background: #0f172a; margin-bottom: 8px; }
 
     /* ========== シフト表からの一括登録 ========== */
     .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
@@ -444,7 +449,7 @@
                 <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>📄 テンプレートをコピーする</a></li>
               <li>コピーしたスプレッドシートのメニュー「<b>スケジュール帳</b>」→「<b>① 初期設定</b>」を押し、表示される許可を「許可」する</li>
               <li>「拡張機能」→「Apps Script」→ 右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」、実行：<b>自分</b>／アクセス：<b>全員</b> で「デプロイ」</li>
-              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>QRコードをスマホのカメラで読み取る</b>（アプリが開いて自動で登録されます。パソコンなら「このパソコンのアプリに登録する」を押す）</li>
+              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>QRコードを、下の「📲 ほかの端末に設定を移す」の「📷 QRコードを読み取る」で読み取る</b>（パソコンなら「このパソコンのアプリに登録する」を押す）</li>
             </ol>
             <p class="field-note">※ 1〜3はパソコンで行ってください（スプレッドシートのスマホアプリでは「スケジュール帳」メニューが使えません）。QRコードが使えないときは、同じ画面のURLと合言葉を下の2つの欄に貼ります。</p>
             <p class="field-note">データはあなたの Google アカウントの中だけで処理され、ほかの人（アプリの開発者を含む）には送られません。</p>
@@ -471,6 +476,25 @@
             <span id="gcal-status" class="field-note">未設定</span>
             <button type="button" class="btn-clear" onclick="syncGoogleCalendar(true)">今すぐ同期</button>
           </div>
+          <details class="setup-guide">
+            <summary>同期できないとき（つながるか確かめる）</summary>
+            <p class="field-note" style="margin-top: 6px;">下のボタンで、登録したURLをブラウザの新しいタブで開きます。表示された内容で原因がわかります。</p>
+            <ul class="check-guide">
+              <li><b>{"events": …</b> のような文字 → 連携は正常です。少し待ってから「今すぐ同期」を押してください</li>
+              <li><b>合言葉が一致しません</b> → 合言葉が違います。「② アプリに登録する情報」を読み取り直してください</li>
+              <li><b>Google のログイン画面・「ファイルを開くことができません」</b> → デプロイが止まっているか、アクセスが「全員」になっていません。Apps Script の「デプロイを管理」を確認してください</li>
+            </ul>
+            <button type="button" class="btn-clear" onclick="openGcalCheck()">URLを開いて確かめる</button>
+          </details>
+        </section>
+
+        <section class="settings-card" id="transfer-settings">
+          <h2>📲 ほかの端末に設定を移す</h2>
+          <p class="field-note">設定（APIキー・Google連携）は端末ごとに別々に保存されます。設定済みの端末でQRコードを出し、もう一方の端末のアプリで読み取ると、同じ設定になります。</p>
+          <label class="check-row"><input type="checkbox" id="transfer-keys" checked> AIのAPIキーも含める</label>
+          <button type="button" class="btn-secondary" onclick="showTransferQr()">この端末の設定をQRコードにする</button>
+          <button type="button" class="btn-submit" onclick="openQrScanner()">📷 QRコードを読み取る</button>
+          <p class="field-note" style="margin-top: 8px;">※ホーム画面に追加したアプリは、Safari などのブラウザとも設定が別です。ホーム画面のアプリで使うときは、カメラアプリではなくこのボタンで読み取ってください（スプレッドシートの「② アプリに登録する情報」のQRコードも読み取れます）。</p>
         </section>
 
         <section class="settings-card">
@@ -593,6 +617,32 @@
   </section>
 
   <!-- 時間割の登録・編集（ボトムシート） -->
+  <section class="sheet" id="qr-sheet" aria-label="設定のQRコード">
+    <div class="sheet-head">
+      <span id="qr-sheet-title">QRコード</span>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
+    </div>
+    <div id="qr-show" hidden>
+      <div class="qr-box" id="qr-code"></div>
+      <p class="field-note center" id="qr-show-note"></p>
+      <p class="field-note center">⚠️ このQRコードは人に見せないでください（予定・課題やAPIキーを使えてしまいます）</p>
+    </div>
+    <div id="qr-scan" hidden>
+      <video id="qr-video" class="qr-video" playsinline muted></video>
+      <p class="field-note center" id="qr-scan-note">QRコードを枠の中に映してください</p>
+      <details class="setup-guide">
+        <summary>カメラが使えないとき</summary>
+        <label class="btn-secondary backup-import" style="margin-top: 8px;">QRコードの写真・スクリーンショットから読み取る
+          <input type="file" accept="image/*" onchange="scanQrFromImage(this)" hidden>
+        </label>
+        <div class="secret-field">
+          <input type="text" id="qr-paste" class="form-control" placeholder="https://…#connect=… を貼り付け" autocomplete="off" spellcheck="false">
+          <button type="button" class="btn-clear" onclick="applyPastedConnect()">登録</button>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <section class="sheet" id="class-sheet" aria-label="時間割の登録">
     <div class="sheet-head">
       <span>🏫 時間割</span>
@@ -807,6 +857,8 @@
       document.getElementById('add-sheet').classList.remove('open');
       document.getElementById('shift-sheet').classList.remove('open');
       document.getElementById('class-sheet').classList.remove('open');
+      document.getElementById('qr-sheet').classList.remove('open');
+      stopQrScanner();
     }
 
     function openShiftSheet() {
@@ -2001,6 +2053,31 @@ ${upcoming}
       return { added, updated, removed };
     }
 
+    // 画面に出す原因の説明を付けたエラー
+    function syncError(reason) {
+      const err = new Error(reason);
+      err.reason = reason;
+      return err;
+    }
+
+    // 合言葉付きのURL（Apps Script に送るのと同じもの）
+    function gcalRequestUrl() {
+      const url = localStorage.getItem(GCAL_URL_STORAGE);
+      if (!url) return '';
+      const token = localStorage.getItem(GCAL_TOKEN_STORAGE);
+      return token ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : url;
+    }
+
+    // 登録したURLを新しいタブで開き、何が表示されるかで原因を確かめてもらう
+    function openGcalCheck() {
+      const requestUrl = gcalRequestUrl();
+      if (!requestUrl) {
+        showStatus('📅 先に Google連携のURLを登録してください', 'error');
+        return;
+      }
+      window.open(requestUrl, '_blank', 'noopener');
+    }
+
     let gcalSyncing = false;   // 同期が重ならないようにする（同じ課題の二重取り込みを防ぐ）
 
     async function syncGoogleCalendar(manual = false) {
@@ -2015,18 +2092,29 @@ ${upcoming}
       try {
         // 追加ヘッダーを付けない単純なGETにする（Apps Script はこの形でしか他サイトから読めない）。
         // 合言葉はURLの末尾に付けて送る（Apps Script 側で一致したときだけ予定と課題を返す）
-        const token = localStorage.getItem(GCAL_TOKEN_STORAGE);
-        const requestUrl = token ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : url;
-        const response = await fetch(requestUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
+        const requestUrl = gcalRequestUrl();
+        let response, data;
+        try {
+          response = await fetch(requestUrl);
+        } catch (err) {
+          // ログイン画面やエラーページに転送されると、ブラウザが中身を読ませないため通信エラーになる
+          throw syncError(navigator.onLine === false
+            ? 'オフラインのため同期できません'
+            : 'Apps Script につながりません（デプロイが止まっているか、アクセスが「全員」になっていません）');
+        }
+        if (!response.ok) throw syncError(`Apps Script がエラーを返しました（HTTP ${response.status}）`);
+        try {
+          data = await response.json();
+        } catch (err) {
+          throw syncError('URLが違うようです（…/exec で終わるウェブアプリのURLか確認）');
+        }
         if (data.needToken) {
           const tokenError = new Error(data.error);
           tokenError.isTokenError = true;
           throw tokenError;
         }
-        if (data.error) throw new Error(data.error);
-        if (!Array.isArray(data.events)) throw new Error('予定の形式が正しくありません');
+        if (data.error) throw syncError(`Apps Script のエラー：${data.error}`);
+        if (!Array.isArray(data.events)) throw syncError('予定の形式が正しくありません（Apps Script のコードが古い可能性）');
 
         const result = applyCalendarEvents(data);
         const manaba = Array.isArray(data.assignments)
@@ -2056,7 +2144,7 @@ ${upcoming}
         console.error('Googleカレンダー同期エラー:', err);
         gcalLastError = err.isTokenError
           ? '合言葉が一致しません（⚙️ 設定の合言葉を確認）'
-          : '同期に失敗しました（URLと公開設定「全員」を確認）';
+          : err.reason || '同期に失敗しました（⚙️ 設定の「同期できないとき」で確かめられます）';
         if (manual) showStatus(`📅 ${gcalLastError}`, 'error');
       } finally {
         gcalSyncing = false;
@@ -3141,22 +3229,243 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     renderTasks();
     setInterval(renderTasks, 60000);
 
-    // QRコード・リンク（…#connect=〇〇）から開いたときは、URLと合言葉を登録する。
-    // 「#」以降はサーバーに送られない。読み取ったらすぐにアドレスから消して、履歴や画面に残さない
+    // ---------- 端末どうしで設定をそろえる（QRコード・リンク …#connect=〇〇） ----------
+    // 中身は {u: 連携のURL, t: 合言葉, p: 使うAI, g: GeminiのAPIキー, c: ClaudeのAPIキー, m: Claudeのモデル} を
+    // JSONにしてbase64urlにしたもの（スプレッドシートの「② アプリに登録する情報」は u と t だけ）。
+    // 「#」以降はサーバーに送られない
+    const QR_GENERATOR_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';
+    const QR_GENERATOR_SRI = 'sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1';
+    const QR_READER_SRC = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    const QR_READER_SRI = 'sha384-hStSInNIZ8ljtOVrmrgf7zdHMapaLBWoSnPTtF0nzsybp4+LuhDz6sHuEVpWIX8o';
+
+    function encodeConnectPayload(payload) {
+      const bytes = new TextEncoder().encode(JSON.stringify(payload));
+      return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    // 「…#connect=〇〇」の文字列から設定を取り出す。形式や中身が正しくなければ例外にする
+    function parseConnectCode(text) {
+      const match = String(text || '').trim().match(/#connect=([A-Za-z0-9_-]+)$/);
+      if (!match) throw new Error('形式が違います');
+      const base64 = match[1].replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(match[1].length / 4) * 4, '=');
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const raw = JSON.parse(new TextDecoder().decode(bytes));
+      const claudeModels = [...document.getElementById('claude-model').options].map(o => o.value);
+      const checks = {
+        u: v => /^https:\/\/script\.google\.com\/.+\/exec$/.test(v),
+        t: v => /^[\w-]{8,}$/.test(v),
+        p: v => Object.hasOwn(AI_PROVIDERS, v),
+        g: v => /^[\w-]{20,}$/.test(v),
+        c: v => /^sk-ant-[\w-]{20,}$/.test(v),
+        m: v => claudeModels.includes(v)
+      };
+      const payload = {};
+      Object.entries(checks).forEach(([key, isValid]) => {
+        if (raw[key] === undefined || raw[key] === '') return;
+        if (typeof raw[key] !== 'string' || !isValid(raw[key])) throw new Error(`内容が正しくありません（${key}）`);
+        payload[key] = raw[key];
+      });
+      if (payload.t && !payload.u) throw new Error('連携のURLがありません');
+      if (!Object.keys(payload).length) throw new Error('登録する設定がありません');
+      return payload;
+    }
+
+    // 取り出した設定を保存する。今と違う設定を上書きするときは確認する。登録した項目の名前を返す（やめたときは null）
+    function applyConnectPayload(payload) {
+      const items = [
+        [payload.u, GCAL_URL_STORAGE], [payload.t, GCAL_TOKEN_STORAGE], [payload.p, AI_PROVIDER_STORAGE],
+        [payload.g, API_KEY_STORAGE], [payload.c, CLAUDE_KEY_STORAGE], [payload.m, CLAUDE_MODEL_STORAGE]
+      ].filter(([value]) => value);
+      const replacing = items.some(([value, key]) => {
+        const current = localStorage.getItem(key);
+        return current && current !== value && key !== AI_PROVIDER_STORAGE && key !== CLAUDE_MODEL_STORAGE;
+      });
+      if (replacing && !confirm('この端末の今の設定（Google連携・APIキー）を、読み取った設定に置き換えますか？')) return null;
+      items.forEach(([value, key]) => localStorage.setItem(key, value));
+      return [
+        payload.u && 'Google連携',
+        payload.g && 'Gemini APIキー',
+        payload.c && 'Claude APIキー'
+      ].filter(Boolean);
+    }
+
+    // 画面の設定欄を保存した内容に合わせ、連携が入っていれば同期する
+    function finishConnect(names) {
+      loadApiKey();
+      loadGcalSettings();
+      loadShiftSettings();
+      showStatus(`🔗 設定を登録しました（${names.join('・') || 'AIの選択'}）`, 'info');
+      if (names.includes('Google連携')) syncGoogleCalendar(true);
+    }
+
+    // アプリのアドレスが …#connect=〇〇 のとき（カメラアプリでQRコードを読み取ったとき）。
+    // 読み取ったらすぐにアドレスから消して、履歴や画面に残さない
     function readConnectLink() {
-      const match = location.hash.match(/^#connect=([A-Za-z0-9_-]+)$/);
       if (!location.hash.startsWith('#connect=')) return null;
+      const hash = location.hash;
       history.replaceState(null, '', location.pathname + location.search);
       try {
-        if (!match) throw new Error('形式が違います');
-        const base64 = match[1].replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(match[1].length / 4) * 4, '=');
-        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-        const { u: url, t: token } = JSON.parse(new TextDecoder().decode(bytes));
-        if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url) || !/^[\w-]{8,}$/.test(token)) throw new Error('内容が正しくありません');
-        return { url, token };
+        return { payload: parseConnectCode(hash) };
       } catch (err) {
         console.warn('連携リンクを読み取れませんでした', err);
         return { error: true };
+      }
+    }
+
+    function loadScriptOnce(src, integrity) {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) return existing.loaded;
+      const script = document.createElement('script');
+      script.src = src;
+      script.integrity = integrity;
+      script.crossOrigin = 'anonymous';
+      script.loaded = new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = () => { script.remove(); reject(new Error('読み込めませんでした')); };
+      });
+      document.head.appendChild(script);
+      return script.loaded;
+    }
+
+    function openQrSheet(mode, title) {
+      document.getElementById('add-sheet').classList.remove('open');
+      document.getElementById('sheet-overlay').classList.add('open');
+      document.getElementById('qr-sheet').classList.add('open');
+      document.getElementById('qr-sheet-title').textContent = title;
+      document.getElementById('qr-show').hidden = mode !== 'show';
+      document.getElementById('qr-scan').hidden = mode !== 'scan';
+    }
+
+    // この端末の設定を、もう一方の端末で読み取るQRコードにする（QRコードはこの画面の中で作り、外部に送らない）
+    async function showTransferQr() {
+      const withKeys = document.getElementById('transfer-keys').checked;
+      const payload = {
+        u: localStorage.getItem(GCAL_URL_STORAGE),
+        t: localStorage.getItem(GCAL_TOKEN_STORAGE),
+        p: localStorage.getItem(AI_PROVIDER_STORAGE),
+        m: localStorage.getItem(CLAUDE_MODEL_STORAGE),
+        g: withKeys ? localStorage.getItem(API_KEY_STORAGE) : '',
+        c: withKeys ? localStorage.getItem(CLAUDE_KEY_STORAGE) : ''
+      };
+      Object.keys(payload).forEach(key => { if (!payload[key]) delete payload[key]; });
+      if (!payload.u && !payload.g && !payload.c) {
+        showStatus('移せる設定がありません（先にこの端末でAPIキーかGoogle連携を登録してください）', 'error');
+        return;
+      }
+      try {
+        await loadScriptOnce(QR_GENERATOR_SRC, QR_GENERATOR_SRI);
+        const qr = qrcode(0, 'L');
+        qr.addData(`${location.origin}${location.pathname}#connect=${encodeConnectPayload(payload)}`);
+        qr.make();
+        document.getElementById('qr-code').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 3, scalable: true });
+      } catch (err) {
+        console.error('QRコード作成エラー:', err);
+        showStatus('QRコードを作れませんでした（通信を確認してください）', 'error');
+        return;
+      }
+      document.getElementById('qr-show-note').textContent =
+        `含まれる設定：${[payload.u && 'Google連携', payload.g && 'Gemini APIキー', payload.c && 'Claude APIキー'].filter(Boolean).join('・')}。` +
+        'もう一方の端末のアプリで「⚙️ 設定」→「📷 QRコードを読み取る」を押して読み取ってください';
+      openQrSheet('show', 'この端末の設定');
+    }
+
+    // ---------- アプリの中でQRコードを読み取る（ホーム画面のアプリはブラウザと設定が別なので、アプリ内で読む） ----------
+    let qrStream = null;
+    let qrScanTimer = null;
+
+    function stopQrScanner() {
+      clearTimeout(qrScanTimer);
+      if (qrStream) qrStream.getTracks().forEach(track => track.stop());
+      qrStream = null;
+      document.getElementById('qr-video').srcObject = null;
+    }
+
+    // 読み取った文字列を登録する。このアプリ用のQRコードでなければ false を返す
+    function handleScannedText(text) {
+      let payload;
+      try {
+        payload = parseConnectCode(text);
+      } catch (err) {
+        return false;
+      }
+      closeSheet();
+      const names = applyConnectPayload(payload);
+      if (names) finishConnect(names);
+      return true;
+    }
+
+    function decodeQrFrom(source, width, height) {
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(1, 1000 / Math.max(width, height));   // 大きな写真は縮めて速く読む
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(source, 0, 0, canvas.width, canvas.height);
+      const image = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(image.data, image.width, image.height);
+      return code ? code.data : '';
+    }
+
+    async function openQrScanner() {
+      openQrSheet('scan', 'QRコードを読み取る');
+      const note = document.getElementById('qr-scan-note');
+      note.textContent = 'カメラを準備しています…';
+      try {
+        await loadScriptOnce(QR_READER_SRC, QR_READER_SRI);
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('カメラが使えません');
+        qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      } catch (err) {
+        console.warn('カメラを起動できませんでした', err);
+        note.textContent = '⚠️ カメラを起動できませんでした。下の「カメラが使えないとき」から読み取ってください';
+        return;
+      }
+      if (!document.getElementById('qr-sheet').classList.contains('open')) {
+        stopQrScanner();   // 準備中に閉じられた
+        return;
+      }
+      const video = document.getElementById('qr-video');
+      video.srcObject = qrStream;
+      await video.play().catch(() => {});
+      note.textContent = 'QRコードを映してください（パソコンの画面でもOK）';
+
+      let warned = false;
+      const scan = () => {
+        if (!qrStream) return;
+        if (video.readyState >= 2) {
+          const text = decodeQrFrom(video, video.videoWidth, video.videoHeight);
+          if (text && handleScannedText(text)) return;
+          if (text && !warned) {
+            warned = true;
+            note.textContent = '⚠️ このアプリ用のQRコードではありません';
+          }
+        }
+        qrScanTimer = setTimeout(scan, 250);
+      };
+      scan();
+    }
+
+    async function scanQrFromImage(input) {
+      const file = input.files[0];
+      input.value = '';
+      if (!file) return;
+      try {
+        await loadScriptOnce(QR_READER_SRC, QR_READER_SRI);
+        const bitmap = await createImageBitmap(file);
+        const text = decodeQrFrom(bitmap, bitmap.width, bitmap.height);
+        if (!text) throw new Error('QRコードが見つかりません');
+        if (!handleScannedText(text)) showStatus('このアプリ用のQRコードではありません', 'error');
+      } catch (err) {
+        console.warn('画像からQRコードを読み取れませんでした', err);
+        showStatus('画像からQRコードを読み取れませんでした', 'error');
+      }
+    }
+
+    function applyPastedConnect() {
+      const input = document.getElementById('qr-paste');
+      if (handleScannedText(input.value)) {
+        input.value = '';
+      } else {
+        showStatus('貼り付けた文字を読み取れませんでした（…#connect=… で終わるリンクか確認）', 'error');
       }
     }
 
@@ -3165,13 +3474,8 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     window.addEventListener('hashchange', () => {
       if (location.hash.startsWith('#connect=')) location.reload();
     });
-    if (connectLink && !connectLink.error) {
-      const currentUrl = localStorage.getItem(GCAL_URL_STORAGE);
-      if (!currentUrl || currentUrl === connectLink.url || confirm('今のGoogle連携を、読み取った連携に置き換えますか？')) {
-        localStorage.setItem(GCAL_URL_STORAGE, connectLink.url);
-        localStorage.setItem(GCAL_TOKEN_STORAGE, connectLink.token);
-      }
-    }
+    const connectedNames = connectLink && connectLink.payload ? applyConnectPayload(connectLink.payload) : null;
+    if (connectedNames) loadApiKey();
 
     // 起動時・30分ごと・アプリに戻ってきたとき（前回から10分以上たっていれば）にカレンダーを同期
     loadGcalSettings();
@@ -3183,7 +3487,8 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     if (connectLink && connectLink.error) {
       showStatus('📅 連携用のQRコード・リンクを読み取れませんでした。もう一度読み取るか、⚙️ 設定で貼り付けてください', 'error');
     }
-    syncGoogleCalendar(!!connectLink && !connectLink.error);   // QRコードから開いたときは結果を表示する
+    syncGoogleCalendar(!!connectedNames?.includes('Google連携'));   // QRコードから開いたときは結果を表示する
+    if (connectedNames && !connectedNames.includes('Google連携')) showStatus(`🔗 設定を登録しました（${connectedNames.join('・')}）`, 'info');
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);
     document.addEventListener('visibilitychange', () => {
       const lastSync = new Date(localStorage.getItem(GCAL_LAST_SYNC_STORAGE) || 0).getTime();

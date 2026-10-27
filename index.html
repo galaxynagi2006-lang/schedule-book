@@ -176,7 +176,7 @@
     .tab-bar {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
       display: flex; justify-content: center;
-      background: rgba(255, 255, 255, 0.96);
+      background: #ffffff;
       border-top: 1px solid var(--line);
       padding-bottom: env(safe-area-inset-bottom);
     }
@@ -186,9 +186,8 @@
       padding: 10px 0 12px; font-size: 11px; font-weight: 700; color: #9ca3af;
       display: flex; flex-direction: column; align-items: center; gap: 2px;
     }
-    .tab-btn .tab-icon { font-size: 20px; filter: grayscale(1); opacity: 0.6; }
+    .tab-btn .tab-icon { width: 24px; height: 24px; }   /* 線のアイコン。色は文字と同じ（選択中は濃く、それ以外は薄い灰色） */
     .tab-btn.active { color: var(--text-main); }
-    .tab-btn.active .tab-icon { filter: none; opacity: 1; }
 
     .fab {
       position: fixed; z-index: 11;
@@ -248,9 +247,9 @@
     .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
     #add-schedule-form { margin-top: 6px; }
     .setup-guide { margin-top: 8px; background: var(--bg-sub); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
-    .setup-guide summary { font-size: 13px; font-weight: 700; color: var(--accent-color); cursor: pointer; }
+    .setup-guide summary { font-size: 13px; font-weight: 700; color: var(--primary-color); cursor: pointer; }   /* 「manabaで開く」と同じ青 */
     .setup-guide ol { padding-left: 18px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; line-height: 1.5; }
-    .btn-template { display: inline-block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: var(--accent-color); color: #fff; font-weight: 700; text-decoration: none; }
+    .btn-template { display: inline-block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: var(--primary-color); color: #fff; font-weight: 700; text-decoration: none; }
     .shift-settings { background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
     .shift-settings summary { font-size: 13px; font-weight: 700; color: var(--text-sub); cursor: pointer; }
     .field-note { font-size: 11px; color: var(--text-sub); }
@@ -483,13 +482,13 @@
   <nav class="tab-bar">
     <div class="tab-bar-inner">
       <button class="tab-btn active" type="button" data-tab="tab-list" onclick="switchTab('tab-list')">
-        <span class="tab-icon">📋</span>リスト
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>リスト
       </button>
       <button class="tab-btn" type="button" data-tab="tab-timeline" onclick="switchTab('tab-timeline')">
-        <span class="tab-icon">🕒</span>タイムライン
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>タイムライン
       </button>
       <button class="tab-btn" type="button" data-tab="tab-settings" onclick="switchTab('tab-settings')">
-        <span class="tab-icon">⚙️</span>設定
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>設定
       </button>
     </div>
   </nav>

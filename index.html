@@ -228,6 +228,10 @@
     /* ========== シフト表からの一括登録 ========== */
     .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
     #add-schedule-form { margin-top: 6px; }
+    .setup-guide { margin-top: 8px; background: var(--bg-sub); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+    .setup-guide summary { font-size: 13px; font-weight: 700; color: var(--accent-color); cursor: pointer; }
+    .setup-guide ol { padding-left: 18px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; line-height: 1.5; }
+    .btn-template { display: inline-block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: var(--accent-color); color: #fff; font-weight: 700; text-decoration: none; }
     .shift-settings { background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
     .shift-settings summary { font-size: 13px; font-weight: 700; color: var(--text-sub); cursor: pointer; }
     .field-note { font-size: 11px; color: var(--text-sub); }
@@ -427,7 +431,18 @@
 
       <!-- Googleカレンダー連携（Apps Script 経由でバイト予定を取り込む） -->
       <details class="api-settings" id="gcal-settings">
-        <summary>📅 Googleカレンダー連携（バイト予定の取り込み）</summary>
+        <summary>📅 Googleカレンダー連携（バイト予定・manaba の課題・通知）</summary>
+        <details class="setup-guide">
+          <summary>はじめての連携の手順（約5分・最初の1回だけ）</summary>
+          <ol>
+            <li><span id="gcal-template-step">下のボタンからテンプレートを開き、「コピーを作成」を押す</span>
+              <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>📄 テンプレートをコピーする</a></li>
+            <li>コピーしたスプレッドシートのメニュー「<b>スケジュール帳</b>」→「<b>① 初期設定</b>」を押し、表示される許可を「許可」する</li>
+            <li>「拡張機能」→「Apps Script」→ 右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」、実行：<b>自分</b>／アクセス：<b>全員</b> で「デプロイ」</li>
+            <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」のURLを下の欄に、合言葉を「📷 シフト表から登録」の設定に貼る</li>
+          </ol>
+          <p class="field-note">データはあなたの Google アカウントの中だけで処理され、ほかの人（アプリの開発者を含む）には送られません。</p>
+        </details>
         <div class="form-group" style="margin-top: 8px;">
           <label for="gcal-url">Apps Script のウェブアプリURL</label>
           <input type="url" id="gcal-url" class="form-control" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" onchange="saveGcalUrl()">
@@ -515,6 +530,9 @@
     const SHIFT_TITLE_STORAGE = 'smart_schedule_shift_title';
     const MANABA_SUBMITTED_STORAGE = 'smart_schedule_manaba_submitted';   // 処理済みの提出メール
     const CLASS_STORAGE = 'smart_schedule_classes';               // 時間割（授業）
+    // 連携用テンプレート（Apps Script 入りのスプレッドシート）の「コピーを作成」リンク。
+    // 例: https://docs.google.com/spreadsheets/d/〇〇〇/copy（空のあいだは手順の文章だけを表示する）
+    const GAS_TEMPLATE_URL = 'https://docs.google.com/spreadsheets/d/1PFeVLmpUlIXduoeU552G30fTWMAMpAc_asD0nn3H3eQ/copy';
 
     // AIごとの設定（APIキーはAIごとに別々に保存する）
     const AI_PROVIDERS = {
@@ -1638,6 +1656,14 @@
     }
 
     function loadGcalSettings() {
+      const templateLink = document.getElementById('gcal-template-link');
+      if (GAS_TEMPLATE_URL) {
+        templateLink.href = GAS_TEMPLATE_URL;
+        templateLink.hidden = false;
+      } else {
+        document.getElementById('gcal-template-step').textContent =
+          'テンプレート（スケジュール帳用のスプレッドシート）を配布者から受け取り、「コピーを作成」を押す';
+      }
       document.getElementById('gcal-url').value = localStorage.getItem(GCAL_URL_STORAGE) || '';
       updateGcalStatus();
     }

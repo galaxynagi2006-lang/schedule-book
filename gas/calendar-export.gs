@@ -1,81 +1,110 @@
 /**
- * スマートスケジュール帳：Googleカレンダーのバイト予定を書き出す Apps Script
+ * スマートスケジュール帳：Googleカレンダー・manaba（Gmail）との連携と通知を行う Apps Script
+ * @OnlyCurrentDoc
  *
- * 【使い方】
- *  1. https://script.google.com で「新しいプロジェクト」を作り、このコードを貼り付けて保存する
- *  2. 下の CONFIG を自分のカレンダーに合わせて変更する
- *  3. 「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」を選び、
- *       次のユーザーとして実行：自分
- *       アクセスできるユーザー：全員
- *     でデプロイする（初回はカレンダーへのアクセス許可を求められるので「許可」する）
- *  4. 表示された「ウェブアプリのURL」（…/exec で終わるURL）をアプリの
- *     「📅 Googleカレンダー連携」欄に貼り付ける
+ * ■ いちばん簡単な使い方（配布用テンプレートのスプレッドシートから）
+ *  1. 配られたリンクを開き「コピーを作成」する（コード入りのスプレッドシートが自分のドライブにできる）
+ *  2. スプレッドシートのメニュー「スケジュール帳」→「① 初期設定」を押して、表示される許可を「許可」する
+ *     （設定シートの作成・合言葉の作成・自動実行（通知）の設定をまとめて行う）
+ *  3. 「拡張機能」→「Apps Script」→「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」
+ *       次のユーザーとして実行：自分 ／ アクセスできるユーザー：全員 → 「デプロイ」
+ *  4. メニュー「スケジュール帳」→「② アプリに登録する情報」に表示されるURLと合言葉を、アプリに貼り付ける
+ *  設定（バイトのキーワード、通知の時刻など）は、シート「設定」の「値」の列を書き換えるだけで変えられる。
  *
- * 【シフト表の画像からカレンダーへ書き込む場合】
- *  5. アプリの「📷 シフト表から登録」→ 設定 で「合言葉を作る」を押し、表示された文字列を
- *     下の CONFIG.WRITE_TOKEN に貼り付けて保存する
- *  6. 「デプロイを管理」→ 編集（鉛筆）→ バージョン「新バージョン」→「デプロイ」で更新する
- *     （カレンダーへの書き込み許可を改めて求められたら「許可」する）
+ * ■ 単体のスクリプトとして使う場合（以前からの方法）
+ *  https://script.google.com で新しいプロジェクトを作ってこのコードを貼り付け、下の DEFAULT_CONFIG を直接書き換える。
+ *  自動実行は関数「setupTriggers」、試しのまとめメールは「morningSummary」を選んで「▶ 実行」する。
  *
- * 【manaba の課題メール（Gmail）を取り込む場合】
- *  7. このコードに貼り替えたら「デプロイを管理」→ 編集 → バージョン「新バージョン」で更新する
- *     （Gmail を読む許可を求められるので「許可」する。読むのは MANABA_QUERY に合うメールだけ）
- *  8. 不要なら CONFIG.MANABA_ENABLED を false にする
- *  9. manaba の「提出のお知らせ」メールも読み、提出した課題をアプリで自動的に完了にする
- *     （manaba のリマインダ設定で、課題提出の通知をONにしておく）
+ * ■ できること
+ *  - アプリ用（doGet）: カレンダーのバイト予定と、manaba の課題・提出状況をアプリに渡す
+ *  - シフト表の書き込み（doPost）: 合言葉（WRITE_TOKEN）が一致したときだけカレンダーに予定を作る
+ *  - 1時間ごと: manaba の締切をカレンダーに「📩 締切：〜」として登録（提出したら ✅）、バイト前の確認メール
+ *  - 毎朝: 今日のバイトと締切が近い課題のまとめメール
+ *    （スクリプト プロパティに GEMINI_API_KEY を入れると AI のひとこと付き）
  *
- * 【アプリを開かなくても届く通知（時間で自動実行）】
- * 10. このコードに貼り替えて保存し、上の関数の選択欄で「setupTriggers」を選んで「▶ 実行」する
- *     （メール送信・外部への接続・自動実行の許可を求められるので「許可」する）。
- *     これで次の3つが自動で動く。止めたいときは「removeTriggers」を実行する
- *       ・1時間ごと: manaba の課題の締切をカレンダーに「📩 締切：〜」として登録（提出したら ✅ に変える）
- *       ・1時間ごと: バイト開始の約1時間前に、24時間以内に締切の未提出課題があればメールで知らせる
- *       ・毎朝 MORNING_HOUR 時: 今日のバイトと締切が近い課題をまとめたメールを送る
- * 11. まとめメールに AI のひとことを付けたい場合は、「プロジェクトの設定（歯車）」→
- *     「スクリプト プロパティ」に GEMINI_API_KEY という名前で Gemini の APIキーを追加する
- *     （キーをコードに書かないこと）
- * 12. 試しにメールを受け取りたいときは「morningSummary」を選んで実行する
- * 13. doGet（アプリ用）の変更も反映するため、「デプロイを管理」→ 新バージョン で更新する
- *
- * 【注意】
- *  - URLを知っている人は、条件に合う予定（タイトルと時刻）を見られます。URLは人に教えないこと。
- *  - manaba の取り込みを有効にすると、URLを知っている人は「課題名・コース名・締切」も見られます。
- *  - 書き込みは合言葉が一致したときだけ行います。合言葉が空のままなら書き込みは無効です。
- *  - コードを変更したら「デプロイを管理」→ 編集 → バージョン「新バージョン」で更新する（URLは変わらない）。
+ * ■ 注意
+ *  - データは使う人それぞれの Google アカウントの中だけで処理され、アプリの開発者には送られない。
+ *  - ウェブアプリのURLを知っている人は、バイトの予定と課題の一覧を見られる。URLは人に教えないこと。
+ *  - コードを変更したら「デプロイを管理」→ 編集（鉛筆）→ バージョン「新バージョン」で更新する（URLは変わらない）。
+ *  - 配布用のテンプレートでは「① 初期設定」を実行しないこと（合言葉などがコピー先に引き継がれてしまう）。
  */
 
-const CONFIG = {
-  // バイト専用カレンダーがあれば、そのカレンダーID（設定 → カレンダーの統合 に表示）を入れる。
-  // 空のままなら、メインのカレンダーを読む。
-  CALENDAR_ID: '',
+// 設定の初期値。シート「設定」に値が書かれていれば、そちらが優先される
+const DEFAULT_CONFIG = {
+  CALENDAR_ID: '',                          // バイトの予定があるカレンダーのID。空ならメインのカレンダー
+  KEYWORDS: ['バイト', 'アルバイト', 'シフト'], // タイトルにどれかを含む予定をバイトとして扱う（空なら全部）
+  DAYS_BACK: 7,                             // アプリに渡す期間：何日前から
+  DAYS_AHEAD: 62,                           //               何日後まで（翌月分のシフトも入るように約2か月）
+  WRITE_TOKEN: '',                          // シフト表を書き込むときの合言葉。空なら書き込み無効
 
-  // タイトルにどれかを含む予定だけを書き出す。
-  // バイト専用カレンダーを使う場合は [] にすると、そのカレンダーの予定をすべて書き出す。
-  KEYWORDS: ['バイト', 'アルバイト', 'シフト'],
-
-  // 書き出す期間（今日から何日前〜何日後まで）
-  DAYS_BACK: 7,
-  DAYS_AHEAD: 62,   // 翌月分のシフトもすべて取り込めるように約2か月先まで
-
-  // シフト表から予定を書き込むときの合言葉（アプリの設定と同じ文字列にする）。空なら書き込み無効
-  WRITE_TOKEN: '',
-
-  // manaba の「〇〇公開のお知らせ」メールから課題を読み取ってアプリに渡す
-  MANABA_ENABLED: true,
+  MANABA_ENABLED: true,                     // manaba の課題メール（Gmail）を読むか
   MANABA_QUERY: 'from:manaba subject:公開のお知らせ newer_than:45d',
-  // 「〇〇提出のお知らせ」メール（提出した課題を完了にするため）
   MANABA_SUBMIT_QUERY: 'from:manaba subject:提出のお知らせ newer_than:45d',
 
-  // ---- アプリを開かなくても届く通知（setupTriggers で有効にする） ----
   TIME_ZONE: 'Asia/Tokyo',
-  NOTIFY_EMAIL: '',                     // 通知の送り先。空なら自分のアドレス
-  DEADLINE_CALENDAR_ID: '',             // 締切の予定を入れるカレンダー。空ならメインのカレンダー
-  DEADLINE_REMINDERS_MIN: [1440, 180],  // 締切の予定の通知（分前）：前日・3時間前
-  MORNING_HOUR: 7,                      // まとめメールを送る時刻（時）
-  SUMMARY_DAYS: 7,                      // まとめメールに載せる締切の範囲（日）
-  JOB_REMINDER_MIN: 60,                 // バイト開始の何分前に知らせるか
+  NOTIFY_EMAIL: '',                         // 通知の送り先。空なら自分のアドレス
+  DEADLINE_CALENDAR_ID: '',                 // 締切の予定を入れるカレンダー。空ならメインのカレンダー
+  DEADLINE_REMINDERS_MIN: [1440, 180],      // 締切の予定の通知（分前）：前日・3時間前
+  MORNING_HOUR: 7,                          // まとめメールを送る時刻（時）
+  SUMMARY_DAYS: 7,                          // まとめメールに載せる締切の範囲（日）
+  JOB_REMINDER_MIN: 60,                     // バイト開始の何分前に知らせるか
   APP_URL: 'https://galaxynagi2006-lang.github.io/schedule-book/'
 };
+
+// シート「設定」に並べる項目と説明（上から順に表示する）
+const SETTINGS_SHEET = '設定';
+const SETTING_NOTES = {
+  KEYWORDS: 'タイトルにこの言葉を含む予定をバイトとして扱う（カンマ区切り。「なし」にすると全部の予定）',
+  CALENDAR_ID: 'バイト専用のカレンダーがあればそのID（Googleカレンダーの設定 →「カレンダーの統合」）。空ならメイン',
+  WRITE_TOKEN: 'シフト表をカレンダーに書き込むときの合言葉（「① 初期設定」で自動で作られる。アプリにも同じものを入れる）',
+  MANABA_ENABLED: 'manaba の課題メールを読むか（TRUE / FALSE）',
+  MORNING_HOUR: 'まとめメールを送る時刻（0〜23時）。変えたら「① 初期設定」をもう一度押す',
+  SUMMARY_DAYS: 'まとめメールに載せる締切の範囲（日）',
+  JOB_REMINDER_MIN: 'バイト開始の何分前に確認メールを送るか',
+  DEADLINE_REMINDERS_MIN: '締切の予定の通知（分前、カンマ区切り）。1440 = 前日',
+  NOTIFY_EMAIL: '通知の送り先。空なら自分のアドレス',
+  DEADLINE_CALENDAR_ID: '締切の予定を入れるカレンダーのID。空ならメイン',
+  DAYS_BACK: 'アプリに渡す期間：何日前から',
+  DAYS_AHEAD: 'アプリに渡す期間：何日後まで',
+  MANABA_QUERY: 'manaba の「公開のお知らせ」を探す Gmail の検索条件',
+  MANABA_SUBMIT_QUERY: 'manaba の「提出のお知らせ」を探す Gmail の検索条件'
+};
+
+const CONFIG = loadConfig();
+
+/** 初期値に、シート「設定」の値を上書きした設定を作る（シートがない・読めないときは初期値のまま） */
+function loadConfig() {
+  const config = Object.assign({}, DEFAULT_CONFIG);
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = spreadsheet && spreadsheet.getSheetByName(SETTINGS_SHEET);
+    if (!sheet) return config;
+    sheet.getDataRange().getValues().slice(1).forEach(row => {
+      const key = String(row[0] || '').trim();
+      const value = row[1];
+      if (!(key in DEFAULT_CONFIG) || value === '' || value === null) return;
+      config[key] = convertSetting(DEFAULT_CONFIG[key], value);
+    });
+  } catch (err) {
+    console.warn('設定シートを読めなかったため、初期値を使います', err);
+  }
+  return config;
+}
+
+/** シートの値を、初期値と同じ型（文字・数・TRUE/FALSE・一覧）にそろえる */
+function convertSetting(defaultValue, value) {
+  if (Array.isArray(defaultValue)) {
+    if (String(value).trim() === 'なし') return [];
+    const items = String(value).split(/[,、，]/).map(item => item.trim()).filter(Boolean);
+    return typeof defaultValue[0] === 'number' ? items.map(Number).filter(n => !isNaN(n)) : items;
+  }
+  if (typeof defaultValue === 'number') {
+    const number = Number(value);
+    return isNaN(number) ? defaultValue : number;
+  }
+  if (typeof defaultValue === 'boolean') return value === true || String(value).trim().toUpperCase() === 'TRUE';
+  return String(value).trim();
+}
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
@@ -296,6 +325,106 @@ function doPost(e) {
   });
 
   return toJson({ created, skipped });
+}
+
+// =====================================================================
+// スプレッドシートのメニュー（配布用テンプレートから使う場合）
+// =====================================================================
+
+/** スプレッドシートを開いたときに「スケジュール帳」メニューを追加する */
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('スケジュール帳')
+    .addItem('① 初期設定（最初に1回）', 'initialSetup')
+    .addItem('② アプリに登録する情報', 'showConnectionInfo')
+    .addSeparator()
+    .addItem('まとめメールを試しに送る', 'morningSummary')
+    .addItem('今すぐ更新（締切の登録・バイト前の確認）', 'hourlyUpdate')
+    .addItem('自動実行（通知）を止める', 'removeTriggers')
+    .addToUi();
+}
+
+/** 設定シートの用意・合言葉の作成・自動実行の設定をまとめて行う */
+function initialSetup() {
+  ensureSettingsSheet();
+  setupTriggers();
+  showConnectionInfo();
+}
+
+/** シート「設定」を作り、足りない項目を初期値で追加する（書き換え済みの値はそのまま） */
+function ensureSettingsSheet() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet) throw new Error('この操作は、スプレッドシートのメニューから実行してください');
+  const sheet = spreadsheet.getSheetByName(SETTINGS_SHEET) || spreadsheet.insertSheet(SETTINGS_SHEET, 0);
+
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, 3).setValues([['項目', '値', '説明']]).setFontWeight('bold').setBackground('#eef2ff');
+    sheet.setFrozenRows(1);
+  }
+  const rows = sheet.getDataRange().getValues();
+  const rowOf = {};
+  rows.forEach((row, i) => { if (row[0]) rowOf[String(row[0]).trim()] = i + 1; });
+
+  Object.keys(SETTING_NOTES).forEach(key => {
+    if (rowOf[key]) return;
+    sheet.appendRow([key, settingToText(DEFAULT_CONFIG[key]), SETTING_NOTES[key]]);
+    rowOf[key] = sheet.getLastRow();
+  });
+
+  // 合言葉が空なら、推測されにくいランダムな文字列（32文字）を作る
+  const tokenCell = sheet.getRange(rowOf.WRITE_TOKEN, 2);
+  if (!String(tokenCell.getValue()).trim()) tokenCell.setValue(Utilities.getUuid().replace(/-/g, ''));
+
+  sheet.getRange(1, 2, sheet.getLastRow(), 1).setNumberFormat('@');   // 値は文字として扱う（0の消失・日付化を防ぐ）
+  sheet.autoResizeColumns(1, 2);
+  sheet.setColumnWidth(3, 520);
+  return sheet;
+}
+
+function settingToText(value) {
+  if (Array.isArray(value)) return value.join(', ');
+  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
+  return String(value);
+}
+
+/** アプリに貼り付けるURLと合言葉を表示する */
+function showConnectionInfo() {
+  const config = loadConfig();
+  let url = '';
+  try {
+    url = ScriptApp.getService().getUrl() || '';
+  } catch (err) {
+    url = '';
+  }
+  const escape = text => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const urlBlock = /\/exec$/.test(url)
+    ? `<input readonly value="${escape(url)}" onclick="this.select()">`
+    : '<p class="warn">まだデプロイされていないようです。下の手順でデプロイすると、ここにURLが表示されます。</p>';
+
+  const html = `
+    <style>
+      body { font-family: sans-serif; font-size: 13px; color: #111827; line-height: 1.6; }
+      h3 { font-size: 14px; margin: 14px 0 4px; }
+      input { width: 100%; padding: 6px; font-size: 13px; box-sizing: border-box; }
+      ol { padding-left: 20px; margin: 4px 0; }
+      .warn { color: #92400e; background: #fef3c7; padding: 6px 8px; border-radius: 6px; }
+      .note { color: #6b7280; font-size: 12px; }
+    </style>
+    <h3>1. ウェブアプリのURL（アプリの「📅 Googleカレンダー連携」に貼る）</h3>
+    ${urlBlock}
+    <ol>
+      <li>メニュー「拡張機能」→「Apps Script」を開く</li>
+      <li>右上の「デプロイ」→「新しいデプロイ」→ 歯車から種類「ウェブアプリ」</li>
+      <li>次のユーザーとして実行：<b>自分</b> ／ アクセスできるユーザー：<b>全員</b> →「デプロイ」</li>
+      <li>表示された「ウェブアプリ」のURL（…/exec で終わる）をコピーする</li>
+    </ol>
+    <h3>2. 合言葉（アプリのシフト表の設定「カレンダー書き込み用の合言葉」に貼る）</h3>
+    <input readonly value="${escape(config.WRITE_TOKEN)}" onclick="this.select()">
+    <p class="note">URLと合言葉は人に教えないでください。設定はシート「設定」の「値」で変えられます。
+    自動実行（毎朝${escape(config.MORNING_HOUR)}時のまとめメール・1時間ごとの更新）は設定済みです。</p>`;
+  SpreadsheetApp.getUi().showModalDialog(
+    HtmlService.createHtmlOutput(html).setWidth(560).setHeight(470),
+    'アプリに登録する情報'
+  );
 }
 
 // =====================================================================

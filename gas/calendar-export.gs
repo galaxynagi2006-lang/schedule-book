@@ -38,7 +38,7 @@ const DEFAULT_CONFIG = {
   DAYS_BACK: 7,                             // アプリに渡す期間：何日前から
   DAYS_AHEAD: 62,                           //               何日後まで（翌月分のシフトも入るように約2か月）
   WRITE_TOKEN: '',                          // 合言葉（アプリが読むとき・シフト表を書き込むときに必要）
-  WEBAPP_URL: '',                           // デプロイしたURL。自動で取れないときだけ入れる（QRコード用）
+  WEBAPP_URL: '',                           // デプロイしたURL。入れるとQRコードにはこのURLを使う（自動で取れない・違うとき用）
 
   MANABA_ENABLED: true,                     // manaba の課題メール（Gmail）を読むか
   MANABA_QUERY: 'from:manaba subject:公開のお知らせ newer_than:45d',
@@ -61,7 +61,7 @@ const SETTING_NOTES = {
   KEYWORDS: 'タイトルにこの言葉を含む予定をバイトとして扱う（カンマ区切り。「なし」にすると全部の予定）',
   CALENDAR_ID: 'バイト専用のカレンダーがあればそのID（Googleカレンダーの設定 →「カレンダーの統合」）。空ならメイン',
   WRITE_TOKEN: '合言葉（「① 初期設定」で自動で作られる。アプリが読むとき・シフト表を書き込むときに使う）',
-  WEBAPP_URL: 'デプロイしたウェブアプリのURL（…/exec）。「② アプリに登録する情報」にQRコードが出ないときだけ入れる',
+  WEBAPP_URL: 'デプロイしたウェブアプリのURL（…/exec）。QRコードが出ないときや、アプリで「Apps Script につながりません」と出るときに入れる（入れるとこのURLを優先）',
   MANABA_ENABLED: 'manaba の課題メールを読むか（TRUE / FALSE）',
   MANABA_HIDE_KINDS: 'まとめメール・バイト前のメール・カレンダーに出さない課題の種類（例: アンケート。カンマ区切り。空なら全部出す）',
   MORNING_HOUR: 'まとめメールを送る時刻（0〜23時）。変えたら「① 初期設定」をもう一度押す',
@@ -398,16 +398,19 @@ function settingToText(value) {
   return String(value);
 }
 
-/** ウェブアプリのURL（…/exec）。自動で取れないときは、シート「設定」の WEBAPP_URL を使う */
+/**
+ * ウェブアプリのURL（…/exec）。シート「設定」の WEBAPP_URL があればそれを優先する。
+ * 自動で取れるURLは、デプロイが複数ある・アーカイブ済みのデプロイがあるときに、止まったデプロイのものになることがある
+ */
 function getWebAppUrl(config) {
+  if (/^https:\/\/script\.google\.com\/.+\/exec$/.test(config.WEBAPP_URL)) return config.WEBAPP_URL;
   let url = '';
   try {
     url = ScriptApp.getService().getUrl() || '';
   } catch (err) {
     url = '';
   }
-  if (/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) return url;
-  return /^https:\/\/script\.google\.com\/.+\/exec$/.test(config.WEBAPP_URL) ? config.WEBAPP_URL : '';
+  return /^https:\/\/script\.google\.com\/.+\/exec$/.test(url) ? url : '';
 }
 
 /**
@@ -469,6 +472,9 @@ function showConnectionInfo() {
       URL：<input readonly value="${escape(url)}" onclick="this.select()">
       合言葉：<input readonly value="${escape(config.WRITE_TOKEN)}" onclick="this.select()">
     </details>
+    <p class="note">アプリで「Apps Script につながりません」と出るときは、上のURLが「デプロイを管理」の
+    ウェブアプリのURLと同じか確かめてください。違うときは、正しいURLをシート「設定」の WEBAPP_URL に貼り、
+    この画面を開き直して読み取り直します。</p>
     <p class="note">QRコード・URL・合言葉は人に見せないでください（予定と課題を読めてしまいます）。
     自動実行（毎朝${escape(config.MORNING_HOUR)}時のまとめメール・1時間ごとの更新）は設定済みです。</p>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>

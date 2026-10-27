@@ -141,8 +141,11 @@
 
     #tab-timeline { background: var(--bg-sub); min-height: 100vh; }
     .tl-body { padding: 16px 20px 0; }
-    .tl-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; }
-    .tl-title span:last-child { color: var(--accent-color); }
+    .tl-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .tl-title > span:last-child { color: var(--accent-color); }
+    .tl-day-switch { display: inline-flex; background: #e2e8f0; border-radius: 999px; padding: 3px; gap: 2px; }
+    .tl-day-btn { border: none; background: transparent; color: var(--text-sub); font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+    .tl-day-btn.active { background: #fff; color: var(--text-main); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
 
     .tl-grid { position: relative; }
     .tl-hour { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9ca3af; transform: translateY(-50%); }
@@ -399,7 +402,13 @@
         <div class="pills" id="tl-pills"></div>
       </div>
       <div class="tl-body">
-        <div class="tl-title"><span>今日のタイムライン</span><span>⏱ 自動配置</span></div>
+        <div class="tl-title">
+          <div class="tl-day-switch" role="group" aria-label="表示する日">
+            <button type="button" class="tl-day-btn active" data-offset="0" onclick="showTimelineDay(0)">今日</button>
+            <button type="button" class="tl-day-btn" data-offset="1" onclick="showTimelineDay(1)">明日</button>
+          </div>
+          <span>⏱ 自動配置</span>
+        </div>
         <div class="tl-grid" id="tl-grid"></div>
       </div>
       <div id="tl-extra"></div>
@@ -1326,25 +1335,36 @@
     }
 
     // ---------- タブ2：タイムライン ----------
-    // 今日の空き時間に、優先度の高い課題（🚨・⚠️）を前から順に詰めて配置する
-    function planToday(activeTasks, now, dayEnd) {
+    let timelineDayOffset = 0;   // 0 = 今日、1 = 明日
+
+    function showTimelineDay(offset) {
+      timelineDayOffset = offset;
+      renderTasks();
+    }
+
+    // day の空き時間に、優先度の高い課題（🚨・⚠️）を前から順に詰めて配置する。
+    // remainingMs（課題ごとの残りの作業時間）を渡すと、その分だけを配置する（明日の計画で、今日やる分を差し引く）
+    function planDay(activeTasks, now, day, remainingMs = null) {
+      const dayStart = startOfDay(day);
+      const dayEnd = addDays(dayStart, 1);
+      const from = new Date(Math.max(now.getTime(), dayStart.getTime()));
       const jobRanges = tasks
         .filter(t => t.type === 'job')
         .map(getJobRange)
-        .filter(r => r.end > now && r.start < dayEnd);
+        .filter(r => r.end > from && r.start < dayEnd);
 
-      // バイト前後の移動時間と、今日の授業を「埋まっている時間」とする
+      // バイト前後の移動時間と、その日の授業を「埋まっている時間」とする
       const busy = jobRanges
         .map(r => [r.start.getTime() - MOVE_BUFFER_MIN * 60000, r.end.getTime() + MOVE_BUFFER_MIN * 60000])
-        .concat(classRangesOn(now).map(r => [r.start.getTime(), r.end.getTime()]))
+        .concat(classRangesOn(dayStart).map(r => [r.start.getTime(), r.end.getTime()]))
         .sort((a, b) => a[0] - b[0]);
 
       // 次の15分刻みから、設定の「課題に使える時間帯」の中で計画する
       const quarter = 15 * 60000;
       const studyHours = loadStudyHours();
-      const planStart = startOfDay(now).getTime() + studyHours.start * HOUR_MS;
-      const planEnd = Math.min(dayEnd.getTime(), startOfDay(now).getTime() + studyHours.end * HOUR_MS);
-      let cursor = Math.max(Math.ceil(now.getTime() / quarter) * quarter, planStart);
+      const planStart = dayStart.getTime() + studyHours.start * HOUR_MS;
+      const planEnd = Math.min(dayEnd.getTime(), dayStart.getTime() + studyHours.end * HOUR_MS);
+      let cursor = Math.max(Math.ceil(from.getTime() / quarter) * quarter, planStart);
       const slots = [];
       for (const [bs, be] of busy) {
         if (Math.min(bs, planEnd) > cursor) slots.push({ start: cursor, end: Math.min(bs, planEnd) });
@@ -1356,21 +1376,24 @@
       const shortage = [];
       const later = [];
 
+      const placedMs = new Map();   // 課題ごとに、この日に配置した時間
+
       for (const task of activeTasks) {
-        const level = urgencyLevel(task, now);
+        let remaining = remainingMs ? (remainingMs.get(task.id) ?? 0) : (task.estimatedMinutes || 60) * 60000;
+        if (remaining <= 0) continue;   // 前の日までに配置し終えた
+        const level = urgencyLevel(task, from);
         if (level === 'green') {
           later.push(task);
           continue;
         }
 
         const deadline = new Date(task.datetime).getTime();
-        let remaining = (task.estimatedMinutes || 60) * 60000;
         const parts = [];
 
         for (const slot of slots) {
           if (remaining <= 0) break;
-          // 締切を過ぎている課題は今日中にとにかく片付ける
-          const limit = deadline > now.getTime() ? Math.min(slot.end, deadline) : slot.end;
+          // 締切を過ぎている課題はその日のうちにとにかく片付ける
+          const limit = deadline > from.getTime() ? Math.min(slot.end, deadline) : slot.end;
           const usable = limit - slot.start;
           if (usable < MIN_CHUNK_MIN * 60000) continue;
           const take = Math.min(usable, remaining);
@@ -1386,42 +1409,59 @@
           partLabel: parts.length > 1 ? `（${i + 1}/${parts.length}）` : ''
         }));
 
+        placedMs.set(task.id, parts.reduce((sum, p) => sum + (p.end - p.start), 0));
         if (remaining > 0) shortage.push({ task, minutes: Math.round(remaining / 60000) });
       }
 
-      return { jobRanges, blocks, shortage, later };
+      return { jobRanges, blocks, shortage, later, placedMs };
+    }
+
+    // 明日の計画：今日の計画で配置した分を差し引いた残りを配置する
+    function planTomorrow(activeTasks, now) {
+      const today = planDay(activeTasks, now, now);
+      const remainingMs = new Map(activeTasks.map(t =>
+        [t.id, (t.estimatedMinutes || 60) * 60000 - (today.placedMs.get(t.id) || 0)]));
+      return planDay(activeTasks, now, addDays(now, 1), remainingMs);
     }
 
     function renderTimeline(activeTasks, now) {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const todayJobs = jobsOn(now);
-      const tomorrowJobs = jobsOn(tomorrow);
+      const isTomorrow = timelineDayOffset === 1;
+      const dayLabel = isTomorrow ? '明日' : '今日';
+      const day = addDays(now, timelineDayOffset);
+      const nextDay = addDays(day, 1);
+      const dayJobs = jobsOn(day);
+      const nextDayJobs = jobsOn(nextDay);
       const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
-      const todayClasses = classRangesOn(now);
+      const dayClasses = classRangesOn(day);
 
-      document.getElementById('tl-date').textContent = formatDateHeading(now);
+      document.querySelectorAll('.tl-day-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.offset) === timelineDayOffset));
+      document.getElementById('tl-date').textContent = formatDateHeading(day);
       document.getElementById('tl-pills').innerHTML = `
-        ${todayClasses.length > 0
-          ? `<span class="pill pill-class">授業 ${formatHM(todayClasses[0].start)}–${formatHM(todayClasses[todayClasses.length - 1].end)}</span>`
+        ${dayClasses.length > 0
+          ? `<span class="pill pill-class">授業 ${formatHM(dayClasses[0].start)}–${formatHM(dayClasses[dayClasses.length - 1].end)}</span>`
           : ''}
-        ${todayJobs.length > 0
-          ? todayJobs.map(j => `<span class="pill pill-job">バイト ${formatJobRange(j, '–')}</span>`).join('')
-          : '<span class="pill pill-none">今日のバイト なし</span>'}
-        <span class="pill pill-none">明日${tomorrowJobs.length > 0 ? 'あり' : 'なし'}</span>
+        ${dayJobs.length > 0
+          ? dayJobs.map(j => `<span class="pill pill-job">バイト ${formatJobRange(j, '–')}</span>`).join('')
+          : `<span class="pill pill-none">${dayLabel}のバイト なし</span>`}
+        <span class="pill pill-none">${isTomorrow ? '明後日' : '明日'}${nextDayJobs.length > 0 ? 'あり' : 'なし'}</span>
         <span class="pill pill-sum">残り ${formatMinutes(totalMinutes)}</span>
       `;
 
-      // 表示範囲：いまの時刻（正時）〜 24:00
-      const tlStart = new Date(now);
+      const { jobRanges, blocks, shortage, later } = isTomorrow ? planTomorrow(activeTasks, now) : planDay(activeTasks, now, now);
+
+      // 表示範囲：今日は いまの時刻（正時）〜 24:00。明日は 課題に使える時間帯・授業・バイト（移動を含む）の早いほう 〜 24:00
+      const dayEnd = addDays(day, 1);
+      const tlStart = new Date(isTomorrow
+        ? Math.min(
+            startOfDay(day).getTime() + loadStudyHours().start * HOUR_MS,
+            ...dayClasses.map(r => r.start.getTime()),
+            ...jobRanges.map(r => r.start.getTime() - MOVE_BUFFER_MIN * 60000))
+        : now.getTime());
+      if (tlStart < startOfDay(day)) tlStart.setTime(startOfDay(day).getTime());
       tlStart.setMinutes(0, 0, 0);
-      const dayEnd = new Date(now);
-      dayEnd.setHours(24, 0, 0, 0);
       const hours = Math.round((dayEnd - tlStart) / 3600000);
       const toY = t => ((t - tlStart) / 3600000) * HOUR_PX;
       const clip = t => new Date(Math.min(Math.max(t, tlStart), dayEnd));
-
-      const { jobRanges, blocks, shortage, later } = planToday(activeTasks, now, dayEnd);
 
       let html = '';
       for (let h = 0; h <= hours; h++) {
@@ -1447,7 +1487,7 @@
         html += block('b-move', r.end, new Date(r.end.getTime() + moveMs), '移動', '');
       });
 
-      todayClasses.forEach(r => {
+      dayClasses.forEach(r => {
         html += block('b-class', r.start, r.end, escapeHtml(r.name),
           `${formatHM(r.start)}–${formatHM(r.end)}${r.room ? ` ・ ${escapeHtml(r.room)}` : ''}`);
       });
@@ -1458,29 +1498,32 @@
           `${formatHM(b.start)}–${formatHM(b.end)} ・ ${Math.round((b.end - b.start) / 60000)}分`);
       });
 
-      // 今日が締切の課題に締切ラインを引く
+      // その日が締切の課題に締切ラインを引く
       activeTasks.forEach(task => {
         const d = new Date(task.datetime);
-        if (d > now && d <= dayEnd) {
+        if (d > now && d >= tlStart && d <= dayEnd) {
           html += `<div class="tl-deadline" style="top:${toY(d)}px"><span>${escapeHtml(task.name)} 締切 ${formatHM(d)}</span></div>`;
         }
       });
 
-      html += `<div class="tl-now" style="top:${toY(now)}px"><span>いま ${formatHM(now)}</span></div>`;
+      if (!isTomorrow) html += `<div class="tl-now" style="top:${toY(now)}px"><span>いま ${formatHM(now)}</span></div>`;
 
       const gridEl = document.getElementById('tl-grid');
       gridEl.style.height = `${hours * HOUR_PX}px`;
       gridEl.innerHTML = html;
 
-      // 時間が足りない課題・今日やらなくてよい課題
+      // 時間が足りない課題・その日にやらなくてよい課題
       let extra = '';
+      if (isTomorrow) {
+        extra += '<div class="tl-card"><div class="tl-card-title">今日の計画どおりに進めた場合の、明日の計画です</div></div>';
+      }
       if (shortage.length > 0) {
-        extra += `<div class="tl-card"><div class="tl-card-title warn">⚠️ 今日の空き時間では足りません</div>
+        extra += `<div class="tl-card"><div class="tl-card-title warn">⚠️ ${dayLabel}の空き時間では足りません</div>
           ${shortage.map(s => `<div class="tl-card-row"><span>${escapeHtml(s.task.name)}</span><span class="c-red">あと${formatMinutes(s.minutes)}不足</span></div>`).join('')}
         </div>`;
       }
       if (later.length > 0) {
-        extra += `<div class="tl-card"><div class="tl-card-title">今日やらなくてOK</div>
+        extra += `<div class="tl-card"><div class="tl-card-title">${dayLabel}やらなくてOK</div>
           ${later.map(t => `<div class="tl-card-row"><span>${escapeHtml(t.name)}（約${t.estimatedMinutes || 60}分）</span><span class="c-green">あと${formatCountdown(new Date(t.datetime) - now)}</span></div>`).join('')}
         </div>`;
       }

@@ -224,6 +224,41 @@
     .api-settings summary { font-size: 12px; color: var(--text-sub); cursor: pointer; font-weight: 600; }
     .btn-clear { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
+    /* ========== 見通し・遅延リスク ========== */
+    .outlook { border-radius: 14px; padding: 14px; margin-top: 18px; border: 1px solid var(--line); }
+    .outlook-green { background: #f0fdf4; border-color: #bbf7d0; }
+    .outlook-yellow { background: #fffbeb; border-color: #fde68a; }
+    .outlook-red { background: #fef2f2; border-color: #fecaca; }
+    .outlook-head { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 800; }
+    .outlook-badge { font-size: 12px; padding: 3px 8px; border-radius: 999px; color: #fff; }
+    .outlook-green .outlook-badge { background: var(--alert-green); }
+    .outlook-yellow .outlook-badge { background: var(--alert-yellow); }
+    .outlook-red .outlook-badge { background: var(--alert-red); }
+    .outlook-bar { height: 8px; border-radius: 99px; background: rgba(0, 0, 0, 0.08); margin: 10px 0 4px; overflow: hidden; }
+    .outlook-bar span { display: block; height: 100%; border-radius: 99px; }
+    .outlook-green .outlook-bar span { background: var(--alert-green); }
+    .outlook-yellow .outlook-bar span { background: var(--alert-yellow); }
+    .outlook-red .outlook-bar span { background: var(--alert-red); }
+    .outlook-numbers { font-size: 12px; color: var(--text-sub); }
+    .outlook-message { font-size: 13px; margin-top: 8px; line-height: 1.5; }
+    .day-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+    .day-chip { background: rgba(255, 255, 255, 0.8); border-radius: 8px; padding: 4px 0; text-align: center; font-size: 11px; color: var(--text-sub); }
+    .day-chip b { display: block; color: var(--text-main); font-size: 11px; }
+    .day-chip.low { background: #fee2e2; color: #991b1b; }
+    .risk-note { font-size: 12px; margin-top: 5px; padding: 5px 8px; border-radius: 8px; line-height: 1.45; }
+    .risk-high { background: #fee2e2; color: #991b1b; }
+    .risk-mid { background: #fef3c7; color: #92400e; }
+    .tendency { margin-top: 14px; }
+    .tendency summary { font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: 600; list-style: none; }
+    .tendency summary::-webkit-details-marker { display: none; }
+    .tendency summary::before { content: "› "; }
+    .tendency[open] summary::before { content: "⌄ "; }
+    .tendency-body { font-size: 13px; line-height: 1.6; margin-top: 8px; background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; }
+    .tendency-body ul { padding-left: 18px; }
+    .ai-advice { margin-top: 8px; padding: 8px 10px; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
+    .study-hours { justify-content: flex-start; }
+    .study-hours select { width: auto; }
+
     /* ========== 設定タブ ========== */
     .settings-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 14px; }
     .settings-card h2 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
@@ -336,6 +371,9 @@
           <div><div class="stat-num" id="summary-time">0<small>分</small></div><div class="stat-label">残り作業の合計</div></div>
         </section>
 
+        <!-- これから7日の見通し（締切ラッシュの事前警告） -->
+        <section id="outlook-card"></section>
+
         <!-- ③④ 課題リスト & カウントダウン -->
         <div class="list-head label">課題（優先度順）</div>
         <div id="task-list"></div>
@@ -343,6 +381,9 @@
 
         <!-- 完了済み課題（折りたたみ） -->
         <div id="completed-container"></div>
+
+        <!-- 提出の傾向（遅延リスク予測のもとになる記録） -->
+        <div id="tendency-card"></div>
       </div>
     </main>
 
@@ -443,6 +484,16 @@
             <input type="text" id="shift-title" class="form-control" value="バイト" onchange="saveShiftSettings()">
             <span class="field-note">※「バイト」を含めると、Google連携でアプリにも自動で取り込まれます</span>
           </div>
+        </section>
+
+        <section class="settings-card">
+          <h2>⏰ 課題に使える時間帯</h2>
+          <div class="field-row study-hours">
+            <select id="study-start" class="form-control" onchange="saveStudyHours()" aria-label="開始"></select>
+            <span>〜</span>
+            <select id="study-end" class="form-control" onchange="saveStudyHours()" aria-label="終了"></select>
+          </div>
+          <span class="field-note">※この時間帯から授業・バイト（前後の移動30分を含む）を除いた時間を「空き時間」として、見通しと遅れの予測に使います</span>
         </section>
 
         <section class="settings-card">
@@ -1144,7 +1195,7 @@
         : `${hours}<small>時間</small>${mins > 0 ? `${mins}<small>分</small>` : ''}`;
     }
 
-    function renderTaskList(activeTasks, now) {
+    function renderTaskList(activeTasks, now, risks = new Map()) {
       const taskListEl = document.getElementById('task-list');
 
       if (activeTasks.length === 0) {
@@ -1166,6 +1217,7 @@
               ${task.detail ? `<div class="task-detail">${escapeHtml(task.detail)}</div>` : ''}
               <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
               ${safeManabaUrl(task.url) ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener">manabaで開く ›</a>` : ''}
+              ${risks.has(task.id) ? `<div class="risk-note risk-${risks.get(task.id).level}">${risks.get(task.id).level === 'high' ? '🔥' : '⚠️'} ${risks.get(task.id).text}</div>` : ''}
             </div>
             <div class="task-side">
               <div class="count-num c-${level}">${countdownText}</div>
@@ -1235,15 +1287,18 @@
         .concat(classRangesOn(now).map(r => [r.start.getTime(), r.end.getTime()]))
         .sort((a, b) => a[0] - b[0]);
 
-      // 次の15分刻みから計画を始める
+      // 次の15分刻みから、設定の「課題に使える時間帯」の中で計画する
       const quarter = 15 * 60000;
-      let cursor = Math.ceil(now.getTime() / quarter) * quarter;
+      const studyHours = loadStudyHours();
+      const planStart = startOfDay(now).getTime() + studyHours.start * HOUR_MS;
+      const planEnd = Math.min(dayEnd.getTime(), startOfDay(now).getTime() + studyHours.end * HOUR_MS);
+      let cursor = Math.max(Math.ceil(now.getTime() / quarter) * quarter, planStart);
       const slots = [];
       for (const [bs, be] of busy) {
-        if (bs > cursor) slots.push({ start: cursor, end: Math.min(bs, dayEnd.getTime()) });
+        if (Math.min(bs, planEnd) > cursor) slots.push({ start: cursor, end: Math.min(bs, planEnd) });
         cursor = Math.max(cursor, be);
       }
-      if (cursor < dayEnd.getTime()) slots.push({ start: cursor, end: dayEnd.getTime() });
+      if (cursor < planEnd) slots.push({ start: cursor, end: planEnd });
 
       const blocks = [];
       const shortage = [];
@@ -1384,6 +1439,316 @@
     }
 
     // ---------- 全体の再描画 ----------
+    // ---------- 空き時間の計算（見通し・遅延リスク・タイムラインで共通） ----------
+    const STUDY_HOURS_STORAGE = 'smart_schedule_study_hours';
+    const DEFAULT_STUDY_HOURS = { start: 9, end: 24 };   // 課題に使える時間帯（時）。24 = 夜0時
+    const HOUR_MS = 3600000;
+    const DAY_MS = 24 * HOUR_MS;
+    const OUTLOOK_DAYS = 7;
+    const MIN_TENDENCY_RECORDS = 5;    // 傾向を使った予測を始める記録の数
+
+    function loadStudyHours() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STUDY_HOURS_STORAGE) || 'null');
+        if (saved && saved.start < saved.end) return saved;
+      } catch (e) { /* 初期値を使う */ }
+      return { ...DEFAULT_STUDY_HOURS };
+    }
+
+    function renderStudyHoursOptions() {
+      const { start, end } = loadStudyHours();
+      const option = (h, selected) => `<option value="${h}"${h === selected ? ' selected' : ''}>${h === 24 ? '24:00（夜0時）' : `${h}:00`}</option>`;
+      document.getElementById('study-start').innerHTML = [5, 6, 7, 8, 9, 10, 11, 12].map(h => option(h, start)).join('');
+      document.getElementById('study-end').innerHTML = [20, 21, 22, 23, 24].map(h => option(h, end)).join('');
+    }
+
+    function saveStudyHours() {
+      const start = Number(document.getElementById('study-start').value);
+      const end = Number(document.getElementById('study-end').value);
+      localStorage.setItem(STUDY_HOURS_STORAGE, JSON.stringify({ start, end }));
+      renderTasks();
+    }
+
+    function startOfDay(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function addDays(date, days) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+    }
+
+    // from〜to の「埋まっている時間」（バイト＋前後の移動・授業）を [開始ms, 終了ms] の一覧で返す
+    function busyRangesBetween(from, to) {
+      const busy = tasks
+        .filter(t => t.type === 'job')
+        .map(getJobRange)
+        .filter(r => r.end > from && r.start < to)
+        .map(r => [r.start.getTime() - MOVE_BUFFER_MIN * 60000, r.end.getTime() + MOVE_BUFFER_MIN * 60000]);
+      for (let d = startOfDay(from); d < to; d = addDays(d, 1)) {
+        classRangesOn(d).forEach(r => busy.push([r.start.getTime(), r.end.getTime()]));
+      }
+      return busy.sort((a, b) => a[0] - b[0]);
+    }
+
+    // from〜to の、課題に使える空き時間（分）。日ごとの内訳も返す
+    function freeTimeBetween(from, to) {
+      const { start, end } = loadStudyHours();
+      const busy = busyRangesBetween(from, to);
+      const days = [];
+      let total = 0;
+      for (let d = startOfDay(from); d < to; d = addDays(d, 1)) {
+        const windowStart = Math.max(d.getTime() + start * HOUR_MS, from.getTime());
+        const windowEnd = Math.min(d.getTime() + end * HOUR_MS, to.getTime());
+        let freeMs = 0;
+        if (windowEnd > windowStart) {
+          let cursor = windowStart;
+          for (const [busyStart, busyEnd] of busy) {
+            if (busyEnd <= cursor) continue;
+            if (busyStart >= windowEnd) break;
+            if (busyStart > cursor) freeMs += busyStart - cursor;
+            cursor = Math.max(cursor, busyEnd);
+            if (cursor >= windowEnd) break;
+          }
+          if (cursor < windowEnd) freeMs += windowEnd - cursor;
+        }
+        const minutes = Math.round(freeMs / 60000);
+        days.push({ date: d, minutes });
+        total += minutes;
+      }
+      return { total, days };
+    }
+
+    // ---------- 締切ラッシュの事前警告（これから7日の見通し） ----------
+    // 締切が早い順に「その締切までに終えるべき作業量の合計」と「そこまでの空き時間」を比べ、いちばん苦しい締切を探す
+    function analyzeWorkload(activeTasks, now) {
+      const horizon = new Date(now.getTime() + OUTLOOK_DAYS * DAY_MS);
+      const due = activeTasks
+        .filter(t => { const d = new Date(t.datetime); return d > now && d <= horizon; })
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+      const perTask = new Map();
+      let cumulative = 0;
+      let tightest = null;
+      due.forEach(task => {
+        cumulative += task.estimatedMinutes || 60;
+        const supply = freeTimeBetween(now, new Date(task.datetime)).total;
+        const slack = supply - cumulative;
+        perTask.set(task.id, { supply, demandUntil: cumulative, slack });
+        if (!tightest || slack < tightest.slack) tightest = { task, supply, demand: cumulative, slack };
+      });
+
+      const free = freeTimeBetween(now, horizon);
+      const demand = due.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
+      let level = 'green';
+      if (tightest && tightest.slack < 0) level = 'red';
+      else if (demand > free.total * 0.7 || (tightest && tightest.slack < 120)) level = 'yellow';
+      return { level, demand, free, due, tightest, perTask };
+    }
+
+    function renderOutlook(workload, now) {
+      const { level, demand, free, due, tightest } = workload;
+      const badge = { green: '余裕あり', yellow: '余裕が少ない', red: '間に合わないおそれ' }[level];
+      const ratio = free.total > 0 ? Math.min(100, Math.round(demand / free.total * 100)) : (demand > 0 ? 100 : 0);
+
+      let message;
+      if (due.length === 0) {
+        message = '7日以内に締切の課題はありません。';
+      } else if (level === 'green') {
+        message = `空き時間に対して課題は${ratio}%です。このペースで大丈夫です。`;
+      } else {
+        const name = escapeHtml(tightest.task.name);
+        const deadline = formatDeadline(new Date(tightest.task.datetime), now);
+        message = level === 'red'
+          ? `「${name}」の締切（${deadline}）までに、課題の作業が合計${formatMinutes(tightest.demand)}あるのに、空き時間は${formatMinutes(tightest.supply)}しかありません。`
+          : `「${name}」の締切（${deadline}）までの余裕が${formatMinutes(Math.max(0, tightest.slack))}しかありません。`;
+        // いちばん苦しい締切までの課題と、余裕がほとんどない課題を、締切が早い順に
+        const startNow = due.filter(t =>
+          new Date(t.datetime) <= new Date(tightest.task.datetime) ||
+          workload.perTask.get(t.id).slack < (t.estimatedMinutes || 60) * 0.5
+        ).slice(0, 3);
+        message += `<br><b>今日から進めたい課題：</b>${startNow.map(t => escapeHtml(t.name)).join('・')}`;
+      }
+
+      const today = startOfDay(now).getTime();
+      const chips = free.days.slice(0, OUTLOOK_DAYS).map(day => {
+        const label = day.date.getTime() === today ? '今日' : WEEKDAYS[day.date.getDay()];
+        const hours = Math.round(day.minutes / 30) / 2;
+        return `<div class="day-chip${day.minutes < 60 ? ' low' : ''}"><b>${label}</b>${hours}h</div>`;
+      }).join('');
+
+      document.getElementById('outlook-card').innerHTML = `
+        <div class="outlook outlook-${level}">
+          <div class="outlook-head"><span>📊 これから7日の見通し</span><span class="outlook-badge">${badge}</span></div>
+          <div class="outlook-bar"><span style="width:${ratio}%"></span></div>
+          <div class="outlook-numbers">課題 ${formatMinutes(demand)} ／ 空き時間 ${formatMinutes(free.total)}（授業・バイトを除く）</div>
+          <div class="outlook-message">${message}</div>
+          <div class="day-strip">${chips}</div>
+        </div>
+      `;
+    }
+
+    // ---------- 提出の傾向と遅延リスク ----------
+    // 締切の前日・当日にバイトがあるか（0:00〜5:59 の締切は前日の夜の締切として扱う）
+    function hasJobNearDeadline(task) {
+      const day = startOfDay(new Date(new Date(task.datetime).getTime() - 6 * HOUR_MS));
+      const prev = addDays(day, -1);
+      return tasks.some(t => {
+        if (t.type !== 'job') return false;
+        const start = startOfDay(new Date(t.datetime)).getTime();
+        return start === day.getTime() || start === prev.getTime();
+      });
+    }
+
+    function median(values) {
+      if (values.length === 0) return null;
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    // 完了の記録（直近90日）から「締切の何時間前に提出しているか」を集計する
+    function analyzeTendency(now) {
+      const records = tasks
+        .filter(t => t.type === 'task' && t.completed && t.completedAt && t.datetime)
+        .map(t => ({ task: t, completedAt: new Date(t.completedAt), marginH: (new Date(t.datetime) - new Date(t.completedAt)) / HOUR_MS }))
+        .filter(r => isFinite(r.marginH) && r.completedAt.getTime() >= now.getTime() - 90 * DAY_MS);
+      const margins = records.map(r => r.marginH);
+      const withJob = records.filter(r => hasJobNearDeadline(r.task)).map(r => r.marginH);
+      const withoutJob = records.filter(r => !hasJobNearDeadline(r.task)).map(r => r.marginH);
+      const n = records.length;
+
+      const result = {
+        n,
+        ready: n >= MIN_TENDENCY_RECORDS,
+        medianMargin: median(margins),
+        lastMinuteRate: n ? margins.filter(m => m < 3).length / n : 0,
+        lateRate: n ? margins.filter(m => m < 0).length / n : 0,
+        withJob: { n: withJob.length, median: median(withJob) },
+        withoutJob: { n: withoutJob.length, median: median(withoutJob) }
+      };
+      result.lastMinute = result.ready && (result.medianMargin < 12 || result.lastMinuteRate >= 0.4);
+      result.jobDiffH = withJob.length >= 2 && withoutJob.length >= 2 ? result.withoutJob.median - result.withJob.median : 0;
+      result.jobSlower = result.ready && result.jobDiffH >= 3;   // バイトが重なると3時間以上遅い
+      return result;
+    }
+
+    function formatHours(hours) {
+      if (hours === null) return '-';
+      if (Math.abs(hours) >= 48) return `${Math.round(hours / 24 * 10) / 10}日`;
+      return `${Math.round(hours * 10) / 10}時間`;
+    }
+
+    // 課題ごとの遅延リスク。空き時間が足りないか（全員共通）と、本人の傾向（記録が5件以上のとき）で判断する
+    function delayRisk(task, workload, tendency, now) {
+      const info = workload.perTask.get(task.id);
+      if (!info) return null;   // 7日より先・期限切れ
+      const estimate = task.estimatedMinutes || 60;
+      const hoursLeft = (new Date(task.datetime) - now) / HOUR_MS;
+
+      if (info.slack < 0) {
+        return { level: 'high', text: `締切までの空き時間では、先に締切が来る課題も含めて${formatMinutes(-info.slack)}足りません。今日から少しずつ進めましょう` };
+      }
+      if (info.slack < estimate * 0.5) {
+        return { level: 'high', text: `締切までの空き時間に余裕がほとんどありません（余裕 ${formatMinutes(info.slack)}）。今日中に着手を` };
+      }
+      if (tendency.jobSlower && hasJobNearDeadline(task) && hoursLeft <= 72) {
+        return { level: 'mid', text: `締切の前日・当日にバイトがあります。あなたはバイトが重なる課題を、いつもより約${formatHours(tendency.jobDiffH)}遅く提出する傾向です。バイトの前に着手を` };
+      }
+      if (tendency.lastMinute && hoursLeft <= 48 && info.slack < estimate * 2) {
+        return { level: 'mid', text: `いつも締切の約${formatHours(tendency.medianMargin)}前に提出する傾向です。今回は余裕が少ないので、早めの着手を` };
+      }
+      return null;
+    }
+
+    let tendencyOpen = false;
+
+    function renderTendency(tendency) {
+      const el = document.getElementById('tendency-card');
+      const percent = rate => `${Math.round(rate * 100)}%`;
+      let body;
+      if (!tendency.ready) {
+        body = `<p>提出の記録が${MIN_TENDENCY_RECORDS}件たまると、あなたの傾向も使って遅れを予測します（いま ${tendency.n}件）。</p>
+          <p class="field-note">manaba の「提出のお知らせ」や、課題の完了チェックで自動的に記録されます。それまでは、空き時間だけで判断します。</p>`;
+      } else {
+        const jobLine = tendency.withJob.n >= 2 && tendency.withoutJob.n >= 2
+          ? `<li>締切の前日・当日にバイトがある課題：<b>${formatHours(tendency.withJob.median)}前</b>（ない課題：${formatHours(tendency.withoutJob.median)}前）</li>`
+          : '<li>バイトがある日とない日の比較は、それぞれ2件以上の記録で表示します</li>';
+        body = `<ul>
+            <li>ふだんは締切の<b>${formatHours(tendency.medianMargin)}前</b>に提出（中央値）</li>
+            <li>締切まで3時間を切ってからの提出：<b>${percent(tendency.lastMinuteRate)}</b>（締切後：${percent(tendency.lateRate)}）</li>
+            ${jobLine}
+          </ul>`;
+      }
+      const advice = loadAiAdvice();
+      body += `
+        <div class="shift-actions">
+          <button type="button" class="btn-clear" id="ai-advice-btn" onclick="requestAiAdvice()">🤖 AIに今週の進め方を相談する</button>
+        </div>
+        ${advice ? `<div class="ai-advice">💡 ${escapeHtml(advice.text)}<div class="field-note">（${formatDateTime(new Date(advice.at))} の分析）</div></div>` : ''}`;
+
+      el.innerHTML = `
+        <details class="tendency" id="tendency-details" ${tendencyOpen ? 'open' : ''}>
+          <summary>🔮 あなたの提出の傾向（記録 ${tendency.n}件）</summary>
+          <div class="tendency-body">${body}</div>
+        </details>`;
+      document.getElementById('tendency-details').addEventListener('toggle', e => { tendencyOpen = e.target.open; });
+    }
+
+    // ---------- AI のアドバイス（ボタンを押したときだけ。結果は保存して再表示） ----------
+    const AI_ADVICE_STORAGE = 'smart_schedule_ai_advice';
+
+    function loadAiAdvice() {
+      try {
+        return JSON.parse(localStorage.getItem(AI_ADVICE_STORAGE) || 'null');
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function requestAiAdvice() {
+      const providerId = currentProvider();
+      const provider = AI_PROVIDERS[providerId];
+      const apiKey = localStorage.getItem(provider.keyStorage);
+      if (!apiKey) {
+        showStatus(`${provider.label}のAPIキーが未設定です。⚙️ 設定タブで入力してください`, 'error');
+        return;
+      }
+
+      const now = new Date();
+      const activeTasks = tasks.filter(t => t.type === 'task' && !t.completed && isTaskVisible(t));
+      const workload = analyzeWorkload(activeTasks, now);
+      const tendency = analyzeTendency(now);
+      const upcoming = workload.due.map(t =>
+        `- ${t.name}（締切 ${formatDeadline(new Date(t.datetime), now)}、約${t.estimatedMinutes || 60}分${hasJobNearDeadline(t) ? '、締切の前日か当日にバイトあり' : ''}）`).join('\n') || '- なし';
+      const days = workload.free.days.slice(0, OUTLOOK_DAYS)
+        .map(d => `${d.date.getMonth() + 1}/${d.date.getDate()}(${WEEKDAYS[d.date.getDay()]}) ${Math.round(d.minutes / 30) / 2}時間`).join('、');
+      const stats = tendency.n === 0 ? '提出の記録はまだありません。' :
+        `記録${tendency.n}件。提出は締切の中央値${formatHours(tendency.medianMargin)}前。締切3時間以内の提出${Math.round(tendency.lastMinuteRate * 100)}%、締切後${Math.round(tendency.lateRate * 100)}%。` +
+        (tendency.withJob.n >= 2 && tendency.withoutJob.n >= 2 ? `締切前日・当日にバイトがある課題は${formatHours(tendency.withJob.median)}前、ない課題は${formatHours(tendency.withoutJob.median)}前。` : '');
+      const prompt = `あなたは、授業とアルバイトを両立している大学生の課題の進め方をアドバイスするアシスタントです。
+次の情報をもとに、今週どの課題をいつ進めるべきかを、具体的に2〜3文の日本語で答えてください。前置きは不要です。
+
+【これから7日の空き時間（授業・バイトを除く）】${days}
+【7日以内に締切の課題】
+${upcoming}
+【これまでの提出の傾向】${stats}`;
+
+      const button = document.getElementById('ai-advice-btn');
+      button.disabled = true;
+      button.textContent = '🤖 分析中…';
+      const result = providerId === 'claude'
+        ? await callClaude(apiKey, prompt, { output_config: { effort: 'low' }, max_tokens: 2000 }, 60000)
+        : await callGemini(apiKey, [{ text: prompt }], {}, 60000);
+      if (result.error) {
+        showStatus(`AIの分析に失敗しました（${result.error}）`, 'error');
+        renderTasks();
+        return;
+      }
+      localStorage.setItem(AI_ADVICE_STORAGE, JSON.stringify({ at: new Date().toISOString(), text: result.text.trim().replace(/\s+/g, ' ').slice(0, 400) }));
+      tendencyOpen = true;
+      renderTasks();
+    }
+
     // ---------- 表示する課題の種類（manaba の課題のみ） ----------
     function loadHiddenKinds() {
       try {
@@ -1453,7 +1818,16 @@
       updateJobSection(now);
       renderJobList(now);
       updateSummary(activeTasks);
-      renderTaskList(activeTasks, now);
+      const workload = analyzeWorkload(activeTasks, now);
+      const tendency = analyzeTendency(now);
+      const risks = new Map();
+      activeTasks.forEach(task => {
+        const risk = delayRisk(task, workload, tendency, now);
+        if (risk) risks.set(task.id, risk);
+      });
+      renderOutlook(workload, now);
+      renderTaskList(activeTasks, now, risks);
+      renderTendency(tendency);
       renderHiddenNote(now);
       renderCompletedSection(completedTasks);
       renderTimeline(activeTasks, now);
@@ -2803,6 +3177,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     loadGcalSettings();
     loadShiftSettings();
     renderKindOptions();
+    renderStudyHoursOptions();
     updateClassSummary();
     estimatePendingTasks();
     if (connectLink && connectLink.error) {

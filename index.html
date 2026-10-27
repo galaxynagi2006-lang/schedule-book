@@ -404,8 +404,9 @@
                 <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>📄 テンプレートをコピーする</a></li>
               <li>コピーしたスプレッドシートのメニュー「<b>スケジュール帳</b>」→「<b>① 初期設定</b>」を押し、表示される許可を「許可」する</li>
               <li>「拡張機能」→「Apps Script」→ 右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」、実行：<b>自分</b>／アクセス：<b>全員</b> で「デプロイ」</li>
-              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>URL</b>と<b>合言葉</b>を、下の2つの欄に貼る</li>
+              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>QRコードをスマホのカメラで読み取る</b>（アプリが開いて自動で登録されます。パソコンなら「このパソコンのアプリに登録する」を押す）</li>
             </ol>
+            <p class="field-note">※ 1〜3はパソコンで行ってください（スプレッドシートのスマホアプリでは「スケジュール帳」メニューが使えません）。QRコードが使えないときは、同じ画面のURLと合言葉を下の2つの欄に貼ります。</p>
             <p class="field-note">データはあなたの Google アカウントの中だけで処理され、ほかの人（アプリの開発者を含む）には送られません。</p>
           </details>
           <div class="form-group" style="margin-top: 10px;">
@@ -2767,13 +2768,48 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     renderTasks();
     setInterval(renderTasks, 60000);
 
+    // QRコード・リンク（…#connect=〇〇）から開いたときは、URLと合言葉を登録する。
+    // 「#」以降はサーバーに送られない。読み取ったらすぐにアドレスから消して、履歴や画面に残さない
+    function readConnectLink() {
+      const match = location.hash.match(/^#connect=([A-Za-z0-9_-]+)$/);
+      if (!location.hash.startsWith('#connect=')) return null;
+      history.replaceState(null, '', location.pathname + location.search);
+      try {
+        if (!match) throw new Error('形式が違います');
+        const base64 = match[1].replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(match[1].length / 4) * 4, '=');
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const { u: url, t: token } = JSON.parse(new TextDecoder().decode(bytes));
+        if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url) || !/^[\w-]{8,}$/.test(token)) throw new Error('内容が正しくありません');
+        return { url, token };
+      } catch (err) {
+        console.warn('連携リンクを読み取れませんでした', err);
+        return { error: true };
+      }
+    }
+
+    const connectLink = readConnectLink();
+    // アプリを開いたまま連携リンクを開いた場合（アドレスの「#」以降だけが変わる）も、読み込み直して登録する
+    window.addEventListener('hashchange', () => {
+      if (location.hash.startsWith('#connect=')) location.reload();
+    });
+    if (connectLink && !connectLink.error) {
+      const currentUrl = localStorage.getItem(GCAL_URL_STORAGE);
+      if (!currentUrl || currentUrl === connectLink.url || confirm('今のGoogle連携を、読み取った連携に置き換えますか？')) {
+        localStorage.setItem(GCAL_URL_STORAGE, connectLink.url);
+        localStorage.setItem(GCAL_TOKEN_STORAGE, connectLink.token);
+      }
+    }
+
     // 起動時・30分ごと・アプリに戻ってきたとき（前回から10分以上たっていれば）にカレンダーを同期
     loadGcalSettings();
     loadShiftSettings();
     renderKindOptions();
     updateClassSummary();
     estimatePendingTasks();
-    syncGoogleCalendar();
+    if (connectLink && connectLink.error) {
+      showStatus('📅 連携用のQRコード・リンクを読み取れませんでした。もう一度読み取るか、⚙️ 設定で貼り付けてください', 'error');
+    }
+    syncGoogleCalendar(!!connectLink && !connectLink.error);   // QRコードから開いたときは結果を表示する
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);
     document.addEventListener('visibilitychange', () => {
       const lastSync = new Date(localStorage.getItem(GCAL_LAST_SYNC_STORAGE) || 0).getTime();

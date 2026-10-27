@@ -8,7 +8,8 @@
  *     （設定シートの作成・合言葉の作成・自動実行（通知）の設定をまとめて行う）
  *  3. 「拡張機能」→「Apps Script」→「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」
  *       次のユーザーとして実行：自分 ／ アクセスできるユーザー：全員 → 「デプロイ」
- *  4. メニュー「スケジュール帳」→「② アプリに登録する情報」のURLと合言葉を、アプリの「⚙️ 設定」→「Google連携」に貼る
+ *  4. メニュー「スケジュール帳」→「② アプリに登録する情報」のQRコードをスマホのカメラで読み取る
+ *     （アプリが開いて連携が自動で登録される。パソコンなら「このパソコンのアプリに登録する」を押す）
  *  設定（バイトのキーワード、通知の時刻など）は、シート「設定」の「値」の列を書き換えるだけで変えられる。
  *
  * ■ 単体のスクリプトとして使う場合（以前からの方法）
@@ -36,7 +37,8 @@ const DEFAULT_CONFIG = {
   KEYWORDS: ['バイト', 'アルバイト', 'シフト'], // タイトルにどれかを含む予定をバイトとして扱う（空なら全部）
   DAYS_BACK: 7,                             // アプリに渡す期間：何日前から
   DAYS_AHEAD: 62,                           //               何日後まで（翌月分のシフトも入るように約2か月）
-  WRITE_TOKEN: '',                          // シフト表を書き込むときの合言葉。空なら書き込み無効
+  WRITE_TOKEN: '',                          // 合言葉（アプリが読むとき・シフト表を書き込むときに必要）
+  WEBAPP_URL: '',                           // デプロイしたURL。自動で取れないときだけ入れる（QRコード用）
 
   MANABA_ENABLED: true,                     // manaba の課題メール（Gmail）を読むか
   MANABA_QUERY: 'from:manaba subject:公開のお知らせ newer_than:45d',
@@ -58,7 +60,8 @@ const SETTINGS_SHEET = '設定';
 const SETTING_NOTES = {
   KEYWORDS: 'タイトルにこの言葉を含む予定をバイトとして扱う（カンマ区切り。「なし」にすると全部の予定）',
   CALENDAR_ID: 'バイト専用のカレンダーがあればそのID（Googleカレンダーの設定 →「カレンダーの統合」）。空ならメイン',
-  WRITE_TOKEN: 'シフト表をカレンダーに書き込むときの合言葉（「① 初期設定」で自動で作られる。アプリにも同じものを入れる）',
+  WRITE_TOKEN: '合言葉（「① 初期設定」で自動で作られる。アプリが読むとき・シフト表を書き込むときに使う）',
+  WEBAPP_URL: 'デプロイしたウェブアプリのURL（…/exec）。「② アプリに登録する情報」にQRコードが出ないときだけ入れる',
   MANABA_ENABLED: 'manaba の課題メールを読むか（TRUE / FALSE）',
   MANABA_HIDE_KINDS: 'まとめメール・バイト前のメール・カレンダーに出さない課題の種類（例: アンケート。カンマ区切り。空なら全部出す）',
   MORNING_HOUR: 'まとめメールを送る時刻（0〜23時）。変えたら「① 初期設定」をもう一度押す',
@@ -395,46 +398,91 @@ function settingToText(value) {
   return String(value);
 }
 
-/** アプリに貼り付けるURLと合言葉を表示する */
-function showConnectionInfo() {
-  const config = loadConfig();
+/** ウェブアプリのURL（…/exec）。自動で取れないときは、シート「設定」の WEBAPP_URL を使う */
+function getWebAppUrl(config) {
   let url = '';
   try {
     url = ScriptApp.getService().getUrl() || '';
   } catch (err) {
     url = '';
   }
-  const escape = text => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const urlBlock = /\/exec$/.test(url)
-    ? `<input readonly value="${escape(url)}" onclick="this.select()">`
-    : '<p class="warn">まだデプロイされていないようです。下の手順でデプロイすると、ここにURLが表示されます。</p>';
+  if (/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) return url;
+  return /^https:\/\/script\.google\.com\/.+\/exec$/.test(config.WEBAPP_URL) ? config.WEBAPP_URL : '';
+}
 
-  const html = `
+/**
+ * アプリに登録するためのリンク。URLと合言葉を「#connect=」の後ろに入れる
+ * （「#」以降はアプリのサーバーに送られず、アプリが読み取ったらすぐにアドレスから消す）
+ */
+function buildConnectLink(url, token, appUrl) {
+  const payload = Utilities.base64EncodeWebSafe(JSON.stringify({ u: url, t: token }), Utilities.Charset.UTF_8).replace(/=+$/, '');
+  return `${appUrl}#connect=${payload}`;
+}
+
+/** アプリに登録する情報（スマホ用のQRコード・このパソコン用のリンク・予備のURLと合言葉）を表示する */
+function showConnectionInfo() {
+  const config = loadConfig();
+  const url = getWebAppUrl(config);
+  const escape = text => String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const style = `
     <style>
-      body { font-family: sans-serif; font-size: 13px; color: #111827; line-height: 1.6; }
-      h3 { font-size: 14px; margin: 14px 0 4px; }
-      input { width: 100%; padding: 6px; font-size: 13px; box-sizing: border-box; }
+      body { font-family: sans-serif; font-size: 13px; color: #111827; line-height: 1.6; margin: 0; }
+      h3 { font-size: 14px; margin: 12px 0 4px; }
+      input { width: 100%; padding: 6px; font-size: 12px; box-sizing: border-box; }
       ol { padding-left: 20px; margin: 4px 0; }
+      .qr { display: flex; justify-content: center; margin: 6px 0; min-height: 200px; align-items: center; }
+      .qr svg { width: 220px; height: 220px; }
+      .btn { display: inline-block; background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: bold; }
+      .center { text-align: center; }
       .warn { color: #92400e; background: #fef3c7; padding: 6px 8px; border-radius: 6px; }
       .note { color: #6b7280; font-size: 12px; }
-    </style>
-    <h3>1. ウェブアプリのURL（アプリの「⚙️ 設定」→「Google連携」のURLの欄に貼る）</h3>
-    ${urlBlock}
-    <ol>
-      <li>メニュー「拡張機能」→「Apps Script」を開く</li>
-      <li>右上の「デプロイ」→「新しいデプロイ」→ 歯車から種類「ウェブアプリ」</li>
-      <li>次のユーザーとして実行：<b>自分</b> ／ アクセスできるユーザー：<b>全員</b> →「デプロイ」</li>
-      <li>表示された「ウェブアプリ」のURL（…/exec で終わる）をコピーする</li>
-    </ol>
-    <h3>2. 合言葉（アプリの「⚙️ 設定」→「Google連携」の合言葉の欄に貼る）</h3>
-    <input readonly value="${escape(config.WRITE_TOKEN)}" onclick="this.select()">
-    <p class="note">合言葉は、アプリが予定や課題を読むときと、シフト表を書き込むときの両方に使います。
-    URLと合言葉は人に教えないでください。設定はシート「設定」の「値」で変えられます。
-    自動実行（毎朝${escape(config.MORNING_HOUR)}時のまとめメール・1時間ごとの更新）は設定済みです。</p>`;
-  SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(560).setHeight(470),
-    'アプリに登録する情報'
-  );
+      details { margin-top: 10px; }
+    </style>`;
+
+  if (!url || !config.WRITE_TOKEN) {
+    const html = `${style}
+      <p class="warn">${!config.WRITE_TOKEN ? '合言葉がまだありません。先に「① 初期設定」を押してください。' : 'まだデプロイされていないようです。'}</p>
+      <h3>デプロイの手順（最初の1回だけ）</h3>
+      <ol>
+        <li>メニュー「拡張機能」→「Apps Script」を開く</li>
+        <li>右上の「デプロイ」→「新しいデプロイ」→ 歯車から種類「ウェブアプリ」</li>
+        <li>次のユーザーとして実行：<b>自分</b> ／ アクセスできるユーザー：<b>全員</b> →「デプロイ」</li>
+        <li>この画面（「② アプリに登録する情報」）をもう一度開く</li>
+      </ol>
+      <p class="note">デプロイしたのにこの表示のままの場合は、デプロイ後に表示された「ウェブアプリ」のURL（…/exec）を、
+      シート「設定」の WEBAPP_URL の「値」に貼ってから、もう一度開いてください。</p>`;
+    SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(520).setHeight(420), 'アプリに登録する情報');
+    return;
+  }
+
+  const link = buildConnectLink(url, config.WRITE_TOKEN, config.APP_URL);
+  const html = `${style}
+    <h3>📱 スマホで使う場合：カメラでQRコードを読み取る</h3>
+    <div class="qr" id="qr">QRコードを作成中…</div>
+    <p class="note center">読み取るとアプリが開き、連携が自動で登録されます</p>
+    <h3>💻 このパソコンで使う場合</h3>
+    <p class="center"><a class="btn" href="${escape(link)}" target="_blank" rel="noopener">このパソコンのアプリに登録する</a></p>
+    <details>
+      <summary>QRコードが使えないとき（手で貼り付ける）</summary>
+      <p>アプリの「⚙️ 設定」→「Google連携」に、次の2つを貼ってください。</p>
+      URL：<input readonly value="${escape(url)}" onclick="this.select()">
+      合言葉：<input readonly value="${escape(config.WRITE_TOKEN)}" onclick="this.select()">
+    </details>
+    <p class="note">QRコード・URL・合言葉は人に見せないでください（予定と課題を読めてしまいます）。
+    自動実行（毎朝${escape(config.MORNING_HOUR)}時のまとめメール・1時間ごとの更新）は設定済みです。</p>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script>
+      try {
+        // QRコードはこの画面の中で作る（URLや合言葉を外部のサービスに送らない）
+        const qr = qrcode(0, 'M');
+        qr.addData(${JSON.stringify(link)});
+        qr.make();
+        document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+      } catch (err) {
+        document.getElementById('qr').textContent = 'QRコードを表示できませんでした。下の方法で登録してください。';
+      }
+    </script>`;
+  SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(520).setHeight(560), 'アプリに登録する情報');
 }
 
 // =====================================================================

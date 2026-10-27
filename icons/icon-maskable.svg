@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- アプリアイコン（全面塗り・マスク用）切迫度リング：緑→黄→赤で締切が近づく様子と、完了のチェック -->
+  <rect width="512" height="512" fill="#f8fafc"/>
+  <!-- 上から時計回りに 緑→黄→赤 の一続きのリング。
+       前の色を2°長めに描き、次の色をちょうど3時・6時の位置から上に重ねて、境目がまっすぐ・すき間なしになるようにしている -->
+  <g fill="none" stroke-width="40" stroke-linecap="butt">
+    <path d="M 256 110 A 146 146 0 0 1 401.91 261.10" stroke="#10b981"/>
+    <path d="M 402 256 A 146 146 0 0 1 250.90 401.91" stroke="#f59e0b"/>
+    <path d="M 256 402 A 146 146 0 0 1 110 256" stroke="#ef4444"/>
+  </g>
+  <!-- リングの両端だけ丸くする -->
+  <circle cx="256" cy="110" r="20" fill="#10b981"/>
+  <circle cx="110" cy="256" r="20" fill="#ef4444"/>
+  <polyline points="196,262 242,308 322,214" fill="none" stroke="#111827" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

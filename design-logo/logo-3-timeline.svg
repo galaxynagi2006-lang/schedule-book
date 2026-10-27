@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 案3 タイムライン：授業（緑）・バイト（青）・課題（赤）が並ぶ1日 -->
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <line x1="150" y1="128" x2="150" y2="384" stroke="#334155" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="150" cy="170" r="20" fill="#ffffff"/>
+  <circle cx="150" cy="256" r="20" fill="#ffffff"/>
+  <circle cx="150" cy="342" r="20" fill="#ef4444"/>
+  <rect x="192" y="144" width="200" height="52" rx="26" fill="#14b8a6"/>
+  <rect x="192" y="230" width="236" height="52" rx="26" fill="#3b82f6"/>
+  <rect x="192" y="316" width="148" height="52" rx="26" fill="#f87171"/>
+</svg>

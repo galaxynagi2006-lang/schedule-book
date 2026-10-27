@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 案2 カレンダー×稲妻：予定を「1秒で把握」 -->
+  <rect width="512" height="512" rx="112" fill="#4338ca"/>
+  <rect x="106" y="138" width="300" height="270" rx="44" fill="#ffffff"/>
+  <path d="M106 182 a44 44 0 0 1 44 -44 h212 a44 44 0 0 1 44 44 v30 h-300 z" fill="#ef4444"/>
+  <rect x="176" y="104" width="30" height="72" rx="15" fill="#ffffff"/>
+  <rect x="306" y="104" width="30" height="72" rx="15" fill="#ffffff"/>
+  <path d="M276 236 L198 330 H254 L236 392 L316 296 H260 Z" fill="#fbbf24" stroke="#f59e0b" stroke-width="6" stroke-linejoin="round"/>
+</svg>

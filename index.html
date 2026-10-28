@@ -275,6 +275,10 @@
     .kind-options { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 6px; }
     .check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0; }
     .check-row input, .kind-options input { width: 18px; height: 18px; accent-color: var(--primary-color); }
+    .weekly-until { display: flex; flex-direction: column; gap: 6px; }
+    .weekly-row { padding: 8px 0; border-top: 1px solid var(--line); }
+    .weekly-row:first-child { border-top: none; margin-top: 0; }
+    .weekly-name { font-size: 13px; font-weight: 700; }
     .backup-actions { display: flex; flex-direction: column; gap: 8px; }
     .backup-import { display: block; text-align: center; margin-bottom: 0; }
     .hidden-note { font-size: 12px; color: var(--text-sub); padding: 10px 0 0; }
@@ -538,6 +542,11 @@
         </section>
 
         <section class="settings-card">
+          <h2>🔁 毎週の課題</h2>
+          <div id="weekly-list"></div>
+        </section>
+
+        <section class="settings-card">
           <h2>👁 表示する課題の種類（manaba から取り込んだ課題）</h2>
           <div class="kind-options" id="kind-options"></div>
           <span class="field-note">※チェックを外した種類は、リスト・タイムライン・残り時間の合計に出しません（手入力の課題は常に表示）</span>
@@ -613,6 +622,15 @@
       <div class="form-group">
         <label for="task-datetime" id="datetime-label">日時・締め切り</label>
         <input type="datetime-local" id="task-datetime" class="form-control" required>
+      </div>
+
+      <div class="form-group" id="weekly-group">
+        <label class="check-row"><input type="checkbox" id="task-weekly" onchange="toggleWeeklyInput()"> 毎週くり返す（毎週同じ曜日・時刻が締切の課題）</label>
+        <div class="weekly-until" id="weekly-until-group" style="display:none;">
+          <label for="task-weekly-until">くり返す最後の日（空欄なら ⚙️ 設定でやめるまで）</label>
+          <input type="date" id="task-weekly-until" class="form-control">
+          <span class="field-note">※締切の7日前から一覧に出ます。タイトルにコース名と課題名（例: メディアデザイン論 リフレクションシート）を入れておくと、manaba の提出のお知らせで自動で完了になります</span>
+        </div>
       </div>
 
       <div class="form-group" id="end-time-group" style="display:none;">
@@ -706,7 +724,9 @@
     const SHIFT_TITLE_STORAGE = 'smart_schedule_shift_title';
     const MANABA_SUBMITTED_STORAGE = 'smart_schedule_manaba_submitted';   // 処理済みの提出メール
     const HIDDEN_KINDS_STORAGE = 'smart_schedule_hidden_kinds';           // 表示しない manaba の課題の種類
-    const MANABA_OVERDUE_DAYS = 14;   // 締切を過ぎても提出のお知らせがない課題を取り込む期間（日）
+    const OVERDUE_KEEP_DAYS = 14;   // 締切を過ぎても未提出の課題（manaba・毎週の課題）を一覧に追加する期間（日）
+    const WEEKLY_STORAGE = 'smart_schedule_weekly_tasks';                 // 毎週くり返す課題
+    const WEEKLY_SHOW_DAYS = 7;     // 毎週の課題を締切の何日前から一覧に出すか
     const LAST_BACKUP_STORAGE = 'smart_schedule_last_backup';
     const MANABA_KINDS = ['レポート', '小テスト', 'アンケート', 'プロジェクト', 'その他'];
     const CLASS_STORAGE = 'smart_schedule_classes';               // 時間割（授業）
@@ -853,6 +873,7 @@
       if (tabId === 'tab-settings') {
         updateClassSummary();
         updateBackupInfo();
+        renderWeeklySettings();
       }
       window.scrollTo(0, 0);
     }
@@ -917,6 +938,17 @@
         endTimeGroup.style.display = 'none';
         datetimeLabel.textContent = '日時・締め切り';
       }
+      toggleWeeklyInput();
+    }
+
+    // 「毎週くり返す」は課題だけ。チェックしたときは、くり返す最後の日に学期の終了日を入れておく
+    function toggleWeeklyInput() {
+      const isTask = document.getElementById('task-type').value === 'task';
+      const checked = isTask && document.getElementById('task-weekly').checked;
+      document.getElementById('weekly-group').style.display = isTask ? 'flex' : 'none';
+      document.getElementById('weekly-until-group').style.display = checked ? 'flex' : 'none';
+      const until = document.getElementById('task-weekly-until');
+      if (checked && !until.value && classData && classData.termEnd) until.value = classData.termEnd;
     }
 
     // 所要時間の推定：手動指定 → 選択中のAI（Gemini / Claude）→ 失敗時は60分
@@ -1275,7 +1307,7 @@
           <div class="task-row">
             <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="完了にする">
             <div class="task-body">
-              <div class="task-name">${task.source === 'manaba' ? '📩 ' : ''}${escapeHtml(task.name)}</div>
+              <div class="task-name">${task.source === 'manaba' ? '📩 ' : task.source === 'weekly' ? '🔁 ' : ''}${escapeHtml(task.name)}</div>
               ${task.detail ? `<div class="task-detail">${escapeHtml(task.detail)}</div>` : ''}
               <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
               ${safeManabaUrl(task.url) ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener">manabaで開く ›</a>` : ''}
@@ -1942,6 +1974,8 @@ ${upcoming}
       const manualMinutes = document.getElementById('task-manual-minutes').value;
       const datetime = document.getElementById('task-datetime').value;
       const endTime = document.getElementById('job-end-time').value;
+      const weekly = type === 'task' && document.getElementById('task-weekly').checked;
+      const weeklyUntil = document.getElementById('task-weekly-until').value;
 
       let estimatedMinutes = 60;
       if (type === 'task') {
@@ -1961,8 +1995,14 @@ ${upcoming}
         ...(type === 'job' && endTime ? { endTime } : {})
       });
 
-      tasks.push(newTask);
-      saveTasks();
+      if (weekly) {
+        addWeeklyTask(newTask, weeklyUntil);
+        const deadline = new Date(datetime);
+        showStatus(`🔁 毎週${WEEKDAYS[deadline.getDay()]}曜 ${formatHM(deadline)} 締切の課題として登録しました（締切の${WEEKLY_SHOW_DAYS}日前から一覧に出ます）`, 'info');
+      } else {
+        tasks.push(newTask);
+        saveTasks();
+      }
       renderTasks();
 
       this.reset();
@@ -1984,16 +2024,133 @@ ${upcoming}
 
     function deleteTask(id) {
       const target = tasks.find(t => t.id === id);
-      // カレンダーから取り込んだ予定は、次の同期で復活しないように記録しておく
-      if (target && (target.source === 'gcal' || target.source === 'manaba')) {
+      // カレンダー・manaba から取り込んだ予定と毎週の課題は、次の同期・次の週の追加で復活しないように記録しておく
+      if (target && ['gcal', 'manaba', 'weekly'].includes(target.source)) {
         const hiddenIds = loadGcalHiddenIds();
         hiddenIds.push(target.externalId);
         localStorage.setItem(GCAL_HIDDEN_STORAGE, JSON.stringify(hiddenIds));
-        showStatus(target.source === 'manaba' ? '📩 この課題は今後の同期でも取り込みません' : '📅 この予定は今後の同期でも取り込みません', 'info');
+        showStatus({
+          manaba: '📩 この課題は今後の同期でも取り込みません',
+          weekly: '🔁 この週の分だけ削除しました（毎週の登録は ⚙️ 設定でやめられます）'
+        }[target.source] || '📅 この予定は今後の同期でも取り込みません', 'info');
       }
       tasks = tasks.filter(t => t.id !== id);
       saveTasks();
       renderTasks();
+    }
+
+    // ---------- 毎週くり返す課題（manaba からお知らせメールが来ない課題など） ----------
+    // 保存形式: [{ id, name, detail, estimatedMinutes, first: 最初の締切 "YYYY-MM-DDTHH:mm", until: くり返す最後の日 "YYYY-MM-DD"（空なら期限なし） }]
+    // 締切の WEEKLY_SHOW_DAYS 日前になった週の分を、課題として一覧に追加する（externalId: weekly_〇_締切日）
+    function loadWeeklyTasks() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(WEEKLY_STORAGE) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveWeeklyTasks(list) {
+      localStorage.setItem(WEEKLY_STORAGE, JSON.stringify(list));
+    }
+
+    function addWeeklyTask(task, until) {
+      const list = loadWeeklyTasks();
+      list.push({
+        id: Date.now(),
+        name: task.name,
+        detail: task.detail,
+        estimatedMinutes: task.estimatedMinutes,   // AIの推定は登録のときの1回だけ
+        first: task.datetime,
+        until: until || ''
+      });
+      saveWeeklyTasks(list);
+      generateWeeklyTasks();
+    }
+
+    // 一覧に出す時期になった週の分を追加する。削除した週と、締切から OVERDUE_KEEP_DAYS 日より前の週は追加しない
+    function generateWeeklyTasks(now = new Date()) {
+      const hiddenIds = new Set(loadGcalHiddenIds());
+      const showUntil = now.getTime() + WEEKLY_SHOW_DAYS * DAY_MS;
+      const keepFrom = now.getTime() - OVERDUE_KEEP_DAYS * DAY_MS;
+      let added = 0;
+
+      loadWeeklyTasks().forEach(w => {
+        const end = w.until ? new Date(`${w.until}T23:59`).getTime() : Infinity;
+        for (const d = new Date(w.first); d.getTime() <= showUntil && d.getTime() <= end; d.setDate(d.getDate() + 7)) {
+          if (d.getTime() < keepFrom) continue;
+          const datetime = toLocalInputValue(d);
+          const externalId = `weekly_${w.id}_${datetime.slice(0, 10)}`;
+          if (hiddenIds.has(externalId) || tasks.some(t => t.externalId === externalId)) continue;
+          tasks.push(normalizeTask({
+            id: generateTaskId(),
+            name: w.name,
+            type: 'task',
+            detail: w.detail || '',
+            datetime,
+            estimatedMinutes: w.estimatedMinutes || 60,
+            source: 'weekly',
+            weeklyId: w.id,
+            externalId,
+            createdAt: new Date().toISOString()
+          }));
+          added++;
+        }
+      });
+
+      if (added > 0) saveTasks();
+      return added;
+    }
+
+    // やめるときは、まだ終わっていない週の分も一覧から消す（完了の記録は残す）
+    function stopWeeklyTask(id) {
+      const target = loadWeeklyTasks().find(w => w.id === id);
+      if (!target || !confirm(`毎週の「${target.name}」をやめますか？\nまだ終わっていない週の分も一覧から消えます`)) return;
+      saveWeeklyTasks(loadWeeklyTasks().filter(w => w.id !== id));
+      tasks = tasks.filter(t => !(t.weeklyId === id && !t.completed));
+      saveTasks();
+      renderTasks();
+      renderWeeklySettings();
+    }
+
+    function renderWeeklySettings() {
+      const list = loadWeeklyTasks();
+      document.getElementById('weekly-list').innerHTML = list.length === 0
+        ? '<p class="field-note">登録はありません。課題を追加するときに「毎週くり返す」にチェックを入れると登録できます。</p>'
+        : list.map(w => {
+          const first = new Date(w.first);
+          const until = w.until ? `・${Number(w.until.slice(5, 7))}/${Number(w.until.slice(8, 10))}まで` : '';
+          return `
+            <div class="field-row weekly-row">
+              <div>
+                <div class="weekly-name">${escapeHtml(w.name)}</div>
+                <span class="field-note">毎週${WEEKDAYS[first.getDay()]}曜 ${formatHM(first)} 締切・約${w.estimatedMinutes || 60}分${until}</span>
+              </div>
+              <button type="button" class="btn-clear" onclick="stopWeeklyTask(${w.id})">やめる</button>
+            </div>
+          `;
+        }).join('');
+    }
+
+    // 提出のお知らせに当てはまる毎週の課題。タイトルにコース名を含み、残りの言葉が manaba の課題名に入っていて、
+    // 締切の WEEKLY_SHOW_DAYS 日前〜締切の OVERDUE_KEEP_DAYS 日後に提出した未完了の週のうち、
+    // 締切前に出した週を優先し、なければいちばん締切が早い週
+    function findWeeklyTaskForSubmission(sub) {
+      if (!sub.course) return null;
+      const submittedAt = new Date(sub.submittedAt).getTime();
+      const candidates = tasks
+        .filter(t => t.source === 'weekly' && !t.completed && t.name.includes(sub.course))
+        .filter(t => {
+          const rest = t.name.replace(sub.course, '').replace(/^[\s：:・-]+|[\s：:・-]+$/g, '');
+          return !rest || String(sub.title || '').includes(rest);
+        })
+        .filter(t => {
+          const deadline = new Date(t.datetime).getTime();
+          return submittedAt > deadline - WEEKLY_SHOW_DAYS * DAY_MS && submittedAt <= deadline + OVERDUE_KEEP_DAYS * DAY_MS;
+        })
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+      return candidates.find(t => submittedAt <= new Date(t.datetime).getTime()) || candidates[0] || null;
     }
 
     // ---------- Googleカレンダー連携（Apps Script のウェブアプリから取得） ----------
@@ -2216,14 +2373,14 @@ ${upcoming}
     }
 
     // 新しい課題を追加し、締切が変わった課題は更新する。
-    //   締切を過ぎた課題も、提出のお知らせがなく締切から MANABA_OVERDUE_DAYS 日以内なら取り込む
+    //   締切を過ぎた課題も、提出のお知らせがなく締切から OVERDUE_KEEP_DAYS 日以内なら取り込む
     //   （提出の一覧を返さない古い Apps Script では、提出済みか分からないので取り込まない）
     async function applyManabaAssignments(assignments, submissions) {
       const hiddenIds = new Set(loadGcalHiddenIds());
       const submittedIds = new Set((submissions || []).map(s => s && s.id).filter(Boolean));
       const submittedNames = new Set((submissions || []).filter(Boolean).map(s => s.course ? `${s.course}：${s.title}` : s.title));
       const now = new Date();
-      const overdueFrom = now.getTime() - MANABA_OVERDUE_DAYS * DAY_MS;
+      const overdueFrom = now.getTime() - OVERDUE_KEEP_DAYS * DAY_MS;
       let added = 0, updated = 0, overdue = 0;
 
       for (const a of assignments) {
@@ -2292,7 +2449,8 @@ ${upcoming}
         // 課題URLの目印で探し、なければ「コース名：課題名」で探す（manabaから取り込んだ課題のみ）
         const name = sub.course ? `${sub.course}：${sub.title}` : sub.title;
         const task = tasks.find(t => t.source === 'manaba' && sub.id && t.externalId === sub.id) ||
-          tasks.find(t => t.source === 'manaba' && t.name === name);
+          tasks.find(t => t.source === 'manaba' && t.name === name) ||
+          findWeeklyTaskForSubmission(sub);
         if (!task) return;   // まだ取り込んでいない課題なら、次の同期でもう一度試す
 
         if (!task.completed) {
@@ -3289,8 +3447,12 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       setTimeout(() => location.reload(), 800);
     }
 
+    generateWeeklyTasks();
     renderTasks();
-    setInterval(renderTasks, 60000);
+    setInterval(() => {
+      generateWeeklyTasks();
+      renderTasks();
+    }, 60000);
 
     // ---------- 端末どうしで設定をそろえる（QRコード・リンク …#connect=〇〇） ----------
     // 中身は {u: 連携のURL, t: 合言葉, p: 使うAI, g: GeminiのAPIキー, c: ClaudeのAPIキー, m: Claudeのモデル} を

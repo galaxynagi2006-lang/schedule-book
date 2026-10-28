@@ -706,6 +706,7 @@
     const SHIFT_TITLE_STORAGE = 'smart_schedule_shift_title';
     const MANABA_SUBMITTED_STORAGE = 'smart_schedule_manaba_submitted';   // 処理済みの提出メール
     const HIDDEN_KINDS_STORAGE = 'smart_schedule_hidden_kinds';           // 表示しない manaba の課題の種類
+    const MANABA_OVERDUE_DAYS = 14;   // 締切を過ぎても提出のお知らせがない課題を取り込む期間（日）
     const LAST_BACKUP_STORAGE = 'smart_schedule_last_backup';
     const MANABA_KINDS = ['レポート', '小テスト', 'アンケート', 'プロジェクト', 'その他'];
     const CLASS_STORAGE = 'smart_schedule_classes';               // 時間割（授業）
@@ -2160,10 +2161,11 @@ ${upcoming}
         if (!Array.isArray(data.events)) throw syncError('予定の形式が正しくありません（Apps Script のコードが古い可能性）');
 
         const result = applyCalendarEvents(data);
+        const submissions = Array.isArray(data.submissions) ? data.submissions : null;
         const manaba = Array.isArray(data.assignments)
-          ? await applyManabaAssignments(data.assignments)
-          : { added: 0, updated: 0 };
-        const submitted = Array.isArray(data.submissions) ? applyManabaSubmissions(data.submissions) : 0;
+          ? await applyManabaAssignments(data.assignments, submissions)
+          : { added: 0, updated: 0, overdue: 0 };
+        const submitted = submissions ? applyManabaSubmissions(submissions) : 0;
         if (Array.isArray(data.assignments)) {
           manabaLastInfo = {
             received: data.assignments.length,
@@ -2175,9 +2177,10 @@ ${upcoming}
         manabaLastError = data.assignmentsError ? 'manabaのメールを読めませんでした（Gmailの許可を確認）' : '';
         localStorage.setItem(GCAL_LAST_SYNC_STORAGE, new Date().toISOString());
 
-        if (manaba.added > 0 || submitted > 0) {
+        if (manaba.added > 0 || manaba.overdue > 0 || submitted > 0) {
           showStatus([
             manaba.added > 0 ? `📩 manabaから新しい課題を${manaba.added}件取り込みました` : '',
+            manaba.overdue > 0 ? `⏰ 締切を過ぎた未提出の課題を${manaba.overdue}件取り込みました` : '',
             submitted > 0 ? `✅ 提出済みの課題を${submitted}件完了にしました` : ''
           ].filter(Boolean).join(' ／ '), 'info');
         } else if (manual || result.added + result.updated + result.removed > 0) {
@@ -2204,16 +2207,29 @@ ${upcoming}
       return /^https:\/\/[a-z0-9-]+\.manaba\.jp\/ct\/[\w-]+$/i.test(url || '') ? url : '';
     }
 
-    // 締切前の新しい課題を追加し、締切が変わった課題は更新する
-    async function applyManabaAssignments(assignments) {
+    // manaba の日時 "2026-10-21 00:00:00" → "2026-10-21T00:00"（月日・時に0が付かない形にも対応）
+    function manabaDatetime(text) {
+      const m = String(text || '').match(/(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})/);
+      if (!m) return '';
+      const p = n => String(n).padStart(2, '0');
+      return `${m[1]}-${p(m[2])}-${p(m[3])}T${p(m[4])}:${m[5]}`;
+    }
+
+    // 新しい課題を追加し、締切が変わった課題は更新する。
+    //   締切を過ぎた課題も、提出のお知らせがなく締切から MANABA_OVERDUE_DAYS 日以内なら取り込む
+    //   （提出の一覧を返さない古い Apps Script では、提出済みか分からないので取り込まない）
+    async function applyManabaAssignments(assignments, submissions) {
       const hiddenIds = new Set(loadGcalHiddenIds());
+      const submittedIds = new Set((submissions || []).map(s => s && s.id).filter(Boolean));
+      const submittedNames = new Set((submissions || []).filter(Boolean).map(s => s.course ? `${s.course}：${s.title}` : s.title));
       const now = new Date();
-      let added = 0, updated = 0;
+      const overdueFrom = now.getTime() - MANABA_OVERDUE_DAYS * DAY_MS;
+      let added = 0, updated = 0, overdue = 0;
 
       for (const a of assignments) {
         if (!a || !a.id || !a.title || !a.deadline) continue;
-        const datetime = String(a.deadline).replace(' ', 'T').slice(0, 16);   // "2026-10-21 00:00:00" → "2026-10-21T00:00"
-        if (isNaN(new Date(datetime).getTime())) continue;
+        const datetime = manabaDatetime(a.deadline);
+        if (!datetime || isNaN(new Date(datetime).getTime())) continue;
         const name = a.course ? `${a.course}：${a.title}` : a.title;
 
         const existing = tasks.find(t => t.externalId === a.id);
@@ -2224,8 +2240,11 @@ ${upcoming}
           }
           continue;
         }
-        // アプリで削除した課題・締切を過ぎた課題（提出済みの可能性が高い）は取り込まない
-        if (hiddenIds.has(a.id) || new Date(datetime) <= now) continue;
+        // アプリで削除した課題・提出済みの課題・締切から時間がたった課題は取り込まない
+        if (hiddenIds.has(a.id)) continue;
+        const deadline = new Date(datetime).getTime();
+        const isOverdue = deadline <= now.getTime();
+        if (isOverdue && (!submissions || deadline < overdueFrom || submittedIds.has(a.id) || submittedNames.has(name))) continue;
 
         // まず60分で登録し、所要時間はあとからAIで推定する（estimatePending）
         tasks.push(normalizeTask({
@@ -2242,14 +2261,15 @@ ${upcoming}
           url: safeManabaUrl(a.url),
           createdAt: new Date().toISOString()
         }));
-        added++;
+        if (isOverdue) overdue++;
+        else added++;
       }
 
-      if (added + updated > 0) {
+      if (added + overdue + updated > 0) {
         saveTasks();
         renderTasks();
       }
-      return { added, updated };
+      return { added, updated, overdue };
     }
 
     // manaba の「提出のお知らせ」から、提出した課題を自動で完了にする

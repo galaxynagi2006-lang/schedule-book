@@ -156,8 +156,9 @@
     /* 画面の画像。番号の丸を画像の上に重ねる */
     .help-shot { position: relative; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
     .help-shot img { display: block; width: 100%; height: auto; }
+    :root[data-theme="dark"] .help-shot img { filter: brightness(0.82); }   /* 画像は明るい画面のものなので、夜はまぶしくないよう少し暗くする。番号の丸は画像に合わせて明るい画面の色のまま */
     .help-shot-tall { max-width: 250px; margin-left: auto; margin-right: auto; }   /* 縦長の画像は切らずに幅を細くして全体を見せる（番号の位置がずれないように） */
-    .shot-mark { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: var(--primary-color); color: #fff; border: 2px solid #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3); }
+    .shot-mark { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: #2563eb; color: #fff; border: 2px solid #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3); }
 
     /* はじめての案内：説明する場所だけを明るく残し、まわりを暗くして吹き出しを出す */
     .tour { position: fixed; inset: 0; z-index: 40; }
@@ -165,10 +166,10 @@
     .tour-dim { position: fixed; background: rgba(2, 6, 23, 0.7); }   /* 光らせる場所の上下左右を暗くする4枚 */
     .tour-spot { position: fixed; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.55); pointer-events: none; }
     .tour-spot.none { display: none; }   /* 光らせる場所がない（あいさつ）ときは全体を暗く */
-    .tour-tip { position: fixed; left: 16px; right: 16px; max-width: 360px; margin: 0 auto; background: var(--surface); color: var(--text-main); border-radius: 14px; padding: 14px 16px 10px; box-shadow: 0 12px 32px var(--shadow); transition: top 0.25s ease; }
+    .tour-tip { position: fixed; left: 16px; right: 16px; max-width: 360px; margin: 0 auto; background: var(--surface); color: var(--text-main); border-radius: 14px; padding: 14px 16px 10px; border: 1px solid var(--line-strong); box-shadow: 0 12px 32px var(--shadow); transition: top 0.25s ease; }   /* 暗い表示でも、暗くしたまわりと区別できるように枠を付ける */
     .tour-arrow { position: absolute; width: 14px; height: 14px; background: var(--surface); transform: rotate(45deg); }
-    .tour-tip.below .tour-arrow { top: -7px; }
-    .tour-tip.above .tour-arrow { bottom: -7px; }
+    .tour-tip.below .tour-arrow { top: -8px; border-left: 1px solid var(--line-strong); border-top: 1px solid var(--line-strong); }
+    .tour-tip.above .tour-arrow { bottom: -8px; border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }
     .tour-tip.tour-center .tour-arrow { display: none; }
     .tour-step { font-size: 12px; font-weight: 700; color: var(--primary-color); }
     .tour-title { font-size: 17px; font-weight: 800; margin: 2px 0 4px; }

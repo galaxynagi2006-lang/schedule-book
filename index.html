@@ -162,6 +162,15 @@
     .help-shot-tall { max-width: 250px; margin-left: auto; margin-right: auto; }   /* 縦長の画像は切らずに幅を細くして全体を見せる（番号の位置がずれないように） */
     .shot-mark { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: #2563eb; color: #fff; border: 2px solid #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3); }
 
+    /* 「戻る」を押したときの終了の確認 */
+    .exit-confirm { position: fixed; inset: 0; z-index: 45; background: rgba(2, 6, 23, 0.55); display: grid; place-items: center; padding: 24px; }
+    .exit-confirm[hidden] { display: none; }
+    .exit-card { width: 100%; max-width: 320px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 20px; padding: 20px; box-shadow: 0 16px 40px var(--shadow); }
+    .exit-card h2 { font-size: 17px; font-weight: 800; }
+    .exit-card p { font-size: 13px; color: var(--text-sub); line-height: 1.6; margin: 6px 0 16px; }
+    .exit-actions { display: flex; gap: 10px; }
+    .exit-actions button { flex: 1; margin: 0; font-size: 15px; font-weight: 700; border-radius: 12px; }
+
     /* はじめての案内：説明する場所だけを明るく残し、まわりを暗くして吹き出しを出す */
     .tour { position: fixed; inset: 0; z-index: 40; }
     .tour[hidden] { display: none; }
@@ -907,6 +916,18 @@
     </div>
   </div>
 
+  <!-- 「戻る」を押したときの終了の確認（リストの画面で戻るを押したとき） -->
+  <div class="exit-confirm" id="exit-confirm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title" aria-describedby="exit-text" hidden>
+    <div class="exit-card">
+      <h2 id="exit-title">アプリを終了しますか？</h2>
+      <p id="exit-text">もう一度スマホの「戻る」を押しても終了できます。</p>
+      <div class="exit-actions">
+        <button type="button" class="btn-clear" id="exit-cancel" onclick="cancelExit()">いいえ</button>
+        <button type="button" class="btn-submit" onclick="confirmExit()">はい、終了する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ⑤ 予定追加フォーム（ボトムシート） -->
   <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
   <section class="sheet" id="add-sheet" role="dialog" aria-modal="true" aria-labelledby="add-sheet-title" tabindex="-1">
@@ -1264,7 +1285,8 @@
     // Esc：案内（チュートリアル）→ シート → 実際の時間の記録 の順に、開いているものを閉じる
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
-      if (!document.getElementById('tour').hidden) finishTutorial();
+      if (isExitConfirmOpen()) cancelExit();
+      else if (!document.getElementById('tour').hidden) finishTutorial();
       else if (document.querySelector('.sheet.open')) closeSheet();
       else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
     });
@@ -4790,9 +4812,42 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
 
     // ---------- スマホの「戻る」ボタン：押しただけでアプリが閉じないようにする ----------
     // 履歴に目印を1つ積んでおき、「戻る」を押したら順に：開いている案内・シート・記録を閉じる →
-    // タイムライン・設定ならリストに戻る → リストなら「もう一度押すと閉じます」と知らせる（このときは目印を積まないので、次の「戻る」で閉じる）
+    // タイムライン・設定ならリストに戻る → リストなら「アプリを終了しますか？」と確かめる。
+    // 確認の間は目印を積まないので、もう一度「戻る」を押すとそのまま終了する（時間の制限はない）
     function armBackGuard() {
       if (!(history.state && history.state.backGuard)) history.pushState({ backGuard: true }, '');
+    }
+
+    function isExitConfirmOpen() {
+      return !document.getElementById('exit-confirm').hidden;
+    }
+
+    function openExitConfirm() {
+      document.getElementById('exit-text').textContent = 'もう一度スマホの「戻る」を押しても終了できます。';
+      document.getElementById('exit-confirm').hidden = false;
+      setBackgroundInert(true);
+      document.getElementById('exit-cancel').focus({ preventScroll: true });   // うっかり終了しないよう「いいえ」を選んだ状態にする
+    }
+
+    function cancelExit() {
+      document.getElementById('exit-confirm').hidden = true;
+      setBackgroundInert(false);
+      armBackGuard();
+    }
+
+    // Webのアプリは、ホーム画面から開いたときはボタンで自分を閉じられないことがある。
+    // 閉じられなかったら、スマホの「戻る」で終了するよう案内する
+    function confirmExit() {
+      window.close();
+      setTimeout(() => {
+        if (document.visibilityState === 'hidden') return;
+        history.back();
+        setTimeout(() => {
+          if (document.visibilityState !== 'hidden' && isExitConfirmOpen()) {
+            document.getElementById('exit-text').textContent = 'このままスマホの「戻る」をもう一度押すと終了します。';
+          }
+        }, 400);
+      }, 200);
     }
 
     window.addEventListener('popstate', () => {
@@ -4801,15 +4856,16 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
       else if (!document.getElementById('tab-list').classList.contains('active')) switchTab('tab-list');
       else {
-        showStatus('もう一度「戻る」を押すとアプリを閉じます', 'info');
-        setTimeout(armBackGuard, 2500);   // 少し待っても押されなければ、また1回では閉じないようにする
+        openExitConfirm();
         return;
       }
       armBackGuard();
     });
     armBackGuard();
     // ブラウザによっては、画面に触る前に積んだ目印は「戻る」で飛ばされるので、触ったときにも積み直す
-    ['pointerdown', 'keydown'].forEach(type => document.addEventListener(type, armBackGuard, { passive: true }));
+    ['pointerdown', 'keydown'].forEach(type => document.addEventListener(type, () => {
+      if (!isExitConfirmOpen()) armBackGuard();
+    }, { passive: true }));
   </script>
 </body>
 </html>

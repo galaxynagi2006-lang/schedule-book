@@ -112,6 +112,9 @@
       padding: 2px 0 2px 6px;
     }
     .delete-btn:hover { color: var(--alert-red); }
+    .delete-btn.edit { color: #94a3b8; }
+    .delete-btn.edit:hover { color: var(--primary-color); }
+    .task-body[onclick] { cursor: pointer; }
 
     .empty-message { text-align: center; color: var(--text-sub); font-size: 14px; padding: 28px 0; }
 
@@ -279,6 +282,7 @@
     .weekly-row { padding: 8px 0; border-top: 1px solid var(--line); }
     .weekly-row:first-child { border-top: none; margin-top: 0; }
     .weekly-name { font-size: 13px; font-weight: 700; }
+    .weekly-actions { display: flex; gap: 6px; flex-shrink: 0; }
     .backup-actions { display: flex; flex-direction: column; gap: 8px; }
     .backup-import { display: block; text-align: center; margin-bottom: 0; }
     .hidden-note { font-size: 12px; color: var(--text-sub); padding: 10px 0 0; }
@@ -590,11 +594,13 @@
   <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
   <section class="sheet" id="add-sheet" aria-label="予定・課題の追加">
     <div class="sheet-head">
-      <span>予定・課題を追加</span>
+      <span id="add-sheet-title">予定・課題を追加</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
-    <button type="button" class="btn-secondary" onclick="openShiftSheet()">📷 シフト表の写真からバイトを一括登録</button>
-    <button type="button" class="btn-secondary" onclick="openClassSheet()">🏫 時間割の画像から授業を登録</button>
+    <div id="add-sheet-imports">
+      <button type="button" class="btn-secondary" onclick="openShiftSheet()">📷 シフト表の写真からバイトを一括登録</button>
+      <button type="button" class="btn-secondary" onclick="openClassSheet()">🏫 時間割の画像から授業を登録</button>
+    </div>
     <form id="add-schedule-form">
       <div class="form-group">
         <label for="task-name">タイトル・件名</label>
@@ -615,7 +621,7 @@
       </div>
 
       <div class="form-group" id="manual-est-group">
-        <label for="task-manual-minutes">所要時間（分） <span style="font-size:0.75rem; font-weight:normal;">※空欄時はAIが自動推測</span></label>
+        <label for="task-manual-minutes">所要時間（分） <span id="manual-est-note" style="font-size:0.75rem; font-weight:normal;">※空欄時はAIが自動推測</span></label>
         <input type="number" id="task-manual-minutes" class="form-control" placeholder="例: 90（手動指定する場合）" min="5" step="5">
       </div>
 
@@ -625,7 +631,7 @@
       </div>
 
       <div class="form-group" id="weekly-group">
-        <label class="check-row"><input type="checkbox" id="task-weekly" onchange="toggleWeeklyInput()"> 毎週くり返す（毎週同じ曜日・時刻が締切の課題）</label>
+        <label class="check-row" id="task-weekly-row"><input type="checkbox" id="task-weekly" onchange="toggleWeeklyInput()"> 毎週くり返す（毎週同じ曜日・時刻が締切の課題）</label>
         <div class="weekly-until" id="weekly-until-group" style="display:none;">
           <label for="task-weekly-until">くり返す最後の日（空欄なら ⚙️ 設定でやめるまで）</label>
           <input type="date" id="task-weekly-until" class="form-control">
@@ -802,6 +808,7 @@
 
     function saveTasks() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      scheduleTaskPush();
     }
 
     function currentProvider() {
@@ -863,6 +870,9 @@
     }
 
     let tasks = loadTasks();
+    let taskPushTimer = null;       // 課題を Apps Script に送るまでの待ち（変更が続くときはまとめて送る）
+    let lastPushedTasks = '';       // 前回送った内容（同じなら送らない）
+    let taskPushOutdated = false;   // Apps Script が古く、課題を受け取れない
     loadApiKey();
 
     // ---------- タブ・シート ----------
@@ -879,8 +889,125 @@
     }
 
     function openSheet() {
+      if (editTarget) {   // 編集のあとは、追加用の空のフォームに戻す
+        document.getElementById('add-schedule-form').reset();
+        setFormMode(null);
+        toggleJobTimeInput();
+      }
       document.getElementById('sheet-overlay').classList.add('open');
       document.getElementById('add-sheet').classList.add('open');
+    }
+
+    // ---------- 追加フォームを編集にも使う ----------
+    // editTarget: null（追加）／ { kind: 'item', id }（課題・バイト）／ { kind: 'weekly', id, datetime: 開いたときの次の締切 }
+    let editTarget = null;
+
+    function setFormMode(target) {
+      editTarget = target;
+      const editing = !!target;
+      document.getElementById('add-sheet-title').textContent =
+        !editing ? '予定・課題を追加' : target.kind === 'weekly' ? '毎週の課題を編集' : '編集';
+      document.getElementById('add-sheet-imports').hidden = editing;
+      document.getElementById('task-type').disabled = editing;
+      document.getElementById('task-weekly-row').style.display = editing ? 'none' : '';
+      document.getElementById('manual-est-note').textContent = editing ? '※空欄なら今のまま' : '※空欄時はAIが自動推測';
+      document.getElementById('submit-btn').textContent = editing ? '保存する' : '登録する';
+    }
+
+    function openEditSheet() {
+      document.getElementById('sheet-overlay').classList.add('open');
+      document.getElementById('add-sheet').classList.add('open');
+    }
+
+    function openEditTask(id) {
+      const item = tasks.find(t => t.id === id);
+      if (!item) return;
+      document.getElementById('add-schedule-form').reset();
+      setFormMode({ kind: 'item', id });
+      document.getElementById('task-type').value = item.type;
+      toggleJobTimeInput();   // バイトのときは開始時刻を18:00にするので、日時はこのあとで入れる
+      document.getElementById('task-name').value = item.name;
+      document.getElementById('task-detail').value = item.detail || '';
+      document.getElementById('task-manual-minutes').value = item.estimatePending ? '' : (item.estimatedMinutes || '');
+      document.getElementById('task-datetime').value = item.datetime;
+      if (item.type === 'job') document.getElementById('job-end-time').value = item.endTime || '';
+      openEditSheet();
+    }
+
+    function openEditWeekly(id) {
+      const weekly = loadWeeklyTasks().find(w => w.id === id);
+      if (!weekly) return;
+      const next = nextWeeklyDeadline(weekly, new Date());
+      document.getElementById('add-schedule-form').reset();
+      setFormMode({ kind: 'weekly', id, datetime: next });
+      document.getElementById('task-type').value = 'task';
+      document.getElementById('task-weekly').checked = true;
+      toggleJobTimeInput();
+      document.getElementById('task-name').value = weekly.name;
+      document.getElementById('task-detail').value = weekly.detail || '';
+      document.getElementById('task-manual-minutes').value = weekly.estimatedMinutes || '';
+      document.getElementById('task-datetime').value = next;
+      document.getElementById('task-weekly-until').value = weekly.until || '';
+      openEditSheet();
+    }
+
+    // フォームの内容で、編集中の課題・バイト・毎週の課題を書き換える
+    function saveEditedItem() {
+      const name = document.getElementById('task-name').value.trim();
+      const detail = document.getElementById('task-detail').value;
+      const minutes = parseInt(document.getElementById('task-manual-minutes').value, 10);
+      const datetime = document.getElementById('task-datetime').value;
+
+      if (editTarget.kind === 'weekly') {
+        const list = loadWeeklyTasks();
+        const weekly = list.find(w => w.id === editTarget.id);
+        if (!weekly) return;
+        const scheduleChanged = datetime !== editTarget.datetime;
+        weekly.name = name;
+        weekly.detail = detail;
+        if (minutes > 0) weekly.estimatedMinutes = minutes;
+        weekly.until = document.getElementById('task-weekly-until').value;
+        if (scheduleChanged) weekly.first = datetime;
+        saveWeeklyTasks(list);
+
+        // 締切前でまだ終わっていない週の分は、曜日・時刻が変わったら作り直し、そうでなければ内容だけそろえる
+        const now = new Date();
+        const upcoming = t => t.weeklyId === weekly.id && !t.completed && new Date(t.datetime) > now;
+        if (scheduleChanged) {
+          tasks = tasks.filter(t => !upcoming(t));
+        } else {
+          tasks.filter(upcoming).forEach(t => {
+            t.name = weekly.name;
+            t.detail = weekly.detail;
+            t.estimatedMinutes = weekly.estimatedMinutes;
+          });
+        }
+        generateWeeklyTasks();
+        saveTasks();
+        renderTasks();
+        renderWeeklySettings();
+        showStatus(`🔁 毎週の「${weekly.name}」を変更しました`, 'info');
+        return;
+      }
+
+      const item = tasks.find(t => t.id === editTarget.id);
+      if (!item) return;
+      // manaba の締切を自分で変えたときは、次の同期で manaba の締切に戻さないよう、元の締切を覚えておく
+      if (item.source === 'manaba' && !item.manabaDeadline) item.manabaDeadline = item.datetime;
+      item.name = name;
+      item.datetime = datetime;
+      if (item.type === 'job') {
+        item.endTime = document.getElementById('job-end-time').value || item.endTime;
+      } else {
+        item.detail = detail;
+        if (minutes > 0) {
+          item.estimatedMinutes = minutes;
+          delete item.estimatePending;
+        }
+      }
+      saveTasks();
+      renderTasks();
+      showStatus(`「${item.name}」を変更しました`, 'info');
     }
 
     function closeSheet() {
@@ -1262,6 +1389,7 @@
           <div class="job-row">
             <span class="job-row-date">${start.getMonth() + 1}/${start.getDate()}（${WEEKDAYS[start.getDay()]}） ${formatJobRange(job)}</span>
             <span class="job-row-name">${job.source === 'gcal' ? '📅 ' : ''}${escapeHtml(job.name)}</span>
+            ${job.source === 'gcal' ? '' : `<button class="delete-btn edit" onclick="openEditTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを編集">✎</button>`}
             <button class="delete-btn" onclick="deleteTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを削除">✕</button>
           </div>
         `;
@@ -1306,16 +1434,16 @@
         return `
           <div class="task-row">
             <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="完了にする">
-            <div class="task-body">
+            <div class="task-body" onclick="openEditTask(${task.id})">
               <div class="task-name">${task.source === 'manaba' ? '📩 ' : task.source === 'weekly' ? '🔁 ' : ''}${escapeHtml(task.name)}</div>
               ${task.detail ? `<div class="task-detail">${escapeHtml(task.detail)}</div>` : ''}
               <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
-              ${safeManabaUrl(task.url) ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener">manabaで開く ›</a>` : ''}
+              ${safeManabaUrl(task.url) ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">manabaで開く ›</a>` : ''}
               ${risks.has(task.id) ? `<div class="risk-note risk-${risks.get(task.id).level}">${risks.get(task.id).level === 'high' ? '🔥' : '⚠️'} ${risks.get(task.id).text}</div>` : ''}
             </div>
             <div class="task-side">
               <div class="count-num c-${level}">${countdownText}</div>
-              <div class="count-unit">${targetDate > now ? '残り' : ''}<button class="delete-btn" onclick="deleteTask(${task.id})" aria-label="削除">✕</button></div>
+              <div class="count-unit">${targetDate > now ? '残り' : ''}<button class="delete-btn edit" onclick="openEditTask(${task.id})" aria-label="編集">✎</button><button class="delete-btn" onclick="deleteTask(${task.id})" aria-label="削除">✕</button></div>
             </div>
           </div>
         `;
@@ -1963,6 +2091,11 @@ ${upcoming}
 
     document.getElementById('add-schedule-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+      if (editTarget) {
+        saveEditedItem();
+        closeSheet();
+        return;
+      }
 
       const submitBtn = document.getElementById('submit-btn');
       submitBtn.disabled = true;
@@ -2069,6 +2202,14 @@ ${upcoming}
       generateWeeklyTasks();
     }
 
+    // まだ締切が来ていない、いちばん近い週の締切（"YYYY-MM-DDTHH:mm"）
+    function nextWeeklyDeadline(weekly, now) {
+      const d = new Date(weekly.first);
+      if (isNaN(d.getTime())) return weekly.first;
+      while (d < now) d.setDate(d.getDate() + 7);
+      return toLocalInputValue(d);
+    }
+
     // 一覧に出す時期になった週の分を追加する。削除した週と、締切から OVERDUE_KEEP_DAYS 日より前の週は追加しない
     function generateWeeklyTasks(now = new Date()) {
       const hiddenIds = new Set(loadGcalHiddenIds());
@@ -2127,7 +2268,10 @@ ${upcoming}
                 <div class="weekly-name">${escapeHtml(w.name)}</div>
                 <span class="field-note">毎週${WEEKDAYS[first.getDay()]}曜 ${formatHM(first)} 締切・約${w.estimatedMinutes || 60}分${until}</span>
               </div>
-              <button type="button" class="btn-clear" onclick="stopWeeklyTask(${w.id})">やめる</button>
+              <div class="weekly-actions">
+                <button type="button" class="btn-clear" onclick="openEditWeekly(${w.id})">編集</button>
+                <button type="button" class="btn-clear" onclick="stopWeeklyTask(${w.id})">やめる</button>
+              </div>
             </div>
           `;
         }).join('');
@@ -2175,8 +2319,72 @@ ${upcoming}
       } else {
         statusEl.textContent = (lastSync ? `前回の同期: ${formatDateTime(new Date(lastSync))}` : '未同期') +
           (manabaLastError ? ` ／ ⚠️ ${manabaLastError}` : '') +
-          (manabaLastInfo ? ` ／ 📩 manaba 締切前 ${manabaLastInfo.upcoming}件（メール${manabaLastInfo.received}件）` : '');
+          (manabaLastInfo ? ` ／ 📩 manaba 締切前 ${manabaLastInfo.upcoming}件（メール${manabaLastInfo.received}件）` : '') +
+          (taskPushOutdated ? ' ／ ⚠️ Apps Script のコードが古いため、まとめメールにアプリの課題が載りません' : '');
       }
+    }
+
+    // ---------- 未完了の課題を Apps Script に送る（朝のまとめメール・バイト前のメールに載せるため） ----------
+    // 送る形: { token, action: 'tasks', tasks: [{ name, deadline: ISO, minutes, source, id }], manabaIds: [...] }
+    //   tasks     : 表示中の未完了の課題（期限切れは OVERDUE_KEEP_DAYS 日以内）。締切が近い順
+    //   manabaIds : アプリが知っている manaba の課題（完了・削除・非表示を含む）。Apps Script はこれ以外の manaba の課題だけを足す
+    function buildTaskPush(now = new Date()) {
+      const keepFrom = now.getTime() - OVERDUE_KEEP_DAYS * DAY_MS;
+      const recent = t => new Date(t.datetime).getTime() >= keepFrom;
+      const pending = tasks
+        .filter(t => t.type === 'task' && !t.completed && isTaskVisible(t) && recent(t))
+        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
+        .map(t => ({
+          name: String(t.name).slice(0, 80),
+          deadline: new Date(t.datetime).toISOString(),
+          minutes: t.estimatedMinutes || 60,
+          source: t.source || '',
+          id: t.source === 'manaba' ? t.externalId : ''
+        }));
+      const manabaIds = [...new Set([
+        ...tasks.filter(t => t.source === 'manaba' && recent(t)).map(t => t.externalId),
+        ...loadGcalHiddenIds().filter(id => String(id).startsWith('manaba_')).slice(-100)
+      ])];
+      return { tasks: pending, manabaIds };
+    }
+
+    function scheduleTaskPush() {
+      clearTimeout(taskPushTimer);
+      taskPushTimer = setTimeout(pushTasksToScript, 5000);
+    }
+
+    // 合言葉があるときだけ送る。前回と同じ内容なら送らない。
+    // アプリを閉じる直前は keepalive で送る（返事は待たない）
+    async function pushTasksToScript(keepalive = false) {
+      clearTimeout(taskPushTimer);
+      taskPushTimer = null;
+      const url = localStorage.getItem(GCAL_URL_STORAGE);
+      const token = localStorage.getItem(GCAL_TOKEN_STORAGE);
+      if (!url || !token) return;
+      const payload = buildTaskPush();
+      const content = JSON.stringify(payload);
+      if (content === lastPushedTasks) return;
+
+      try {
+        const request = fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ token, action: 'tasks', ...payload }),
+          keepalive
+        });
+        if (keepalive) {
+          lastPushedTasks = content;
+          return;
+        }
+        const data = await (await request).json();
+        if (data.error) throw new Error(data.error);
+        // 古い Apps Script はシフトの書き込みとして受け取り、何もせずに { created: 0 } を返す
+        taskPushOutdated = typeof data.saved !== 'number';
+        lastPushedTasks = content;
+      } catch (err) {
+        console.warn('課題を Apps Script に送れませんでした', err);
+      }
+      updateGcalStatus();
     }
 
     function saveGcalUrl() {
@@ -2333,6 +2541,7 @@ ${upcoming}
         gcalLastError = '';
         manabaLastError = data.assignmentsError ? 'manabaのメールを読めませんでした（Gmailの許可を確認）' : '';
         localStorage.setItem(GCAL_LAST_SYNC_STORAGE, new Date().toISOString());
+        pushTasksToScript();
 
         if (manaba.added > 0 || manaba.overdue > 0 || submitted > 0) {
           showStatus([
@@ -2391,8 +2600,11 @@ ${upcoming}
 
         const existing = tasks.find(t => t.externalId === a.id);
         if (existing) {
-          if (!existing.completed && existing.datetime !== datetime) {
-            existing.datetime = datetime;   // 締切の延長など
+          // manaba 側で締切が変わったとき（延長など）だけ合わせる。アプリで直した締切は、manaba が変わらない限りそのまま
+          const lastSeen = existing.manabaDeadline || existing.datetime;
+          if (lastSeen !== datetime) {
+            existing.manabaDeadline = datetime;
+            if (!existing.completed) existing.datetime = datetime;
             updated++;
           }
           continue;
@@ -3720,6 +3932,8 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       if (document.visibilityState === 'visible' && Date.now() - lastSync > 10 * 60000) {
         syncGoogleCalendar();
       }
+      // 課題を変えてすぐにアプリを閉じたときも、まとめメールに反映されるように送っておく
+      if (document.visibilityState === 'hidden' && taskPushTimer) pushTasksToScript(true);
     });
   </script>
 </body>

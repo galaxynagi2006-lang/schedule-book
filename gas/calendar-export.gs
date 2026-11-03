@@ -20,6 +20,7 @@
  *  - アプリ用（doGet）: カレンダーのバイト予定と、manaba の課題・提出状況をアプリに渡す
  *    （合言葉 WRITE_TOKEN が設定されていれば、アプリから同じ合言葉が送られたときだけ渡す）
  *  - シフト表の書き込み（doPost）: 合言葉（WRITE_TOKEN）が一致したときだけカレンダーに予定を作る
+ *  - アプリの課題の受け取り（doPost）: 手入力・毎週の課題や期限切れの課題も、まとめメールに載せるために保存する
  *  - 1時間ごと: manaba の締切をカレンダーに「📩 締切：〜」として登録（提出したら ✅）、バイト前の確認メール
  *  - 毎朝: 今日のバイトと締切が近い課題のまとめメール
  *    （スクリプト プロパティに GEMINI_API_KEY を入れると AI のひとこと付き）
@@ -293,6 +294,7 @@ function parseManabaSubmission(body) {
  * シフトをカレンダーに書き込む
  * 受け取る形: { token, title, shifts: [{ start: ISO文字列, end: ISO文字列 }, ...] }
  * 同じタイトル・同じ開始/終了時刻の予定がすでにあれば作らない（二重登録防止）
+ * action: 'tasks' のときは、アプリの未完了の課題を受け取って保存する（saveAppTasks）
  */
 function doPost(e) {
   let request;
@@ -305,6 +307,8 @@ function doPost(e) {
   if (!CONFIG.WRITE_TOKEN || request.token !== CONFIG.WRITE_TOKEN) {
     return toJson({ error: '合言葉が一致しません（Apps Script の WRITE_TOKEN を確認）' });
   }
+
+  if (request.action === 'tasks') return toJson(saveAppTasks(request));
 
   const calendar = getCalendar();
   if (!calendar) {
@@ -518,25 +522,99 @@ function hourlyUpdate(arg) {
   const now = arg instanceof Date ? arg : new Date();   // トリガーからは別の値が渡るので現在時刻を使う
   const manaba = loadManabaStatus(now);
   syncDeadlineEvents(manaba.all, now);
-  remindBeforeJobs(manaba.pending, now);
+  remindBeforeJobs(collectPending(manaba, loadAppTasks(), now).upcoming, now);
 }
 
-/** 毎朝：今日のバイトと、締切が近い未提出の課題をまとめて送る */
+/** 毎朝：今日のバイトと、締切が近い未完了の課題・締切を過ぎた課題をまとめて送る */
 function morningSummary(arg) {
   const now = arg instanceof Date ? arg : new Date();
   const calendar = getCalendar();
   const todayStart = startOfDay(now);
   const jobsToday = getJobEvents(calendar, todayStart, new Date(todayStart.getTime() + DAY));
   const jobsTomorrow = getJobEvents(calendar, new Date(todayStart.getTime() + DAY), new Date(todayStart.getTime() + 2 * DAY));
-  const pending = loadManabaStatus(now).pending
-    .filter(a => a.deadlineDate.getTime() - now.getTime() <= CONFIG.SUMMARY_DAYS * DAY);
+  const collected = collectPending(loadManabaStatus(now), loadAppTasks(), now);
+  const pending = collected.upcoming.filter(a => a.deadlineDate.getTime() - now.getTime() <= CONFIG.SUMMARY_DAYS * DAY);
+  const summary = { now, jobsToday, jobsTomorrow, pending, overdue: collected.overdue, appSavedAt: collected.appSavedAt, format: formatDate };
 
-  const message = buildMorningSummary({ now, jobsToday, jobsTomorrow, pending, advice: '', format: formatDate });
+  const message = buildMorningSummary(Object.assign({ advice: '' }, summary));
   const advice = getAiAdvice(message.body);
-  const finalMessage = advice
-    ? buildMorningSummary({ now, jobsToday, jobsTomorrow, pending, advice, format: formatDate })
-    : message;
+  const finalMessage = advice ? buildMorningSummary(Object.assign({ advice }, summary)) : message;
   sendNotice(finalMessage.subject, finalMessage.body);
+}
+
+// ---------- アプリの課題（手入力・毎週の課題・期限切れを含む） ----------
+
+const APP_TASKS_PROPERTY = 'appTasks';
+const APP_MANABA_IDS_PROPERTY = 'appManabaIds';
+const PROPERTY_LIMIT_BYTES = 8000;   // スクリプト プロパティは1つ9KBまで
+
+/**
+ * アプリから送られた未完了の課題を保存する
+ * 受け取る形: { tasks: [{ name, deadline: ISO文字列, minutes, source, id }], manabaIds: [アプリが知っている manaba の課題の目印] }
+ */
+function saveAppTasks(request) {
+  const tasks = (Array.isArray(request.tasks) ? request.tasks : [])
+    .map(t => ({
+      name: String(t && t.name || '').slice(0, 80),
+      deadline: String(t && t.deadline || ''),
+      minutes: Number(t && t.minutes) || 60,
+      source: String(t && t.source || ''),
+      id: String(t && t.id || '')
+    }))
+    .filter(t => t.name && !isNaN(new Date(t.deadline).getTime()));
+  const ids = (Array.isArray(request.manabaIds) ? request.manabaIds : [])
+    .map(String)
+    .filter(id => id.startsWith('manaba_'));
+
+  const props = PropertiesService.getScriptProperties();
+  const stored = fitToPropertyLimit({ savedAt: new Date().toISOString(), tasks }, 'tasks');
+  props.setProperty(APP_TASKS_PROPERTY, JSON.stringify(stored));
+  props.setProperty(APP_MANABA_IDS_PROPERTY, JSON.stringify(fitToPropertyLimit({ ids }, 'ids')));
+  return { saved: stored.tasks.length };
+}
+
+/** プロパティの上限に収まるまで、一覧の後ろ（締切が遠い課題など）から減らす */
+function fitToPropertyLimit(data, key) {
+  const result = Object.assign({}, data, { [key]: data[key].slice() });
+  while (result[key].length > 0 && Utilities.newBlob(JSON.stringify(result)).getBytes().length > PROPERTY_LIMIT_BYTES) {
+    result[key].pop();
+  }
+  return result;
+}
+
+/** アプリから送られた課題。まだ一度も送られていなければ null */
+function loadAppTasks() {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const data = JSON.parse(props.getProperty(APP_TASKS_PROPERTY) || 'null');
+    if (!data || !Array.isArray(data.tasks)) return null;
+    const ids = (JSON.parse(props.getProperty(APP_MANABA_IDS_PROPERTY) || '{}').ids) || [];
+    return { savedAt: new Date(data.savedAt), tasks: data.tasks, manabaIds: new Set(ids) };
+  } catch (err) {
+    console.warn('アプリの課題を読めませんでした', err);
+    return null;
+  }
+}
+
+/**
+ * メールに載せる未完了の課題。アプリの課題に、アプリがまだ知らない manaba の課題（メールから）を足す。
+ * アプリの課題でも、そのあと manaba の提出のお知らせが届いたものは除く。
+ * アプリから一度も届いていなければ、これまでどおり manaba の締切前の未提出課題だけ
+ * 返す形: { upcoming: [締切前], overdue: [締切後], appSavedAt }（どちらも締切が近い順）
+ */
+function collectPending(manaba, app, now) {
+  if (!app) return { upcoming: manaba.pending, overdue: [], appSavedAt: null };
+  const submittedIds = new Set(manaba.all.filter(a => a.submitted).map(a => a.id));
+  const fromApp = app.tasks
+    .filter(t => !(t.id && submittedIds.has(t.id)))
+    .map(t => ({ title: t.name, course: '', deadlineDate: new Date(t.deadline), minutes: t.minutes }));
+  const fromMail = manaba.pending.filter(a => !app.manabaIds.has(a.id));
+  const all = fromApp.concat(fromMail).sort((x, y) => x.deadlineDate - y.deadlineDate);
+  return {
+    upcoming: all.filter(a => a.deadlineDate > now),
+    overdue: all.filter(a => a.deadlineDate <= now),
+    appSavedAt: app.savedAt
+  };
 }
 
 // ---------- manaba の課題の状況 ----------
@@ -677,14 +755,26 @@ function remainingLabel(deadline, now) {
 
 function assignmentLine(a, now, format) {
   const mark = a.deadlineDate.getTime() - now.getTime() <= DAY ? '🚨' : '・';
-  return `${mark} ${format(a.deadlineDate, 'M/d HH:mm')} まで（${remainingLabel(a.deadlineDate, now)}）　${a.title}［${a.course}］`;
+  return `${mark} ${format(a.deadlineDate, 'M/d HH:mm')} まで（${remainingLabel(a.deadlineDate, now)}）　${assignmentName(a)}`;
+}
+
+/** 締切を過ぎた課題の行（「2日超過」など） */
+function overdueLine(a, now, format) {
+  const minutes = Math.floor((now.getTime() - a.deadlineDate.getTime()) / MINUTE);
+  const over = minutes >= 1440 ? `${Math.floor(minutes / 1440)}日` : `${Math.floor(minutes / 60)}時間`;
+  return `⏰ ${format(a.deadlineDate, 'M/d HH:mm')} 締切（${over}超過）　${assignmentName(a)}`;
+}
+
+// manaba のメールからの課題は「課題名［コース名］」、アプリの課題はアプリでの名前と所要時間
+function assignmentName(a) {
+  return `${a.title}${a.course ? `［${a.course}］` : ''}${a.minutes ? `（約${a.minutes}分）` : ''}`;
 }
 
 function jobLine(job, format) {
   return `${format(job.start, 'HH:mm')}〜${format(job.end, 'HH:mm')}　${job.title}`;
 }
 
-function buildMorningSummary({ now, jobsToday, jobsTomorrow, pending, advice, format }) {
+function buildMorningSummary({ now, jobsToday, jobsTomorrow, pending, overdue = [], appSavedAt = null, advice, format }) {
   const lines = [
     `おはようございます。${dayLabel(now, format)}の予定です。`,
     '',
@@ -692,15 +782,21 @@ function buildMorningSummary({ now, jobsToday, jobsTomorrow, pending, advice, fo
     ...(jobsToday.length > 0 ? jobsToday.map(job => `  ${jobLine(job, format)}`) : ['  なし']),
     `■ 明日のバイト：${jobsTomorrow.length > 0 ? jobsTomorrow.map(job => jobLine(job, format)).join(' ／ ') : 'なし'}`,
     '',
-    `■ 締切が近い課題（${CONFIG.SUMMARY_DAYS}日以内・未提出 ${pending.length}件）`,
+    `■ 締切が近い課題（${CONFIG.SUMMARY_DAYS}日以内・未完了 ${pending.length}件）`,
     ...(pending.length > 0 ? pending.map(a => `  ${assignmentLine(a, now, format)}`) : ['  なし']),
   ];
+  if (overdue.length > 0) {
+    lines.push('', `■ 締切を過ぎた未完了の課題（${overdue.length}件・遅れて出せるか確認）`,
+      ...overdue.map(a => `  ${overdueLine(a, now, format)}`));
+  }
   if (advice) lines.push('', `💡 ひとこと：${advice}`);
+  if (appSavedAt) lines.push('', `※アプリの課題は ${format(appSavedAt, 'M/d HH:mm')} 時点の内容です`);
   lines.push('', `アプリで開く：${CONFIG.APP_URL}`);
 
   const urgentCount = pending.filter(a => a.deadlineDate.getTime() - now.getTime() <= DAY).length;
   const subject = `【今日の予定】${dayLabel(now, format)} バイト${jobsToday.length > 0 ? 'あり' : 'なし'}・締切${pending.length}件` +
-    (urgentCount > 0 ? `（24時間以内 ${urgentCount}件）` : '');
+    (urgentCount > 0 ? `（24時間以内 ${urgentCount}件）` : '') +
+    (overdue.length > 0 ? `・期限切れ${overdue.length}件` : '');
   return { subject, body: lines.join('\n') };
 }
 

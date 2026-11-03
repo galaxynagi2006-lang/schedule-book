@@ -53,16 +53,16 @@
       --surface-2: #f1f5f9;
       --surface-3: #e2e8f0;
       --text-main: #111827;
-      --text-sub: #6b7280;
-      --text-faint: #9ca3af;
+      --text-sub: #525b68;
+      --text-faint: #5b6472;        /* 白・薄い灰色の背景の上でも、色の差が 4.5:1 以上になる濃さ */
       --line: #e5e7eb;
       --line-soft: #f3f4f6;
       --line-strong: #cbd5e1;
       --on-fill: #ffffff;              /* 塗りのボタン・バッジの上の文字 */
       --btn-bg: #111827;
       --alert-red: #dc2626;
-      --alert-yellow: #d97706;
-      --alert-green: #059669;
+      --alert-yellow: #b45309;
+      --alert-green: #047857;
       --red-soft: #fee2e2;   --red-ink: #991b1b;   --red-tint: #fef2f2;   --red-line: #fecaca;
       --yellow-soft: #fef3c7; --yellow-ink: #92400e; --yellow-tint: #fffbeb; --yellow-line: #fde68a;
       --green-soft: #d1fae5; --green-ink: #065f46; --green-tint: #f0fdf4; --green-line: #bbf7d0;
@@ -88,7 +88,7 @@
       --surface-3: #283447;
       --text-main: #e5e7eb;
       --text-sub: #9ca3af;
-      --text-faint: #6b7280;
+      --text-faint: #949cab;
       --line: #263042;
       --line-soft: #1b2435;
       --line-strong: #3a475c;
@@ -143,8 +143,10 @@
     .job-status-large.none { color: var(--text-faint); }
     .job-time { font-size: 22px; font-weight: 700; }
     .job-name { font-size: 13px; color: var(--text-sub); margin-top: 6px; }
-    .tomorrow-row { display: flex; justify-content: space-between; margin-top: 14px; font-size: 15px; color: var(--text-sub); }
-    .tomorrow-row b { color: var(--text-main); }
+    .tomorrow-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 14px; font-size: 15px; color: var(--text-sub); }
+    .tomorrow-row span { white-space: nowrap; }
+    .tomorrow-row b { color: var(--text-main); text-align: right; }
+    .nowrap { white-space: nowrap; }
 
     .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 20px; margin-bottom: 2px; }
     .list-summary { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
@@ -155,7 +157,7 @@
     .task-name { font-size: 15px; font-weight: 700; word-break: break-all; }
     .task-detail { font-size: 12px; color: var(--text-sub); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .task-meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .task-link { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--primary-color); font-weight: 600; text-decoration: none; }
+    .task-link { display: inline-block; margin-top: 4px; padding: 6px 0; margin-bottom: -6px; font-size: 12px; color: var(--primary-color); font-weight: 600; text-decoration: none; }
     .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
     .task-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .count-num { font-size: 17px; font-weight: 800; white-space: nowrap; }
@@ -170,15 +172,17 @@
     .task-checkbox {
       appearance: none;
       -webkit-appearance: none;
-      width: 22px;
-      height: 22px;
-      border: 2px solid var(--line-strong);
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--text-faint);
       border-radius: 50%;
       flex-shrink: 0;
       cursor: pointer;
       display: grid;
       place-content: center;
+      position: relative;
     }
+    .task-checkbox::before { content: ""; position: absolute; inset: -10px; }   /* 押せる範囲を44px四方に広げる */
     .task-checkbox:checked { background: var(--alert-green); border-color: var(--alert-green); }
     .task-checkbox:checked::after { content: "✓"; color: var(--on-fill); font-size: 13px; font-weight: 800; }
 
@@ -203,8 +207,8 @@
 
     .empty-message { text-align: center; color: var(--text-sub); font-size: 15px; padding: 28px 0; }
 
-    .completed-section { margin-top: 14px; }
-    .completed-section summary { font-size: 13px; color: var(--text-faint); cursor: pointer; font-weight: 600; list-style: none; }
+    .completed-section { margin-top: 2px; }
+    .completed-section summary { font-size: 13px; color: var(--text-faint); cursor: pointer; font-weight: 600; list-style: none; padding: 12px 0; }
     .completed-section summary::-webkit-details-marker { display: none; }
     .completed-section summary::before { content: "› "; }
     .completed-section[open] summary::before { content: "⌄ "; }
@@ -213,8 +217,7 @@
     .job-row-name { flex: 1; min-width: 0; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .job-row .delete-btn { font-size: 15px; }
 
-    .completed-row { opacity: 0.6; }
-    .completed-row .task-name { text-decoration: line-through; }
+    .completed-row .task-name { text-decoration: line-through; color: var(--text-sub); font-weight: 600; }
     .completed-meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; }
 
     /* ========== タブ2：タイムライン（案C） ========== */
@@ -300,9 +303,13 @@
       transform: translateY(100%); transition: transform 0.25s ease;
     }
     .sheet.open { transform: translateY(0); }
+    .sheet:focus { outline: none; }   /* 開いたときに読み上げの位置を移すためのフォーカス。枠は出さない */
+    @media (prefers-reduced-motion: reduce) {
+      .sheet, .sheet-overlay { transition: none; }
+    }
     .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .sheet-head span { font-size: 17px; font-weight: 800; }
-    .sheet-close { border: none; background: var(--surface-2); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; color: var(--text-sub); }
+    .sheet-close { border: none; background: var(--surface-2); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 15px; color: var(--text-sub); }
 
     .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
     .form-group label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
@@ -313,7 +320,7 @@
 
     .api-settings { margin-top: 14px; border-top: 1px dashed var(--line-strong); padding-top: 12px; }
     .api-settings summary { font-size: 12px; color: var(--text-sub); cursor: pointer; font-weight: 600; }
-    .btn-clear { background: var(--surface-3); color: var(--text-main); border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .btn-clear { background: var(--surface-3); color: var(--text-main); border: none; padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
 
     /* ========== 見通し・遅延リスク ========== */
     .outlook { border-radius: 14px; padding: 14px; margin-top: 18px; border: 1px solid var(--line); }
@@ -339,8 +346,8 @@
     .risk-note { font-size: 12px; margin-top: 5px; padding: 5px 8px; border-radius: 8px; line-height: 1.45; }
     .risk-high { background: var(--red-soft); color: var(--red-ink); border-left: 3px solid var(--alert-red); }
     .risk-mid { background: var(--yellow-soft); color: var(--yellow-ink); border-left: 3px solid var(--alert-yellow); }
-    .tendency { margin-top: 14px; }
-    .tendency summary { font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: 600; list-style: none; }
+    .tendency { margin-top: 2px; }
+    .tendency summary { font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: 600; list-style: none; padding: 12px 0; }
     .tendency summary::-webkit-details-marker { display: none; }
     .tendency summary::before { content: "› "; }
     .tendency[open] summary::before { content: "⌄ "; }
@@ -459,7 +466,7 @@
     .actual-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
     .actual-choice { border: 1px solid var(--line); background: var(--bg-sub); border-radius: 10px; padding: 8px 2px; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; }
     .actual-choice small { display: block; font-size: 12px; color: var(--text-sub); font-weight: 600; margin-top: 2px; }
-    .record-btn { background: none; border: none; padding: 0; margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
+    .record-btn { background: none; border: none; padding: 6px 0; margin: -3px 0 -6px; font-size: 12px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -513,8 +520,8 @@
       <div class="tl-body">
         <div class="tl-title">
           <div class="tl-day-switch" role="group" aria-label="表示する日">
-            <button type="button" class="tl-day-btn active" data-offset="0" onclick="showTimelineDay(0)">今日</button>
-            <button type="button" class="tl-day-btn" data-offset="1" onclick="showTimelineDay(1)">明日</button>
+            <button type="button" class="tl-day-btn active" data-offset="0" onclick="showTimelineDay(0)" aria-pressed="true">今日</button>
+            <button type="button" class="tl-day-btn" data-offset="1" onclick="showTimelineDay(1)" aria-pressed="false">明日</button>
           </div>
           <span>自動配置</span>
         </div>
@@ -692,7 +699,7 @@
   <!-- 下部タブバー -->
   <nav class="tab-bar">
     <div class="tab-bar-inner">
-      <button class="tab-btn active" type="button" data-tab="tab-list" onclick="switchTab('tab-list')">
+      <button class="tab-btn active" type="button" data-tab="tab-list" onclick="switchTab('tab-list')" aria-current="page">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>リスト
       </button>
       <button class="tab-btn" type="button" data-tab="tab-timeline" onclick="switchTab('tab-timeline')">
@@ -706,7 +713,7 @@
 
   <!-- ⑤ 予定追加フォーム（ボトムシート） -->
   <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
-  <section class="sheet" id="add-sheet" aria-label="予定・課題の追加">
+  <section class="sheet" id="add-sheet" role="dialog" aria-modal="true" aria-labelledby="add-sheet-title" tabindex="-1">
     <div class="sheet-head">
       <span id="add-sheet-title">予定・課題を追加</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
@@ -765,7 +772,7 @@
   </section>
 
   <!-- 時間割の登録・編集（ボトムシート） -->
-  <section class="sheet" id="qr-sheet" aria-label="設定のQRコード">
+  <section class="sheet" id="qr-sheet" role="dialog" aria-modal="true" aria-labelledby="qr-sheet-title">
     <div class="sheet-head">
       <span id="qr-sheet-title">QRコード</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
@@ -784,14 +791,14 @@
           <input type="file" accept="image/*" onchange="scanQrFromImage(this)" hidden>
         </label>
         <div class="secret-field">
-          <input type="text" id="qr-paste" class="form-control" placeholder="https://…#connect=… を貼り付け" autocomplete="off" spellcheck="false">
+          <input type="text" id="qr-paste" class="form-control" aria-label="連携のリンク（…#connect=…）を貼り付け" placeholder="https://…#connect=… を貼り付け" autocomplete="off" spellcheck="false">
           <button type="button" class="btn-clear" onclick="applyPastedConnect()">登録</button>
         </div>
       </details>
     </div>
   </section>
 
-  <section class="sheet" id="class-sheet" aria-label="時間割の登録">
+  <section class="sheet" id="class-sheet" role="dialog" aria-modal="true" aria-label="時間割の登録">
     <div class="sheet-head">
       <span>時間割</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
@@ -807,7 +814,7 @@
   </section>
 
   <!-- シフト表の写真から一括登録（ボトムシート） -->
-  <section class="sheet" id="shift-sheet" aria-label="シフト表から登録">
+  <section class="sheet" id="shift-sheet" role="dialog" aria-modal="true" aria-label="シフト表から登録">
     <div class="sheet-head">
       <span>シフト表から登録</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
@@ -828,7 +835,7 @@
     <div id="shift-result"></div>
   </section>
 
-  <div id="status-display" class="status-msg"></div>
+  <div id="status-display" class="status-msg" role="status" aria-live="polite"></div>
 
   <div id="actual-prompt" class="actual-prompt" role="dialog" aria-label="実際にかかった時間" hidden>
     <div class="actual-head">
@@ -837,7 +844,7 @@
     </div>
     <div class="actual-choices" id="actual-choices"></div>
     <div class="secret-field">
-      <input type="number" id="actual-input" class="form-control" placeholder="分で入力（例: 50）" min="1" step="5" inputmode="numeric">
+      <input type="number" id="actual-input" class="form-control" aria-label="実際にかかった時間（分）" placeholder="分で入力（例: 50）" min="1" step="5" inputmode="numeric">
       <button type="button" class="btn-clear" onclick="saveActualFromInput()">記録</button>
     </div>
   </div>
@@ -1005,7 +1012,11 @@
     // ---------- タブ・シート ----------
     function switchTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === tabId);
+        if (b.dataset.tab === tabId) b.setAttribute('aria-current', 'page');
+        else b.removeAttribute('aria-current');
+      });
       document.querySelector('.fab').hidden = tabId === 'tab-settings';
       if (tabId === 'tab-settings') {
         updateClassSummary();
@@ -1023,6 +1034,7 @@
       }
       document.getElementById('sheet-overlay').classList.add('open');
       document.getElementById('add-sheet').classList.add('open');
+      document.getElementById('add-sheet').focus({ preventScroll: true });
     }
 
     // ---------- 追加フォームを編集にも使う ----------
@@ -1066,6 +1078,7 @@
     function openEditSheet() {
       document.getElementById('sheet-overlay').classList.add('open');
       document.getElementById('add-sheet').classList.add('open');
+      document.getElementById('add-sheet').focus({ preventScroll: true });
     }
 
     function openEditTask(id) {
@@ -1543,8 +1556,10 @@
         nameEl.textContent = '';
       }
 
-      document.getElementById('tomorrow-job-status').textContent =
-        tomorrowJobs.length > 0 ? `あり ${tomorrowJobs.map(j => formatJobRange(j)).join(' / ')}` : 'なし';
+      // 時間が2つ以上あって折り返すときも、「10:00 – 14:00」の途中では折り返さない
+      document.getElementById('tomorrow-job-status').innerHTML = tomorrowJobs.length > 0
+        ? `あり ${tomorrowJobs.map(j => `<span class="nowrap">${formatJobRange(j)}</span>`).join(' / ')}`
+        : 'なし';
     }
 
     // 今後のアルバイト一覧（終了前のものだけ表示。終わったバイトは分析用に記録として残す）
@@ -1623,7 +1638,7 @@
             <div class="task-body" onclick="openEditTask(${task.id})" onkeydown="if (event.key === 'Enter') openEditTask(${task.id})" role="button" tabindex="0">
               <div class="task-name">${escapeHtml(task.name)}</div>
               ${detail ? `<div class="task-detail">${escapeHtml(detail)}</div>` : ''}
-              <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
+              <div class="task-meta"><span class="dot bg-${level}" role="img" aria-label="${{ red: '急ぎ', yellow: '注意', green: '余裕あり' }[level]}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
               ${tags ? `<div class="task-tags">${tags}</div>` : ''}
               ${risks.has(task.id) ? `<div class="risk-note risk-${risks.get(task.id).level}">${risks.get(task.id).text}</div>` : ''}
             </div>
@@ -1799,7 +1814,11 @@
       const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
       const dayClasses = classRangesOn(day);
 
-      document.querySelectorAll('.tl-day-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.offset) === timelineDayOffset));
+      document.querySelectorAll('.tl-day-btn').forEach(b => {
+        const active = Number(b.dataset.offset) === timelineDayOffset;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-pressed', String(active));
+      });
       document.getElementById('tl-date').textContent = formatDateHeading(day);
       document.getElementById('tl-pills').innerHTML = `
         ${dayClasses.length > 0

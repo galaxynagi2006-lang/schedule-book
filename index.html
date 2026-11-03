@@ -356,6 +356,23 @@
     }
     .status-msg.info { background: #e0f2fe; color: #0369a1; display: block; }
     .status-msg.error { background: #fee2e2; color: #991b1b; display: block; }
+
+    /* 実際にかかった時間の記録（完了にしたときに出る） */
+    .actual-prompt {
+      position: fixed; left: 50%; transform: translateX(-50%); z-index: 15;
+      bottom: calc(80px + env(safe-area-inset-bottom));
+      width: calc(100% - 32px); max-width: 382px;
+      background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+    }
+    .actual-prompt[hidden] { display: none; }
+    .actual-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+    .actual-head span { padding-top: 6px; word-break: break-all; }
+    .actual-head .sheet-close { flex-shrink: 0; }
+    .actual-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+    .actual-choice { border: 1px solid var(--line); background: var(--bg-sub); border-radius: 10px; padding: 8px 2px; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; }
+    .actual-choice small { display: block; font-size: 10px; color: var(--text-sub); font-weight: 600; margin-top: 2px; }
+    .record-btn { background: none; border: none; padding: 0; margin-top: 3px; font-size: 11px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -715,6 +732,18 @@
 
   <div id="status-display" class="status-msg"></div>
 
+  <div id="actual-prompt" class="actual-prompt" role="dialog" aria-label="実際にかかった時間" hidden>
+    <div class="actual-head">
+      <span id="actual-title"></span>
+      <button type="button" class="sheet-close" onclick="closeActualPrompt()" aria-label="記録しない">✕</button>
+    </div>
+    <div class="actual-choices" id="actual-choices"></div>
+    <div class="secret-field">
+      <input type="number" id="actual-input" class="form-control" placeholder="分で入力（例: 50）" min="1" step="5" inputmode="numeric">
+      <button type="button" class="btn-clear" onclick="saveActualFromInput()">記録</button>
+    </div>
+  </div>
+
   <script>
     const STORAGE_KEY = 'smart_schedule_items';
     const API_KEY_STORAGE = 'smart_schedule_gemini_key';     // Gemini（以前からのキー名をそのまま使う）
@@ -965,7 +994,10 @@
         const scheduleChanged = datetime !== editTarget.datetime;
         weekly.name = name;
         weekly.detail = detail;
-        if (minutes > 0) weekly.estimatedMinutes = minutes;
+        if (minutes > 0 && minutes !== weekly.estimatedMinutes) {
+          weekly.estimatedMinutes = minutes;
+          delete weekly.aiMinutes;   // 自分で決めた時間は、実際の時間との比較でもそのまま使う
+        }
         weekly.until = document.getElementById('task-weekly-until').value;
         if (scheduleChanged) weekly.first = datetime;
         saveWeeklyTasks(list);
@@ -980,6 +1012,8 @@
             t.name = weekly.name;
             t.detail = weekly.detail;
             t.estimatedMinutes = weekly.estimatedMinutes;
+            if (weekly.aiMinutes) t.aiMinutes = weekly.aiMinutes;
+            else delete t.aiMinutes;
           });
         }
         generateWeeklyTasks();
@@ -1000,9 +1034,10 @@
         item.endTime = document.getElementById('job-end-time').value || item.endTime;
       } else {
         item.detail = detail;
-        if (minutes > 0) {
+        if (minutes > 0 && (minutes !== item.estimatedMinutes || item.estimatePending)) {
           item.estimatedMinutes = minutes;
           delete item.estimatePending;
+          delete item.aiMinutes;   // 自分で決めた時間は、実際の時間との比較でもそのまま使う
         }
       }
       saveTasks();
@@ -1079,27 +1114,31 @@
     }
 
     // 所要時間の推定：手動指定 → 選択中のAI（Gemini / Claude）→ 失敗時は60分
+    //   返り値: { minutes, aiMinutes（実際にかかった時間の記録で補正したときの、補正前のAIの推定） }
     async function estimateTaskMinutes(name, detail, manualMinutes) {
       if (manualMinutes && !isNaN(parseInt(manualMinutes, 10))) {
         const val = parseInt(manualMinutes, 10);
         showStatus(`所要時間: 手動指定 (${val}分) で登録しました`, "info");
-        return val;
+        return { minutes: val };
       }
 
       const provider = AI_PROVIDERS[currentProvider()];
       const result = await estimateWithCurrentAI(name, detail);
       if (result.noKey) {
         showStatus(`※${provider.label}のAPIキー未設定のためデフォルト値(60分)を適用しました`, "info");
-        return 60;
+        return { minutes: 60 };
       }
 
       if (result.minutes) {
-        showStatus(`🤖 AI解析成功 (${result.model}): 推定 ${result.minutes}分`, "info");
-        return result.minutes;
+        const estimate = applyTimeCorrection(name, result.minutes);
+        showStatus(estimate.correction
+          ? `🤖 AI推定 ${result.minutes}分 → ${estimate.correction.label}から×${estimate.correction.ratio}で ${estimate.minutes}分にしました`
+          : `🤖 AI解析成功 (${result.model}): 推定 ${result.minutes}分`, "info");
+        return estimate;
       }
 
       showStatus(`⚠️ ${provider.label}での解析に失敗したため、標準値(60分)で登録しました。${result.error ? `（${result.error}）` : ''}`, "error");
-      return 60;
+      return { minutes: 60 };
     }
 
     // 選択中のAIで所要時間を推定する（画面には何も表示しない）
@@ -1471,6 +1510,9 @@
             : `締切を${formatMargin(-marginMinutes)}超過`;
           completedText = `完了: ${formatDateTime(completedDate)}（${marginText}）`;
         }
+        const actualHtml = task.actualMinutes
+          ? `<div class="completed-meta">⏱ 実際 ${formatMinutes(task.actualMinutes)}（見込み ${formatMinutes(task.estimatedMinutes || 60)}）</div>`
+          : `<button type="button" class="record-btn" onclick="openActualPrompt(${task.id})">⏱ かかった時間を記録</button>`;
 
         return `
           <div class="task-row completed-row">
@@ -1478,6 +1520,7 @@
             <div class="task-body">
               <div class="task-name">${escapeHtml(task.name)}</div>
               <div class="completed-meta">${completedText}</div>
+              ${actualHtml}
             </div>
             <button class="delete-btn" onclick="deleteTask(${task.id})" aria-label="削除">✕</button>
           </div>
@@ -1702,6 +1745,9 @@
     const DAY_MS = 24 * HOUR_MS;
     const OUTLOOK_DAYS = 7;
     const MIN_TENDENCY_RECORDS = 5;    // 傾向を使った予測を始める記録の数
+    const TIME_RECORD_DAYS = 180;      // 実際にかかった時間の記録を使う期間（日）
+    const MIN_TIME_RECORDS = 3;        // 全体の倍率を使い始める記録の数
+    const MIN_COURSE_TIME_RECORDS = 2; // 科目ごとの倍率を使い始める記録の数
 
     function loadStudyHours() {
       try {
@@ -1935,6 +1981,13 @@
             ${jobLine}
           </ul>`;
       }
+      const time = analyzeTimeRecords();
+      body += time.n === 0
+        ? '<p class="field-note">⏱ 完了にするときに実際にかかった時間を記録すると、科目ごとの傾向をAIの所要時間の推定に反映します。</p>'
+        : `<p>⏱ 実際にかかった時間（記録 ${time.n}件）：${time.overall ? `見込みの<b>${time.overall}倍</b>（中央値）` : `${MIN_TIME_RECORDS}件たまると全体の傾向を出します`}</p>
+          ${time.courses.length ? `<ul>${time.courses.map(c => `<li>${escapeHtml(c.course)}：見込みの<b>${c.ratio}倍</b>（${c.n}件）</li>`).join('')}</ul>` : ''}
+          <p class="field-note">この倍率を、これから登録する課題のAIの推定に掛けます（科目の記録が${MIN_COURSE_TIME_RECORDS}件以上ならその科目の倍率。0.9〜1.1倍のときはそのまま）</p>`;
+
       const advice = loadAiAdvice();
       body += `
         <div class="shift-actions">
@@ -1981,13 +2034,15 @@
       const stats = tendency.n === 0 ? '提出の記録はまだありません。' :
         `記録${tendency.n}件。提出は締切の中央値${formatHours(tendency.medianMargin)}前。締切3時間以内の提出${Math.round(tendency.lastMinuteRate * 100)}%、締切後${Math.round(tendency.lateRate * 100)}%。` +
         (tendency.withJob.n >= 2 && tendency.withoutJob.n >= 2 ? `締切前日・当日にバイトがある課題は${formatHours(tendency.withJob.median)}前、ない課題は${formatHours(tendency.withoutJob.median)}前。` : '');
+      const timeStats = analyzeTimeRecords(now);
+      const timeLine = timeStats.overall ? `作業は見込みの約${timeStats.overall}倍の時間がかかる傾向（記録${timeStats.n}件）。` : '';
       const prompt = `あなたは、授業とアルバイトを両立している大学生の課題の進め方をアドバイスするアシスタントです。
 次の情報をもとに、今週どの課題をいつ進めるべきかを、具体的に2〜3文の日本語で答えてください。前置きは不要です。
 
 【これから7日の空き時間（授業・バイトを除く）】${days}
 【7日以内に締切の課題】
 ${upcoming}
-【これまでの提出の傾向】${stats}`;
+【これまでの提出の傾向】${stats}${timeLine}`;
 
       const button = document.getElementById('ai-advice-btn');
       button.disabled = true;
@@ -2110,9 +2165,9 @@ ${upcoming}
       const weekly = type === 'task' && document.getElementById('task-weekly').checked;
       const weeklyUntil = document.getElementById('task-weekly-until').value;
 
-      let estimatedMinutes = 60;
+      let estimate = { minutes: 60 };
       if (type === 'task') {
-        estimatedMinutes = await estimateTaskMinutes(name, detail, manualMinutes);
+        estimate = await estimateTaskMinutes(name, detail, manualMinutes);
       } else {
         showStatus(`アルバイト（${name}）を登録しました`, "info");
       }
@@ -2123,8 +2178,9 @@ ${upcoming}
         type,
         detail,
         datetime,
-        estimatedMinutes,
+        estimatedMinutes: estimate.minutes,
         createdAt: new Date().toISOString(),
+        ...(estimate.aiMinutes ? { aiMinutes: estimate.aiMinutes } : {}),
         ...(type === 'job' && endTime ? { endTime } : {})
       });
 
@@ -2151,8 +2207,95 @@ ${upcoming}
       if (!task) return;
       task.completed = !task.completed;
       task.completedAt = task.completed ? new Date().toISOString() : null;
+      if (!task.completed) {
+        delete task.actualMinutes;
+        if (actualPromptId === id) closeActualPrompt();
+      }
       saveTasks();
       renderTasks();
+      if (task.completed && task.type === 'task') openActualPrompt(id);
+    }
+
+    // ---------- 実際にかかった時間の記録（完了にしたとき。あとから完了済みの一覧からも記録できる） ----------
+    let actualPromptId = null;
+
+    function openActualPrompt(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+      actualPromptId = id;
+      const estimate = task.estimatedMinutes || 60;
+      const round5 = m => Math.max(5, Math.round(m / 5) * 5);
+      const choices = [[0.5, '半分くらい'], [1, '見込みどおり'], [1.5, '1.5倍'], [2, '2倍']];
+      document.getElementById('actual-title').textContent = `⏱ 「${task.name}」は実際に何分かかりましたか？（見込み ${formatMinutes(estimate)}）`;
+      document.getElementById('actual-choices').innerHTML = choices.map(([ratio, label]) =>
+        `<button type="button" class="actual-choice" onclick="saveActualMinutes(${round5(estimate * ratio)})">${round5(estimate * ratio)}分<small>${label}</small></button>`
+      ).join('');
+      document.getElementById('actual-input').value = task.actualMinutes || '';
+      document.getElementById('actual-prompt').hidden = false;
+    }
+
+    function closeActualPrompt() {
+      actualPromptId = null;
+      document.getElementById('actual-prompt').hidden = true;
+    }
+
+    function saveActualMinutes(minutes) {
+      const task = tasks.find(t => t.id === actualPromptId);
+      closeActualPrompt();
+      if (!task || !(minutes > 0)) return;
+      task.actualMinutes = Math.round(minutes);
+      saveTasks();
+      renderTasks();
+      showStatus(`⏱ 実際にかかった時間（${formatMinutes(task.actualMinutes)}）を記録しました`, 'info');
+    }
+
+    function saveActualFromInput() {
+      saveActualMinutes(parseInt(document.getElementById('actual-input').value, 10));
+    }
+
+    // 科目名。manaba の課題は「コース名：課題名」の前、手入力・毎週の課題はタイトルの最初の言葉（空白で区切られているとき）
+    function courseOf(name) {
+      const text = String(name || '').trim();
+      if (text.includes('：')) return text.split('：')[0].trim() || null;
+      const first = text.split(/[\s　]+/)[0];
+      return first && first !== text ? first : null;
+    }
+
+    // 実際にかかった時間 ÷ 見込み（AIの推定。補正前の値があればそれ）を、直近 TIME_RECORD_DAYS 日の記録から集計する
+    //   overall: 全体の倍率（記録が MIN_TIME_RECORDS 件以上）、courses: 科目ごとの倍率（MIN_COURSE_TIME_RECORDS 件以上）
+    function analyzeTimeRecords(now = new Date()) {
+      const from = now.getTime() - TIME_RECORD_DAYS * DAY_MS;
+      const records = tasks
+        .filter(t => t.type === 'task' && t.completed && t.actualMinutes > 0 && (t.aiMinutes || t.estimatedMinutes) > 0 &&
+          new Date(t.completedAt || 0).getTime() >= from)
+        .map(t => ({ course: courseOf(t.name), ratio: t.actualMinutes / (t.aiMinutes || t.estimatedMinutes) }));
+      const clamp = ratio => Math.min(2.5, Math.max(0.5, Math.round(ratio * 10) / 10));
+      const byCourse = new Map();
+      records.filter(r => r.course).forEach(r => byCourse.set(r.course, [...(byCourse.get(r.course) || []), r.ratio]));
+      return {
+        n: records.length,
+        overall: records.length >= MIN_TIME_RECORDS ? clamp(median(records.map(r => r.ratio))) : null,
+        courses: [...byCourse]
+          .filter(([, ratios]) => ratios.length >= MIN_COURSE_TIME_RECORDS)
+          .map(([course, ratios]) => ({ course, n: ratios.length, ratio: clamp(median(ratios)) }))
+      };
+    }
+
+    // AIの推定に掛ける倍率。同じ科目の記録があればその科目、なければ全体。記録が足りない・ほぼ1倍なら null
+    function timeCorrection(name) {
+      const analysis = analyzeTimeRecords();
+      const course = courseOf(name);
+      const byCourse = course && analysis.courses.find(c => c.course === course);
+      const ratio = byCourse ? byCourse.ratio : analysis.overall;
+      if (!ratio || Math.abs(ratio - 1) < 0.15) return null;
+      return { ratio, label: byCourse ? `${course}の記録` : 'これまでの記録' };
+    }
+
+    // AIの推定（分）に記録からの補正を掛ける。返す形: { minutes, aiMinutes（補正前。補正したときだけ）, correction }
+    function applyTimeCorrection(name, aiMinutes) {
+      const correction = timeCorrection(name);
+      if (!correction) return { minutes: aiMinutes };
+      return { minutes: Math.max(5, Math.round(aiMinutes * correction.ratio / 5) * 5), aiMinutes, correction };
     }
 
     function deleteTask(id) {
@@ -2195,6 +2338,7 @@ ${upcoming}
         name: task.name,
         detail: task.detail,
         estimatedMinutes: task.estimatedMinutes,   // AIの推定は登録のときの1回だけ
+        ...(task.aiMinutes ? { aiMinutes: task.aiMinutes } : {}),
         first: task.datetime,
         until: until || ''
       });
@@ -2231,6 +2375,7 @@ ${upcoming}
             detail: w.detail || '',
             datetime,
             estimatedMinutes: w.estimatedMinutes || 60,
+            ...(w.aiMinutes ? { aiMinutes: w.aiMinutes } : {}),
             source: 'weekly',
             weeklyId: w.id,
             externalId,
@@ -2697,8 +2842,13 @@ ${upcoming}
             // キーがなければ60分のまま確定する
             tasks.forEach(t => { delete t.estimatePending; });
           } else {
-            if (result.minutes) task.estimatedMinutes = result.minutes;
-            else console.warn(`所要時間の推定に失敗（${task.name}）:`, result.error);
+            if (result.minutes) {
+              const estimate = applyTimeCorrection(task.name, result.minutes);
+              task.estimatedMinutes = estimate.minutes;
+              if (estimate.aiMinutes) task.aiMinutes = estimate.aiMinutes;
+            } else {
+              console.warn(`所要時間の推定に失敗（${task.name}）:`, result.error);
+            }
             delete task.estimatePending;   // 失敗しても60分のまま確定し、何度もAIを呼ばない
           }
           saveTasks();

@@ -325,7 +325,10 @@
     .tl-now::before { content: ""; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--alert-red); }
     .tl-now span { position: absolute; right: 0; top: -17px; font-size: 12px; font-weight: 700; color: var(--alert-red); background: var(--bg-sub); padding-left: 4px; }
     .tl-deadline { position: absolute; left: 46px; right: 0; border-top: 2px dotted var(--alert-red); z-index: 1; }
-    .tl-deadline span { position: absolute; right: 0; top: 2px; font-size: 12px; font-weight: 700; color: var(--alert-red); }
+    .tl-deadline-label { position: absolute; right: 0; max-width: 58%; padding: 4px 8px; border: 1px solid var(--red-line); border-radius: 8px; background: var(--surface); color: var(--alert-red); font-size: 11px; line-height: 16px; z-index: 3; }
+    .tl-deadline-label b, .tl-deadline-label span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tl-deadline-label b { font-weight: 800; }
+    .tl-deadline-label span { color: var(--red-ink); font-weight: 600; }
 
     .tl-card { margin: 18px 20px 0; background: var(--surface); border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); }
     .tl-card-title { font-size: 12px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
@@ -413,7 +416,8 @@
     .outlook-numbers { font-size: 12px; color: var(--text-sub); }
     .outlook-message { font-size: 13px; margin-top: 8px; line-height: 1.5; }
     .day-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
-    .day-chip { background: var(--chip-bg); border-radius: 8px; padding: 4px 0; text-align: center; font-size: 12px; color: var(--text-sub); }
+    /* 行の高さを固定する：自動（normal）だと、Android で「.」だけ別のフォントになったとき行が高くなり、小数の日だけ数字が下にずれる */
+    .day-chip { background: var(--chip-bg); border-radius: 8px; padding: 4px 0; text-align: center; font-size: 12px; line-height: 16px; color: var(--text-sub); }
     .day-chip b { display: block; color: var(--text-main); font-size: 12px; }
     .day-chip.low { background: var(--red-soft); color: var(--red-ink); }
     .risk-note { font-size: 12px; margin-top: 5px; padding: 5px 8px; border-radius: 8px; line-height: 1.45; }
@@ -2475,12 +2479,28 @@
           `${formatHM(b.start)}–${formatHM(b.end)} ・ ${Math.round((b.end - b.start) / 60000)}分`);
       });
 
-      // その日が締切の課題に締切ラインを引く
+      // その日が締切の課題に締切ラインを引く。同じ時刻の締切は1本にまとめて札に名前を並べ、
+      // 近い時刻の札どうしは重ならないよう下にずらす（下にはみ出すときは線の上に出す）
+      const deadlineGroups = new Map();
       activeTasks.forEach(task => {
         const d = new Date(task.datetime);
         if (d > now && d >= tlStart && d <= dayEnd) {
-          html += `<div class="tl-deadline" style="top:${toY(d)}px"><span>${escapeHtml(task.name)} 締切 ${formatHM(d)}</span></div>`;
+          const key = d.getTime();
+          if (!deadlineGroups.has(key)) deadlineGroups.set(key, []);
+          deadlineGroups.get(key).push(task);
         }
+      });
+      const gridHeight = hours * HOUR_PX;
+      let labelBottom = -Infinity;
+      [...deadlineGroups.entries()].sort((a, b) => a[0] - b[0]).forEach(([ms, list]) => {
+        const y = toY(new Date(ms));
+        const labelHeight = 10 + 16 * (list.length + 1);   // .tl-deadline-label の上下の余白・枠と、見出し＋課題名の行
+        let top = Math.max(y + 3, labelBottom + 3);
+        if (top + labelHeight > gridHeight) top = Math.max(y - 3 - labelHeight, 0);
+        labelBottom = top + labelHeight;
+        const count = list.length > 1 ? ` ・ ${list.length}件` : '';
+        html += `<div class="tl-deadline" style="top:${y}px"></div>`;
+        html += `<div class="tl-deadline-label" style="top:${top}px"><b>締切 ${formatHM(new Date(ms))}${count}</b>${list.map(t => `<span>${escapeHtml(t.name)}</span>`).join('')}</div>`;
       });
 
       if (!isTomorrow) html += `<div class="tl-now" style="top:${toY(now)}px"><span>いま ${formatHM(now)}</span></div>`;

@@ -9,12 +9,39 @@
   <link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" id="theme-color-meta" content="#ffffff">
+  <script>
+    // 明るい／暗い表示の決め方。画面を描く前にここで決めて、表示が一瞬切り替わるのを防ぐ
+    //   night：夜（21時〜翌6時）だけ暗い（はじめはこれ）／light：いつも明るい／auto：スマホの設定に合わせる／dark：いつも暗い
+    const THEME_STORAGE = 'smart_schedule_theme';
+    const NIGHT_START_HOUR = 21;
+    const NIGHT_END_HOUR = 6;
+
+    function loadThemeModeValue() {
+      try {
+        return localStorage.getItem(THEME_STORAGE) || 'night';
+      } catch (e) {
+        return 'night';
+      }
+    }
+
+    function applyTheme(now = new Date()) {
+      const mode = loadThemeModeValue();
+      const hour = now.getHours();
+      const dark = mode === 'dark' ||
+        (mode === 'night' && (hour >= NIGHT_START_HOUR || hour < NIGHT_END_HOUR)) ||
+        (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      const meta = document.getElementById('theme-color-meta');
+      if (meta) meta.content = dark ? '#0b1120' : '#ffffff';
+    }
+
+    applyTheme();
+  </script>
   <style>
-    /* 色はすべてここで決める（下の @media で夜用の暗い色に切り替わる） */
+    /* 色はすべてここで決める（data-theme="dark" のときは下の暗い色に切り替わる。決め方は <head> の applyTheme） */
     :root {
-      color-scheme: light dark;
+      color-scheme: light;
       --primary-color: #2563eb;
       --primary-soft: #eef2ff;
       --accent-color: #4338ca;
@@ -46,39 +73,38 @@
       --shadow: rgba(15, 23, 42, 0.16);
     }
 
-    /* 夜（就寝前）に見てもまぶしくないように、端末が暗い表示のときは暗い色にする */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --primary-color: #60a5fa;
-        --primary-soft: #1e2a4a;
-        --accent-color: #a5b4fc;
-        --job-soft: #1e3a5f;
-        --job-ink: #dbeafe;
-        --bg-color: #0b1120;
-        --bg-sub: #0f1729;
-        --surface: #151d2e;
-        --surface-2: #1d2738;
-        --surface-3: #283447;
-        --text-main: #e5e7eb;
-        --text-sub: #9ca3af;
-        --text-faint: #6b7280;
-        --line: #263042;
-        --line-soft: #1b2435;
-        --line-strong: #3a475c;
-        --on-fill: #0b1120;
-        --btn-bg: #e5e7eb;
-        --alert-red: #f87171;
-        --alert-yellow: #fbbf24;
-        --alert-green: #34d399;
-        --red-soft: rgba(248, 113, 113, 0.18);   --red-ink: #fecaca;   --red-tint: rgba(248, 113, 113, 0.08);   --red-line: rgba(248, 113, 113, 0.35);
-        --yellow-soft: rgba(251, 191, 36, 0.18); --yellow-ink: #fde68a; --yellow-tint: rgba(251, 191, 36, 0.08); --yellow-line: rgba(251, 191, 36, 0.35);
-        --green-soft: rgba(52, 211, 153, 0.18);  --green-ink: #a7f3d0; --green-tint: rgba(52, 211, 153, 0.08);  --green-line: rgba(52, 211, 153, 0.35);
-        --info-soft: rgba(96, 165, 250, 0.18);   --info-ink: #bfdbfe;
-        --class-color: #2dd4bf; --class-soft: rgba(45, 212, 191, 0.18); --class-ink: #99f6e4;
-        --chip-bg: rgba(255, 255, 255, 0.06);
-        --track: rgba(255, 255, 255, 0.12);
-        --shadow: rgba(0, 0, 0, 0.5);
-      }
+    /* 夜（就寝前）に見てもまぶしくないように、暗い表示のときの色 */
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --primary-color: #60a5fa;
+      --primary-soft: #1e2a4a;
+      --accent-color: #a5b4fc;
+      --job-soft: #1e3a5f;
+      --job-ink: #dbeafe;
+      --bg-color: #0b1120;
+      --bg-sub: #0f1729;
+      --surface: #151d2e;
+      --surface-2: #1d2738;
+      --surface-3: #283447;
+      --text-main: #e5e7eb;
+      --text-sub: #9ca3af;
+      --text-faint: #6b7280;
+      --line: #263042;
+      --line-soft: #1b2435;
+      --line-strong: #3a475c;
+      --on-fill: #0b1120;
+      --btn-bg: #e5e7eb;
+      --alert-red: #f87171;
+      --alert-yellow: #fbbf24;
+      --alert-green: #34d399;
+      --red-soft: rgba(248, 113, 113, 0.18);   --red-ink: #fecaca;   --red-tint: rgba(248, 113, 113, 0.08);   --red-line: rgba(248, 113, 113, 0.35);
+      --yellow-soft: rgba(251, 191, 36, 0.18); --yellow-ink: #fde68a; --yellow-tint: rgba(251, 191, 36, 0.08); --yellow-line: rgba(251, 191, 36, 0.35);
+      --green-soft: rgba(52, 211, 153, 0.18);  --green-ink: #a7f3d0; --green-tint: rgba(52, 211, 153, 0.08);  --green-line: rgba(52, 211, 153, 0.35);
+      --info-soft: rgba(96, 165, 250, 0.18);   --info-ink: #bfdbfe;
+      --class-color: #2dd4bf; --class-soft: rgba(45, 212, 191, 0.18); --class-ink: #99f6e4;
+      --chip-bg: rgba(255, 255, 255, 0.06);
+      --track: rgba(255, 255, 255, 0.12);
+      --shadow: rgba(0, 0, 0, 0.5);
     }
 
     * {
@@ -97,7 +123,7 @@
     .app-container {
       max-width: 414px;
       margin: 0 auto;
-      padding-bottom: calc(100px + env(safe-area-inset-bottom)); /* タブバーに隠れないように */
+      padding-bottom: calc(160px + env(safe-area-inset-bottom)); /* タブバーと＋ボタンに隠れないように */
     }
 
     .tab-panel { display: none; }
@@ -172,6 +198,7 @@
     .task-tags .task-link { margin-top: 0; }
     .tag { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 6px; background: var(--info-soft); color: var(--info-ink); }
     .tag-weekly { background: var(--class-soft); color: var(--class-ink); }
+    .tag-dup { background: var(--yellow-soft); color: var(--yellow-ink); }
     .btn-danger { width: 100%; margin-top: 10px; background: none; border: 1px solid var(--red-line); color: var(--alert-red); padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
 
     .empty-message { text-align: center; color: var(--text-sub); font-size: 15px; padding: 28px 0; }
@@ -253,10 +280,14 @@
     .tab-btn .tab-icon { width: 24px; height: 24px; }   /* 線のアイコン。色は文字と同じ（選択中は濃く、それ以外は薄い灰色） */
     .tab-btn.active { color: var(--text-main); }
 
-    /* 追加ボタン：タブバーの中に置き、課題の残り時間やタイムラインの上に重ならないようにする */
-    .tab-add { flex: 1; border: none; background: none; cursor: pointer; display: grid; place-items: center; padding: 6px 0; }
-    .tab-add span { width: 44px; height: 44px; border-radius: 50%; background: var(--btn-bg); color: var(--on-fill); display: grid; place-items: center; box-shadow: 0 4px 12px var(--shadow); }
-    .tab-add svg { width: 22px; height: 22px; }
+    .fab {
+      position: fixed; z-index: 11;
+      right: max(24px, calc(50vw - 207px + 24px));
+      bottom: calc(80px + env(safe-area-inset-bottom));
+      width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--btn-bg); color: var(--on-fill); font-size: 30px; font-weight: 300; line-height: 1;
+      box-shadow: 0 8px 20px var(--shadow);
+    }
 
     /* ========== 追加フォーム（ボトムシート） ========== */
     .sheet-overlay { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.45); z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -404,7 +435,7 @@
     /* 通知トースト */
     .status-msg {
       position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
-      bottom: calc(84px + env(safe-area-inset-bottom));
+      bottom: calc(150px + env(safe-area-inset-bottom));
       width: calc(100% - 48px); max-width: 366px;
       font-size: 13px; font-weight: 600; padding: 10px 14px; border-radius: 12px;
       box-shadow: 0 6px 18px var(--shadow);
@@ -540,6 +571,17 @@
           </div>
         </section>
 
+        <section class="settings-card">
+          <h2>画面の色</h2>
+          <select id="theme-mode" class="form-control" onchange="saveThemeMode()" aria-label="画面の色">
+            <option value="night">夜だけ暗くする（21時〜翌6時）</option>
+            <option value="light">いつも明るい</option>
+            <option value="auto">スマホの設定に合わせる</option>
+            <option value="dark">いつも暗い</option>
+          </select>
+          <span class="field-note">※就寝前に見てもまぶしくないように、夜は暗い色にできます</span>
+        </section>
+
         <div class="settings-group">連携と初期設定<small>（最初に1回）</small></div>
         <section class="settings-card" id="gcal-settings">
           <h2>Google連携（バイト予定・manaba の課題・通知）</h2>
@@ -644,6 +686,9 @@
     </main>
   </div>
 
+  <!-- 追加ボタン -->
+  <button class="fab" type="button" onclick="openSheet()" aria-label="予定・課題を追加">＋</button>
+
   <!-- 下部タブバー -->
   <nav class="tab-bar">
     <div class="tab-bar-inner">
@@ -652,9 +697,6 @@
       </button>
       <button class="tab-btn" type="button" data-tab="tab-timeline" onclick="switchTab('tab-timeline')">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>タイムライン
-      </button>
-      <button class="tab-add" type="button" onclick="openSheet()" aria-label="予定・課題を追加">
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
       </button>
       <button class="tab-btn" type="button" data-tab="tab-settings" onclick="switchTab('tab-settings')">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>設定
@@ -964,6 +1006,7 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      document.querySelector('.fab').hidden = tabId === 'tab-settings';
       if (tabId === 'tab-settings') {
         updateClassSummary();
         updateBackupInfo();
@@ -1451,11 +1494,30 @@
       return `${formatHM(start)}${separator}${formatHM(end)}`;
     }
 
+    // 開始・終了が同じバイトを見分ける目印
+    function jobRangeKey(job) {
+      const { start, end } = getJobRange(job);
+      return `${start.getTime()}-${end.getTime()}`;
+    }
+
+    // 開始が早い順。同じ時間ならカレンダーから取り込んだものを先にする
+    function compareJobs(a, b) {
+      return new Date(a.datetime) - new Date(b.datetime) || (b.source === 'gcal') - (a.source === 'gcal');
+    }
+
+    // その日のバイト。同じ時間のバイトが2件あれば（アプリだけの分とカレンダーの分など）1つにまとめる
     function jobsOn(date) {
       const dayStr = date.toDateString();
+      const seen = new Set();
       return tasks
         .filter(t => t.type === 'job' && new Date(t.datetime).toDateString() === dayStr)
-        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+        .sort(compareJobs)
+        .filter(job => {
+          const key = jobRangeKey(job);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
     }
 
     // ---------- タブ1：リスト ----------
@@ -1492,19 +1554,24 @@
       const containerEl = document.getElementById('job-list-container');
       const upcomingJobs = tasks
         .filter(t => t.type === 'job' && getJobRange(t).end > now)
-        .sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+        .sort(compareJobs);
+      const seen = new Set();
 
       if (upcomingJobs.length === 0) {
         containerEl.innerHTML = '';
         return;
       }
 
+      // 同じ時間のバイトが2件目以降なら「重複」の印を付ける（✕ で消せる）
       const rowsHtml = upcomingJobs.map(job => {
         const start = new Date(job.datetime);
+        const key = jobRangeKey(job);
+        const duplicate = seen.has(key);
+        seen.add(key);
         return `
           <div class="job-row"${job.source === 'gcal' ? '' : ` onclick="openEditTask(${job.id})" role="button" tabindex="0"`}>
             <span class="job-row-date">${start.getMonth() + 1}/${start.getDate()}（${WEEKDAYS[start.getDay()]}） ${formatJobRange(job)}</span>
-            <span class="job-row-name">${escapeHtml(job.name)}${job.source === 'gcal' ? ' <span class="tag">カレンダー</span>' : ''}</span>
+            <span class="job-row-name">${escapeHtml(job.name)}${job.source === 'gcal' ? ' <span class="tag">カレンダー</span>' : ''}${duplicate ? ' <span class="tag tag-dup">重複</span>' : ''}</span>
             <button class="delete-btn" onclick="event.stopPropagation(); deleteTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを削除">✕</button>
           </div>
         `;
@@ -1643,8 +1710,11 @@
       const dayStart = startOfDay(day);
       const dayEnd = addDays(dayStart, 1);
       const from = new Date(Math.max(now.getTime(), dayStart.getTime()));
+      // 同じ時間のバイトが2件あっても、タイムラインには1つだけ描く
+      const jobKeys = new Set();
       const jobRanges = tasks
         .filter(t => t.type === 'job')
+        .filter(t => !jobKeys.has(jobRangeKey(t)) && jobKeys.add(jobRangeKey(t)))
         .map(getJobRange)
         .filter(r => r.end > from && r.start < dayEnd);
 
@@ -2702,6 +2772,13 @@ ${upcoming}
         }));
         added++;
       });
+
+      // アプリだけに登録したバイトと同じ時間の予定がカレンダーにあれば、アプリだけの分は片付ける
+      // （シフト表を合言葉の設定前に登録し、あとでカレンダーにも入れた場合など）
+      const calendarKeys = new Set(tasks.filter(t => t.source === 'gcal').map(jobRangeKey));
+      const before = tasks.length;
+      tasks = tasks.filter(t => !(t.type === 'job' && t.source !== 'gcal' && calendarKeys.has(jobRangeKey(t))));
+      removed += before - tasks.length;
 
       if (added + updated + removed > 0) {
         saveTasks();
@@ -3917,7 +3994,20 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     setInterval(() => {
       generateWeeklyTasks();
       renderTasks();
+      applyTheme();   // 夜だけ暗くするときは、21時・6時になったら切り替える
     }, 60000);
+
+    // ---------- 画面の色（明るい／暗い）。決め方は <head> の applyTheme ----------
+    function loadThemeMode() {
+      document.getElementById('theme-mode').value = loadThemeModeValue();
+    }
+
+    function saveThemeMode() {
+      localStorage.setItem(THEME_STORAGE, document.getElementById('theme-mode').value);
+      applyTheme();
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme());
 
     // ---------- 端末どうしで設定をそろえる（QRコード・リンク …#connect=〇〇） ----------
     // 中身は {u: 連携のURL, t: 合言葉, p: 使うAI, g: GeminiのAPIキー, c: ClaudeのAPIキー, m: Claudeのモデル} を
@@ -4172,6 +4262,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     loadShiftSettings();
     renderKindOptions();
     renderStudyHoursOptions();
+    loadThemeMode();
     updateClassSummary();
     estimatePendingTasks();
     if (connectLink && connectLink.error) {
@@ -4182,6 +4273,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);
     document.addEventListener('visibilitychange', () => {
       const lastSync = new Date(localStorage.getItem(GCAL_LAST_SYNC_STORAGE) || 0).getTime();
+      if (document.visibilityState === 'visible') applyTheme();
       if (document.visibilityState === 'visible' && Date.now() - lastSync > 10 * 60000) {
         syncGoogleCalendar();
       }

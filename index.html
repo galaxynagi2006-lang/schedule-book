@@ -135,7 +135,8 @@
     .date-label { font-size: 13px; color: var(--text-sub); letter-spacing: 0.04em; }
     .page-title { font-size: 22px; font-weight: 700; margin-top: 2px; }
     .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
-    .help-btn { flex-shrink: 0; border: 1px solid var(--line); background: var(--surface); color: var(--text-sub); font-size: 13px; font-weight: 700; padding: 9px 14px; border-radius: 999px; cursor: pointer; }
+    .help-btn { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--surface); color: var(--text-sub); font-size: 19px; font-weight: 800; line-height: 1; cursor: pointer; position: relative; }
+    .help-btn::before { content: ""; position: absolute; inset: -4px; }   /* 押せる範囲を44px四方に */
 
     /* 使い方（ヘルプ） */
     .help-lead { font-size: 15px; line-height: 1.6; margin-bottom: 12px; }
@@ -144,8 +145,38 @@
     .help-section summary::-webkit-details-marker { display: none; }
     .help-section summary::after { content: "＋"; color: var(--text-faint); font-weight: 700; }
     .help-section[open] summary::after { content: "－"; }
-    .help-section ul { padding: 0 0 14px 18px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.6; }
+    .help-section ul, .help-section ol { padding: 0 0 14px 18px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.6; }
     .help-color { font-weight: 800; }
+    .help-steps { list-style: none; counter-reset: step; }
+    ol.help-steps li { counter-increment: step; position: relative; padding-left: 4px; }
+    ol.help-steps li::before { content: counter(step); position: absolute; left: -26px; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--primary-color); color: var(--on-fill); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+    ol.help-steps { padding-left: 28px !important; }
+    ul.help-steps { list-style: disc; }
+    .help-note { font-size: 14px; line-height: 1.6; color: var(--text-sub); padding-bottom: 14px; }
+    /* 画面の画像。番号の丸を画像の上に重ねる */
+    .help-shot { position: relative; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+    .help-shot img { display: block; width: 100%; height: auto; }
+    .help-shot-tall { max-width: 250px; margin-left: auto; margin-right: auto; }   /* 縦長の画像は切らずに幅を細くして全体を見せる（番号の位置がずれないように） */
+    .shot-mark { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: var(--primary-color); color: #fff; border: 2px solid #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3); }
+
+    /* チュートリアル（はじめて開いたとき） */
+    .tutorial { position: fixed; inset: 0; z-index: 40; background: rgba(2, 6, 23, 0.55); display: grid; place-items: center; padding: 16px; }
+    .tutorial[hidden] { display: none; }
+    .tutorial-card { width: 100%; max-width: 382px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--surface); border-radius: 20px; padding: 18px; box-shadow: 0 16px 40px var(--shadow); }
+    .tutorial-media { border-radius: 12px; overflow: hidden; background: var(--bg-sub); border: 1px solid var(--line); }
+    .tutorial-media img { display: block; width: 100%; height: 240px; object-fit: cover; object-position: top; background: #fff; }
+    .tutorial-media .tutorial-logo { height: 240px; display: grid; place-items: center; }
+    .tutorial-media .tutorial-logo img { width: 112px; height: 112px; object-fit: contain; background: none; border-radius: 24px; }
+    .tutorial-body { padding: 14px 2px 4px; min-height: 194px; }   /* 文の長さが違っても「次へ」の位置が動かないように */
+    .tutorial-step { font-size: 12px; font-weight: 700; color: var(--primary-color); }
+    .tutorial-body h2 { font-size: 20px; font-weight: 800; margin: 4px 0 6px; }
+    .tutorial-body p { font-size: 15px; line-height: 1.6; color: var(--text-sub); }
+    .tutorial-dots { display: flex; justify-content: center; gap: 6px; margin: 12px 0; }
+    .tutorial-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+    .tutorial-dots span.active { background: var(--primary-color); width: 18px; border-radius: 4px; }
+    .tutorial-actions { display: flex; gap: 10px; align-items: center; }
+    .tutorial-skip { flex: 0 0 auto; background: none; border: none; color: var(--text-sub); font-size: 15px; font-weight: 700; padding: 12px 8px; cursor: pointer; }
+    .tutorial-next { flex: 1; }
 
     .label { font-size: 12px; color: var(--text-sub); font-weight: 600; letter-spacing: 0.08em; }
 
@@ -493,7 +524,7 @@
             <div class="date-label" id="list-date"></div>
             <div class="page-title">今日の予定</div>
           </div>
-          <button type="button" class="help-btn" onclick="openHelpSheet()">使い方</button>
+          <button type="button" class="help-btn" onclick="openHelpSheet()" aria-label="使い方" title="使い方">?</button>
         </div>
 
         <!-- ① 今日のバイト（特大表示）／② 明日のバイト -->
@@ -552,7 +583,7 @@
       <div class="list-wrap">
         <div class="page-head">
           <div class="page-title">設定</div>
-          <button type="button" class="help-btn" onclick="openHelpSheet()">使い方</button>
+          <button type="button" class="help-btn" onclick="openHelpSheet()" aria-label="使い方" title="使い方">?</button>
         </div>
 
         <div class="settings-group">ふだん使う設定</div>
@@ -731,60 +762,94 @@
     </div>
   </nav>
 
-  <!-- 使い方（ヘルプ） -->
+  <!-- 使い方（ヘルプ）。画像の番号と、下の説明の番号が対応する -->
   <section class="sheet" id="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-sheet-title" tabindex="-1">
     <div class="sheet-head">
       <span id="help-sheet-title">使い方</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
     <p class="help-lead">朝・帰宅後・寝る前に、<b>今日と明日のバイト</b>と<b>今やるべき課題</b>を1つの画面で確かめるためのスケジュール帳です。</p>
+    <button type="button" class="btn-secondary" onclick="openTutorial()">はじめての方へ（チュートリアルを見る）</button>
 
     <details class="help-section" open>
-      <summary>リスト画面の見方</summary>
-      <ul>
-        <li><b>本日のアルバイト</b>：今日バイトがあるかを大きく表示します。下に明日のバイトも出ます。</li>
-        <li><b>課題（優先度順）</b>：「締切までの残り時間 ÷ 作業にかかる時間」が小さい（＝急ぐ）順に並びます。右の数字は締切までの残り時間です。</li>
-        <li>
-          <span class="help-color c-red">赤</span>…急ぎ（残り時間が作業時間の2倍未満、または12時間未満）<br>
-          <span class="help-color c-yellow">黄</span>…注意（5倍未満、または36時間未満）<br>
-          <span class="help-color c-green">緑</span>…余裕あり
-        </li>
-        <li>締切を過ぎた課題は「期限切れ」として一番上に出ます。遅れて出せるか確かめましょう。</li>
-        <li><b>これから7日の見通し</b>：授業・バイトを除いた空き時間で、課題が間に合うかを知らせます。</li>
-      </ul>
+      <summary>バイトの見方</summary>
+      <figure class="help-shot">
+        <img src="help/jobs.jpg" width="600" height="300" alt="リスト画面の上部。本日のアルバイト「あり 18:00〜22:00」、明日のアルバイト、今後のアルバイトの一覧" loading="lazy">
+        <span class="shot-mark" style="left: 37%; top: 10%">1</span>
+        <span class="shot-mark" style="left: 42%; top: 69%">2</span>
+        <span class="shot-mark" style="left: 50%; top: 88%">3</span>
+      </figure>
+      <ol class="help-steps">
+        <li><b>今日のバイト</b>があるかを大きく表示します。時間とバイト名も出ます。</li>
+        <li><b>明日のバイト</b>も、ここで確かめられます。</li>
+        <li>押すと<b>今後のバイトの一覧</b>が開きます。✕ で消せます。</li>
+      </ol>
+    </details>
+
+    <details class="help-section" open>
+      <summary>課題の見方</summary>
+      <figure class="help-shot">
+        <img src="help/tasks.jpg" width="600" height="572" alt="課題のリスト。情報理論の中間レポートが赤で残り9時間30分、ゼミの発表資料が黄、毎週のリフレクションシートが緑" loading="lazy">
+        <span class="shot-mark" style="left: 5%; top: 19%">1</span>
+        <span class="shot-mark" style="left: 64%; top: 14%">2</span>
+        <span class="shot-mark" style="left: 86%; top: 13%">3</span>
+        <span class="shot-mark" style="left: 8%; top: 34%">4</span>
+      </figure>
+      <ol class="help-steps">
+        <li><b>○ を押すと完了</b>です。もう一度押すと未完了に戻ります。</li>
+        <li>課題の<b>行を押すと編集</b>できます（名前・締切・所要時間）。削除は編集画面のいちばん下です。</li>
+        <li><b>締切までの残り時間</b>です。色が優先度を表します。<br>
+          <span class="help-color c-red">赤</span> 急ぎ（残り時間が作業時間の2倍未満、または12時間未満）<br>
+          <span class="help-color c-yellow">黄</span> 注意（5倍未満、または36時間未満）<br>
+          <span class="help-color c-green">緑</span> 余裕あり</li>
+        <li>印は、manaba から取り込んだ課題の種類（レポートなど）や「毎週」の課題を表します。</li>
+      </ol>
+      <p class="help-note">課題は「締切までの残り時間 ÷ 作業にかかる時間」が小さい（＝急ぐ）順に並びます。締切を過ぎた課題は「期限切れ」として一番上に出ます。下の「これから7日の見通し」では、授業・バイトを除いた空き時間で課題が間に合うかを知らせます。</p>
     </details>
 
     <details class="help-section">
       <summary>課題・バイトを登録する</summary>
-      <ul>
-        <li>右下の <b>＋</b> から、タイトル・種別（課題／アルバイト）・締切を入れて登録します。</li>
-        <li>課題の<b>所要時間</b>は空欄のままでOK。AI（Gemini／Claude）が内容から推定します。自分で分を入れることもできます。</li>
-        <li>毎週同じ曜日・時刻が締切の課題（リフレクションシートなど）は「<b>毎週くり返す</b>」にチェック。締切の7日前から毎週一覧に出ます。</li>
-        <li>シフト表の写真からバイトを、時間割の画像から授業を、まとめて登録できます（＋の画面の上のボタン）。</li>
-      </ul>
+      <figure class="help-shot help-shot-tall">
+        <img src="help/add.jpg" width="600" height="1124" alt="予定・課題を追加する画面。シフト表の写真から登録するボタン、タイトル、種別、詳細、所要時間、締切、毎週くり返すのチェック" loading="lazy">
+        <span class="shot-mark" style="left: 95%; top: 13%">1</span>
+        <span class="shot-mark" style="left: 95%; top: 33%">2</span>
+        <span class="shot-mark" style="left: 95%; top: 69%">3</span>
+        <span class="shot-mark" style="left: 95%; top: 88%">4</span>
+      </figure>
+      <ol class="help-steps">
+        <li>右下の <b>＋</b> で開きます。<b>シフト表の写真</b>からバイトを、<b>時間割の画像</b>から授業を、まとめて登録できます。</li>
+        <li>タイトル・種別（課題／アルバイト）・締切を入れて「登録する」。</li>
+        <li><b>所要時間は空欄でOK</b>。AI が課題の内容から作業時間を推定します。自分で分を入れることもできます。</li>
+        <li>毎週同じ曜日・時刻が締切の課題は「<b>毎週くり返す</b>」に。締切の7日前から毎週一覧に出ます。</li>
+      </ol>
     </details>
 
     <details class="help-section">
-      <summary>完了・編集・削除</summary>
-      <ul>
-        <li>左の <b>○</b> を押すと完了です。実際にかかった時間を聞かれるので、選んで記録すると、次からのAIの推定が自分のペースに合っていきます。</li>
-        <li>課題の行を押すと<b>編集</b>できます（名前・締切・所要時間）。<b>削除</b>は編集画面のいちばん下にあります。</li>
-        <li>完了した課題は「完了済み」にまとまります。○ をもう一度押すと未完了に戻せます。</li>
-      </ul>
+      <summary>完了したら</summary>
+      <figure class="help-shot">
+        <img src="help/done.jpg" width="600" height="328" alt="完了したときに出る「実際に何分かかりましたか？」の画面。45分・90分・135分・180分のボタンと入力欄" loading="lazy">
+      </figure>
+      <p class="help-note">○ を押して完了にすると、<b>実際にかかった時間</b>を聞かれます。選んで記録すると、次からの AI の推定が自分のペースに合っていきます（記録しないときは ✕）。</p>
     </details>
 
     <details class="help-section">
       <summary>タイムライン</summary>
-      <ul>
-        <li>今日（または明日）の授業・バイトの合間に、急ぐ課題から自動で作業時間を割り当てます。</li>
-        <li>バイトの前後30分は移動の時間として空けます。課題に使える時間帯は設定で変えられます。</li>
-        <li>上の「今日／明日」で切り替えます。明日の計画は、今日の計画どおりに進めた場合のものです。</li>
-      </ul>
+      <figure class="help-shot help-shot-tall">
+        <img src="help/timeline.jpg" width="600" height="840" alt="タイムライン。14時半から情報理論のレポート、ゼミの発表資料、18時から22時のアルバイトとその前後の移動の時間" loading="lazy">
+        <span class="shot-mark" style="left: 52%; top: 4%">1</span>
+        <span class="shot-mark" style="left: 92%; top: 19%">2</span>
+        <span class="shot-mark" style="left: 40%; top: 46%">3</span>
+      </figure>
+      <ol class="help-steps">
+        <li><b>今日／明日</b>を切り替えます。明日の計画は、今日の計画どおりに進めた場合のものです。</li>
+        <li>授業・バイトの合間に、<b>急ぐ課題から自動で作業時間</b>を割り当てます。</li>
+        <li>バイトの前後30分は<b>移動の時間</b>として空けます。課題に使える時間帯は設定で変えられます。</li>
+      </ol>
     </details>
 
     <details class="help-section">
       <summary>Google・manaba との連携と通知</summary>
-      <ul>
+      <ul class="help-steps">
         <li>設定の「Google連携」の手順で一度つなぐと、Googleカレンダーのバイトの予定と、manaba の課題（Gmail に届く「公開のお知らせ」）が自動で取り込まれます。</li>
         <li>manaba の「提出のお知らせ」が届くと、その課題は自動で完了になります。</li>
         <li>毎朝のまとめメール（今日・明日のバイトと締切が近い課題）と、バイト前の確認メールが届きます。</li>
@@ -794,7 +859,7 @@
 
     <details class="help-section">
       <summary>困ったとき</summary>
-      <ul>
+      <ul class="help-steps">
         <li><b>同期できない</b>：設定の「同期できないとき」で、連携のURLを開いて原因を確かめられます。</li>
         <li><b>スマホとパソコンで内容が違う</b>：データは端末ごとに保存されます。設定の「ほかの端末に設定を移す」のQRコードで連携をそろえてください。</li>
         <li><b>画面が暗い／明るい</b>：設定の「画面の色」で、夜だけ暗く・いつも明るい などを選べます。</li>
@@ -802,6 +867,23 @@
       </ul>
     </details>
   </section>
+
+  <!-- はじめて開いたときのチュートリアル（使い方の画面からも開ける） -->
+  <div class="tutorial" id="tutorial" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" hidden>
+    <div class="tutorial-card">
+      <div class="tutorial-media" id="tutorial-media"></div>
+      <div class="tutorial-body">
+        <div class="tutorial-step" id="tutorial-step"></div>
+        <h2 id="tutorial-title"></h2>
+        <p id="tutorial-text"></p>
+      </div>
+      <div class="tutorial-dots" id="tutorial-dots" aria-hidden="true"></div>
+      <div class="tutorial-actions">
+        <button type="button" class="tutorial-skip" id="tutorial-skip" onclick="finishTutorial()">スキップ</button>
+        <button type="button" class="btn-submit tutorial-next" id="tutorial-next" onclick="nextTutorialStep()">次へ</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ⑤ 予定追加フォーム（ボトムシート） -->
   <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
@@ -1284,6 +1366,60 @@
       document.getElementById('sheet-overlay').classList.add('open');
       document.getElementById('help-sheet').classList.add('open');
       document.getElementById('help-sheet').focus({ preventScroll: true });
+    }
+
+    // ---------- チュートリアル（はじめて開いたときに1回だけ。使い方の画面からも開ける） ----------
+    const TUTORIAL_STORAGE = 'smart_schedule_tutorial_done';
+    const TUTORIAL_STEPS = [
+      { logo: true, title: 'ようこそ！', text: 'スマートスケジュール帳は、朝・帰宅後・寝る前に、今日と明日のバイトと、今やるべき課題を1つの画面で確かめるためのアプリです。使い方を6つの画面で紹介します。' },
+      { image: 'help/jobs.jpg', alt: '本日のアルバイト「あり 18:00〜22:00」と明日のアルバイト', title: '今日と明日のバイトがひと目で', text: 'いちばん上に、今日バイトがあるかを大きく表示します。明日のバイトもその下で確かめられます。' },
+      { image: 'help/tasks.jpg', alt: '赤・黄・緑で色分けされた課題のリスト', title: '課題は急ぐ順に、色で優先度', text: '締切までの残り時間を表示し、急ぐ順に並べます。赤＝急ぎ、黄＝注意、緑＝余裕あり。行を押すと編集、○ を押すと完了です。' },
+      { image: 'help/add.jpg', alt: '予定・課題を追加する画面', title: '＋ から登録。時間はAIにおまかせ', text: '右下の ＋ から課題やバイトを登録します。所要時間は空欄でOK、AIが推定します。シフト表の写真からバイトをまとめて登録することもできます。' },
+      { image: 'help/timeline.jpg', alt: '授業やバイトの合間に課題が並んだタイムライン', title: 'タイムラインで作業の計画', text: '授業やバイトの合間に、急ぐ課題から作業時間を自動で割り当てます。「今日／明日」で切り替えられます。' },
+      { image: 'help/done.jpg', alt: '実際にかかった時間を選ぶ画面', title: '終わったら ○ を押す', text: '完了にすると、実際にかかった時間を聞かれます。記録すると、次からのAIの推定が自分のペースに合っていきます。' },
+      { logo: true, title: 'さっそく始めましょう', text: '設定の「Google連携」でつなぐと、カレンダーのバイトや manaba の課題が自動で集まり、毎朝まとめメールも届きます。使い方は右上の ? からいつでも見られます。' }
+    ];
+    let tutorialIndex = 0;
+
+    function openTutorial() {
+      closeSheet();
+      tutorialIndex = 0;
+      renderTutorialStep();
+      const el = document.getElementById('tutorial');
+      el.hidden = false;
+      document.getElementById('tutorial-next').focus({ preventScroll: true });
+    }
+
+    function renderTutorialStep() {
+      const step = TUTORIAL_STEPS[tutorialIndex];
+      const last = tutorialIndex === TUTORIAL_STEPS.length - 1;
+      document.getElementById('tutorial-media').innerHTML = step.logo
+        ? '<div class="tutorial-logo"><img src="icons/icon-192.png" alt=""></div>'
+        : `<img src="${step.image}" alt="${step.alt}">`;
+      document.getElementById('tutorial-step').textContent = `${tutorialIndex + 1} / ${TUTORIAL_STEPS.length}`;
+      document.getElementById('tutorial-title').textContent = step.title;
+      document.getElementById('tutorial-text').textContent = step.text;
+      document.getElementById('tutorial-dots').innerHTML = TUTORIAL_STEPS.map((_, i) => `<span${i === tutorialIndex ? ' class="active"' : ''}></span>`).join('');
+      document.getElementById('tutorial-next').textContent = last ? 'はじめる' : '次へ';
+      document.getElementById('tutorial-skip').hidden = last;
+    }
+
+    function nextTutorialStep() {
+      if (tutorialIndex >= TUTORIAL_STEPS.length - 1) {
+        finishTutorial();
+        return;
+      }
+      tutorialIndex++;
+      renderTutorialStep();
+    }
+
+    function finishTutorial() {
+      document.getElementById('tutorial').hidden = true;
+      try {
+        localStorage.setItem(TUTORIAL_STORAGE, new Date().toISOString());
+      } catch (e) {
+        // 保存できなくても、閉じるだけでよい
+      }
     }
 
     function openShiftSheet() {
@@ -4386,6 +4522,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     if (connectLink && connectLink.error) {
       showStatus('📅 連携用のQRコード・リンクを読み取れませんでした。もう一度読み取るか、⚙️ 設定で貼り付けてください', 'error');
     }
+    if (!connectLink && !localStorage.getItem(TUTORIAL_STORAGE)) openTutorial();
     syncGoogleCalendar(!!connectedNames?.includes('Google連携'));   // QRコードから開いたときは結果を表示する
     if (connectedNames && !connectedNames.includes('Google連携')) showStatus(`🔗 設定を登録しました（${connectedNames.join('・')}）`, 'info');
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);

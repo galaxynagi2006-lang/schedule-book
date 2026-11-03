@@ -9,20 +9,76 @@
   <link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)">
   <style>
+    /* 色はすべてここで決める（下の @media で夜用の暗い色に切り替わる） */
     :root {
+      color-scheme: light dark;
       --primary-color: #2563eb;
+      --primary-soft: #eef2ff;
       --accent-color: #4338ca;
+      --job-soft: #dbeafe;
+      --job-ink: #1e3a8a;
       --bg-color: #ffffff;
       --bg-sub: #f6f7fb;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --surface-3: #e2e8f0;
       --text-main: #111827;
       --text-sub: #6b7280;
+      --text-faint: #9ca3af;
       --line: #e5e7eb;
+      --line-soft: #f3f4f6;
+      --line-strong: #cbd5e1;
+      --on-fill: #ffffff;              /* 塗りのボタン・バッジの上の文字 */
+      --btn-bg: #111827;
       --alert-red: #dc2626;
       --alert-yellow: #d97706;
       --alert-green: #059669;
-      --class-color: #0d9488;
+      --red-soft: #fee2e2;   --red-ink: #991b1b;   --red-tint: #fef2f2;   --red-line: #fecaca;
+      --yellow-soft: #fef3c7; --yellow-ink: #92400e; --yellow-tint: #fffbeb; --yellow-line: #fde68a;
+      --green-soft: #d1fae5; --green-ink: #065f46; --green-tint: #f0fdf4; --green-line: #bbf7d0;
+      --info-soft: #e0f2fe;  --info-ink: #0369a1;
+      --class-color: #0d9488; --class-soft: #ccfbf1; --class-ink: #115e59;
+      --chip-bg: rgba(255, 255, 255, 0.8);
+      --track: rgba(0, 0, 0, 0.08);
+      --shadow: rgba(15, 23, 42, 0.16);
+    }
+
+    /* 夜（就寝前）に見てもまぶしくないように、端末が暗い表示のときは暗い色にする */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-color: #60a5fa;
+        --primary-soft: #1e2a4a;
+        --accent-color: #a5b4fc;
+        --job-soft: #1e3a5f;
+        --job-ink: #dbeafe;
+        --bg-color: #0b1120;
+        --bg-sub: #0f1729;
+        --surface: #151d2e;
+        --surface-2: #1d2738;
+        --surface-3: #283447;
+        --text-main: #e5e7eb;
+        --text-sub: #9ca3af;
+        --text-faint: #6b7280;
+        --line: #263042;
+        --line-soft: #1b2435;
+        --line-strong: #3a475c;
+        --on-fill: #0b1120;
+        --btn-bg: #e5e7eb;
+        --alert-red: #f87171;
+        --alert-yellow: #fbbf24;
+        --alert-green: #34d399;
+        --red-soft: rgba(248, 113, 113, 0.18);   --red-ink: #fecaca;   --red-tint: rgba(248, 113, 113, 0.08);   --red-line: rgba(248, 113, 113, 0.35);
+        --yellow-soft: rgba(251, 191, 36, 0.18); --yellow-ink: #fde68a; --yellow-tint: rgba(251, 191, 36, 0.08); --yellow-line: rgba(251, 191, 36, 0.35);
+        --green-soft: rgba(52, 211, 153, 0.18);  --green-ink: #a7f3d0; --green-tint: rgba(52, 211, 153, 0.08);  --green-line: rgba(52, 211, 153, 0.35);
+        --info-soft: rgba(96, 165, 250, 0.18);   --info-ink: #bfdbfe;
+        --class-color: #2dd4bf; --class-soft: rgba(45, 212, 191, 0.18); --class-ink: #99f6e4;
+        --chip-bg: rgba(255, 255, 255, 0.06);
+        --track: rgba(255, 255, 255, 0.12);
+        --shadow: rgba(0, 0, 0, 0.5);
+      }
     }
 
     * {
@@ -41,7 +97,7 @@
     .app-container {
       max-width: 414px;
       margin: 0 auto;
-      padding-bottom: calc(160px + env(safe-area-inset-bottom)); /* タブバーと＋ボタンに隠れないように */
+      padding-bottom: calc(100px + env(safe-area-inset-bottom)); /* タブバーに隠れないように */
     }
 
     .tab-panel { display: none; }
@@ -58,20 +114,17 @@
     .job-section { margin-top: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
     .job-main { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; }
     .job-status-large { font-size: 44px; font-weight: 800; color: var(--primary-color); line-height: 1; }
-    .job-status-large.none { color: #9ca3af; }
+    .job-status-large.none { color: var(--text-faint); }
     .job-time { font-size: 22px; font-weight: 700; }
     .job-name { font-size: 13px; color: var(--text-sub); margin-top: 6px; }
-    .tomorrow-row { display: flex; justify-content: space-between; margin-top: 14px; font-size: 14px; color: var(--text-sub); }
+    .tomorrow-row { display: flex; justify-content: space-between; margin-top: 14px; font-size: 15px; color: var(--text-sub); }
     .tomorrow-row b { color: var(--text-main); }
 
-    .summary { display: flex; gap: 28px; padding: 18px 0; border-bottom: 1px solid var(--line); }
-    .stat-num { font-size: 26px; font-weight: 800; }
-    .stat-num small { font-size: 13px; font-weight: 600; margin-left: 2px; }
-    .stat-label { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+    .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 20px; margin-bottom: 2px; }
+    .list-summary { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
+    .list-summary b { color: var(--text-main); font-size: 15px; }
 
-    .list-head { margin-top: 22px; margin-bottom: 2px; }
-
-    .task-row { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid #f3f4f6; }
+    .task-row { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
     .task-body { flex: 1; min-width: 0; }
     .task-name { font-size: 15px; font-weight: 700; word-break: break-all; }
     .task-detail { font-size: 12px; color: var(--text-sub); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -80,7 +133,7 @@
     .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
     .task-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .count-num { font-size: 17px; font-weight: 800; white-space: nowrap; }
-    .count-unit { font-size: 11px; color: var(--text-sub); }
+    .count-unit { font-size: 12px; color: var(--text-sub); }
     .c-red { color: var(--alert-red); }
     .c-yellow { color: var(--alert-yellow); }
     .c-green { color: var(--alert-green); }
@@ -93,7 +146,7 @@
       -webkit-appearance: none;
       width: 22px;
       height: 22px;
-      border: 2px solid #d1d5db;
+      border: 2px solid var(--line-strong);
       border-radius: 50%;
       flex-shrink: 0;
       cursor: pointer;
@@ -101,78 +154,83 @@
       place-content: center;
     }
     .task-checkbox:checked { background: var(--alert-green); border-color: var(--alert-green); }
-    .task-checkbox:checked::after { content: "✓"; color: #fff; font-size: 13px; font-weight: 800; }
+    .task-checkbox:checked::after { content: "✓"; color: var(--on-fill); font-size: 13px; font-weight: 800; }
 
+    /* ✕ は小さく見せつつ、押せる範囲は40px四方にする */
     .delete-btn {
       background: none;
       border: none;
-      color: #cbd5e1;
-      font-size: 14px;
+      color: var(--text-faint);
+      font-size: 15px;
       cursor: pointer;
-      padding: 2px 0 2px 6px;
+      min-width: 40px; min-height: 40px; margin: -8px -10px -8px 0;
+      display: inline-grid; place-items: center;
     }
     .delete-btn:hover { color: var(--alert-red); }
-    .delete-btn.edit { color: #94a3b8; }
-    .delete-btn.edit:hover { color: var(--primary-color); }
-    .task-body[onclick] { cursor: pointer; }
+    .task-body[onclick], .task-side[onclick], .job-row[onclick] { cursor: pointer; }
+    .task-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 5px; }
+    .task-tags .task-link { margin-top: 0; }
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 6px; background: var(--info-soft); color: var(--info-ink); }
+    .tag-weekly { background: var(--class-soft); color: var(--class-ink); }
+    .btn-danger { width: 100%; margin-top: 10px; background: none; border: 1px solid var(--red-line); color: var(--alert-red); padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
 
-    .empty-message { text-align: center; color: var(--text-sub); font-size: 14px; padding: 28px 0; }
+    .empty-message { text-align: center; color: var(--text-sub); font-size: 15px; padding: 28px 0; }
 
     .completed-section { margin-top: 14px; }
-    .completed-section summary { font-size: 13px; color: #9ca3af; cursor: pointer; font-weight: 600; list-style: none; }
+    .completed-section summary { font-size: 13px; color: var(--text-faint); cursor: pointer; font-weight: 600; list-style: none; }
     .completed-section summary::-webkit-details-marker { display: none; }
     .completed-section summary::before { content: "› "; }
     .completed-section[open] summary::before { content: "⌄ "; }
-    .job-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+    .job-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); font-size: 15px; }
     .job-row-date { font-weight: 700; white-space: nowrap; }
     .job-row-name { flex: 1; min-width: 0; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .job-row .delete-btn { font-size: 15px; }
 
     .completed-row { opacity: 0.6; }
     .completed-row .task-name { text-decoration: line-through; }
-    .completed-meta { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
+    .completed-meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; }
 
     /* ========== タブ2：タイムライン（案C） ========== */
-    .tl-head { background: #fff; padding: calc(24px + env(safe-area-inset-top)) 20px 14px; border-bottom: 1px solid var(--line); }
-    .tl-date { font-size: 20px; font-weight: 800; }
+    .tl-head { background: var(--surface); padding: calc(24px + env(safe-area-inset-top)) 20px 14px; border-bottom: 1px solid var(--line); }
+    .tl-date { font-size: 22px; font-weight: 800; }
     .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .pill { font-size: 12px; font-weight: 700; padding: 7px 10px; border-radius: 999px; white-space: nowrap; }
-    .pill-job { background: var(--primary-color); color: #fff; }
-    .pill-none { background: #f1f5f9; color: #64748b; }
-    .pill-sum { background: #eef2ff; color: var(--accent-color); }
-    .pill-class { background: var(--class-color); color: #fff; }
+    .pill-job { background: var(--primary-color); color: var(--on-fill); }
+    .pill-none { background: var(--surface-2); color: var(--text-sub); }
+    .pill-sum { background: var(--primary-soft); color: var(--accent-color); }
+    .pill-class { background: var(--class-color); color: var(--on-fill); }
 
     #tab-timeline { background: var(--bg-sub); min-height: 100vh; }
     .tl-body { padding: 16px 20px 0; }
     .tl-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
     .tl-title > span:last-child { color: var(--accent-color); }
-    .tl-day-switch { display: inline-flex; background: #e2e8f0; border-radius: 999px; padding: 3px; gap: 2px; }
+    .tl-day-switch { display: inline-flex; background: var(--surface-3); border-radius: 999px; padding: 3px; gap: 2px; }
     .tl-day-btn { border: none; background: transparent; color: var(--text-sub); font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
-    .tl-day-btn.active { background: #fff; color: var(--text-main); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
+    .tl-day-btn.active { background: var(--surface); color: var(--text-main); box-shadow: 0 1px 2px var(--shadow); }
 
     .tl-grid { position: relative; }
-    .tl-hour { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9ca3af; transform: translateY(-50%); }
+    .tl-hour { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-faint); transform: translateY(-50%); }
     .tl-hour::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
     .tl-hour span { width: 38px; }
 
-    .tl-block { position: absolute; left: 46px; right: 0; border-radius: 12px; padding: 7px 12px; font-size: 11px; overflow: hidden; }
-    .tl-block b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tl-block { position: absolute; left: 46px; right: 0; border-radius: 12px; padding: 7px 12px; font-size: 12px; overflow: hidden; }
+    .tl-block b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tl-block.compact { padding: 2px 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
     .tl-block.compact b { display: inline; font-size: 12px; }
-    .b-job { background: var(--primary-color); color: #fff; }
-    .b-red { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
-    .b-yellow { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
-    .b-green { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
-    .b-class { background: var(--class-color); color: #fff; }
-    .b-move { background: repeating-linear-gradient(135deg, #f8fafc, #f8fafc 6px, #eef2f7 6px, #eef2f7 12px); color: #94a3b8; border: 1px dashed #cbd5e1; }
+    .b-job { background: var(--job-soft); color: var(--job-ink); border-left: 4px solid var(--primary-color); }
+    .b-red { background: var(--red-soft); color: var(--red-ink); border-left: 4px solid var(--alert-red); }
+    .b-yellow { background: var(--yellow-soft); color: var(--yellow-ink); border-left: 4px solid var(--alert-yellow); }
+    .b-green { background: var(--green-soft); color: var(--green-ink); border-left: 4px solid var(--alert-green); }
+    .b-class { background: var(--class-color); color: var(--on-fill); }
+    .b-move { background: repeating-linear-gradient(135deg, var(--surface-2), var(--surface-2) 6px, var(--surface-3) 6px, var(--surface-3) 12px); color: var(--text-faint); border: 1px dashed var(--line-strong); }
 
-    .tl-now { position: absolute; left: 40px; right: 0; border-top: 2px solid #ef4444; z-index: 2; }
-    .tl-now::before { content: ""; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; }
-    .tl-now span { position: absolute; right: 0; top: -17px; font-size: 10px; font-weight: 700; color: #ef4444; background: var(--bg-sub); padding-left: 4px; }
-    .tl-deadline { position: absolute; left: 46px; right: 0; border-top: 2px dotted #ef4444; z-index: 1; }
-    .tl-deadline span { position: absolute; right: 0; top: 2px; font-size: 10px; font-weight: 700; color: #ef4444; }
+    .tl-now { position: absolute; left: 40px; right: 0; border-top: 2px solid var(--alert-red); z-index: 2; }
+    .tl-now::before { content: ""; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--alert-red); }
+    .tl-now span { position: absolute; right: 0; top: -17px; font-size: 12px; font-weight: 700; color: var(--alert-red); background: var(--bg-sub); padding-left: 4px; }
+    .tl-deadline { position: absolute; left: 46px; right: 0; border-top: 2px dotted var(--alert-red); z-index: 1; }
+    .tl-deadline span { position: absolute; right: 0; top: 2px; font-size: 12px; font-weight: 700; color: var(--alert-red); }
 
-    .tl-card { margin: 18px 20px 0; background: #fff; border-radius: 14px; padding: 12px 14px; border: 1px solid var(--line); }
+    .tl-card { margin: 18px 20px 0; background: var(--surface); border-radius: 14px; padding: 12px 14px; border: 1px solid var(--line); }
     .tl-card-title { font-size: 12px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
     .tl-card-title.warn { color: var(--alert-red); }
     .tl-card-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 4px 0; }
@@ -182,65 +240,61 @@
     .tab-bar {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
       display: flex; justify-content: center;
-      background: #ffffff;
+      background: var(--surface);
       border-top: 1px solid var(--line);
       padding-bottom: env(safe-area-inset-bottom);
     }
     .tab-bar-inner { display: flex; width: 100%; max-width: 414px; }
     .tab-btn {
       flex: 1; border: none; background: none; cursor: pointer;
-      padding: 10px 0 12px; font-size: 11px; font-weight: 700; color: #9ca3af;
+      padding: 10px 0 12px; font-size: 12px; font-weight: 700; color: var(--text-faint);
       display: flex; flex-direction: column; align-items: center; gap: 2px;
     }
     .tab-btn .tab-icon { width: 24px; height: 24px; }   /* 線のアイコン。色は文字と同じ（選択中は濃く、それ以外は薄い灰色） */
     .tab-btn.active { color: var(--text-main); }
 
-    .fab {
-      position: fixed; z-index: 11;
-      right: max(24px, calc(50vw - 207px + 24px));
-      bottom: calc(80px + env(safe-area-inset-bottom));
-      width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
-      background: var(--text-main); color: #fff; font-size: 30px; font-weight: 300; line-height: 1;
-      box-shadow: 0 8px 20px rgba(17, 24, 39, 0.25);
-    }
+    /* 追加ボタン：タブバーの中に置き、課題の残り時間やタイムラインの上に重ならないようにする */
+    .tab-add { flex: 1; border: none; background: none; cursor: pointer; display: grid; place-items: center; padding: 6px 0; }
+    .tab-add span { width: 44px; height: 44px; border-radius: 50%; background: var(--btn-bg); color: var(--on-fill); display: grid; place-items: center; box-shadow: 0 4px 12px var(--shadow); }
+    .tab-add svg { width: 22px; height: 22px; }
 
     /* ========== 追加フォーム（ボトムシート） ========== */
-    .sheet-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .sheet-overlay { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.45); z-index: 20; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
     .sheet-overlay.open { opacity: 1; pointer-events: auto; }
     .sheet {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
       max-width: 414px; margin: 0 auto; max-height: 88vh; overflow-y: auto;
-      background: #fff; border-radius: 20px 20px 0 0;
+      background: var(--surface); border-radius: 20px 20px 0 0;
       padding: 18px 20px calc(24px + env(safe-area-inset-bottom));
       transform: translateY(100%); transition: transform 0.25s ease;
     }
     .sheet.open { transform: translateY(0); }
     .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .sheet-head span { font-size: 17px; font-weight: 800; }
-    .sheet-close { border: none; background: #f1f5f9; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; color: #475569; }
+    .sheet-close { border: none; background: var(--surface-2); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; color: var(--text-sub); }
 
     .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
     .form-group label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
-    .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 16px; background: #fff; }
+    .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; font-size: 16px; background: var(--surface); color: var(--text-main); }
     textarea.form-control { resize: vertical; }
-    .btn-submit { width: 100%; background: var(--text-main); color: #fff; border: none; padding: 13px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .btn-submit { width: 100%; background: var(--btn-bg); color: var(--on-fill); border: none; padding: 13px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
     .btn-submit:disabled { opacity: 0.6; }
 
-    .api-settings { margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 12px; }
+    .api-settings { margin-top: 14px; border-top: 1px dashed var(--line-strong); padding-top: 12px; }
     .api-settings summary { font-size: 12px; color: var(--text-sub); cursor: pointer; font-weight: 600; }
-    .btn-clear { background: #e2e8f0; color: #334155; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .btn-clear { background: var(--surface-3); color: var(--text-main); border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
     /* ========== 見通し・遅延リスク ========== */
     .outlook { border-radius: 14px; padding: 14px; margin-top: 18px; border: 1px solid var(--line); }
-    .outlook-green { background: #f0fdf4; border-color: #bbf7d0; }
-    .outlook-yellow { background: #fffbeb; border-color: #fde68a; }
-    .outlook-red { background: #fef2f2; border-color: #fecaca; }
-    .outlook-head { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 800; }
-    .outlook-badge { font-size: 12px; padding: 3px 8px; border-radius: 999px; color: #fff; }
+    .outlook-green { background: var(--green-tint); border-color: var(--green-line); }
+    .outlook-yellow { background: var(--yellow-tint); border-color: var(--yellow-line); }
+    .outlook-red { background: var(--red-tint); border-color: var(--red-line); }
+    .outlook-head { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 800; }
+    .outlook-badge { font-size: 12px; padding: 3px 8px; border-radius: 999px; color: var(--on-fill); }
     .outlook-green .outlook-badge { background: var(--alert-green); }
     .outlook-yellow .outlook-badge { background: var(--alert-yellow); }
     .outlook-red .outlook-badge { background: var(--alert-red); }
-    .outlook-bar { height: 8px; border-radius: 99px; background: rgba(0, 0, 0, 0.08); margin: 10px 0 4px; overflow: hidden; }
+    .outlook-bar { height: 8px; border-radius: 99px; background: var(--track); margin: 10px 0 4px; overflow: hidden; }
     .outlook-bar span { display: block; height: 100%; border-radius: 99px; }
     .outlook-green .outlook-bar span { background: var(--alert-green); }
     .outlook-yellow .outlook-bar span { background: var(--alert-yellow); }
@@ -248,12 +302,12 @@
     .outlook-numbers { font-size: 12px; color: var(--text-sub); }
     .outlook-message { font-size: 13px; margin-top: 8px; line-height: 1.5; }
     .day-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
-    .day-chip { background: rgba(255, 255, 255, 0.8); border-radius: 8px; padding: 4px 0; text-align: center; font-size: 11px; color: var(--text-sub); }
-    .day-chip b { display: block; color: var(--text-main); font-size: 11px; }
-    .day-chip.low { background: #fee2e2; color: #991b1b; }
+    .day-chip { background: var(--chip-bg); border-radius: 8px; padding: 4px 0; text-align: center; font-size: 12px; color: var(--text-sub); }
+    .day-chip b { display: block; color: var(--text-main); font-size: 12px; }
+    .day-chip.low { background: var(--red-soft); color: var(--red-ink); }
     .risk-note { font-size: 12px; margin-top: 5px; padding: 5px 8px; border-radius: 8px; line-height: 1.45; }
-    .risk-high { background: #fee2e2; color: #991b1b; }
-    .risk-mid { background: #fef3c7; color: #92400e; }
+    .risk-high { background: var(--red-soft); color: var(--red-ink); border-left: 3px solid var(--alert-red); }
+    .risk-mid { background: var(--yellow-soft); color: var(--yellow-ink); border-left: 3px solid var(--alert-yellow); }
     .tendency { margin-top: 14px; }
     .tendency summary { font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: 600; list-style: none; }
     .tendency summary::-webkit-details-marker { display: none; }
@@ -261,13 +315,15 @@
     .tendency[open] summary::before { content: "⌄ "; }
     .tendency-body { font-size: 13px; line-height: 1.6; margin-top: 8px; background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; }
     .tendency-body ul { padding-left: 18px; }
-    .ai-advice { margin-top: 8px; padding: 8px 10px; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
+    .ai-advice { margin-top: 8px; padding: 8px 10px; background: var(--surface); border-radius: 10px; border: 1px solid var(--line); }
     .study-hours { justify-content: flex-start; }
     .study-hours select { width: auto; }
 
     /* ========== 設定タブ ========== */
     .settings-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 14px; }
     .settings-card h2 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
+    .settings-card h2 small, .settings-group small { font-size: 12px; font-weight: 600; color: var(--text-sub); }
+    .settings-group { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.04em; margin: 24px 0 -4px; }
     .settings-card .form-group:last-child { margin-bottom: 0; }
     .secret-field { display: flex; gap: 8px; }
     .secret-field .form-control { flex: 1; min-width: 0; }
@@ -295,25 +351,25 @@
     .qr-video { display: block; width: 100%; max-height: 50vh; object-fit: cover; border-radius: 12px; background: #0f172a; margin-bottom: 8px; }
 
     /* ========== シフト表からの一括登録 ========== */
-    .btn-secondary { width: 100%; background: #eef2ff; color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
+    .btn-secondary { width: 100%; background: var(--primary-soft); color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
     #add-schedule-form { margin-top: 6px; }
     .setup-guide { margin-top: 8px; background: var(--bg-sub); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
     .setup-guide summary { font-size: 13px; font-weight: 700; color: var(--primary-color); cursor: pointer; }   /* 「manabaで開く」と同じ青 */
     .setup-guide ol { padding-left: 18px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; line-height: 1.5; }
-    .btn-template { display: inline-block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: var(--primary-color); color: #fff; font-weight: 700; text-decoration: none; }
+    .btn-template { display: inline-block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: var(--primary-color); color: var(--on-fill); font-weight: 700; text-decoration: none; }
     .shift-settings { background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
     .shift-settings summary { font-size: 13px; font-weight: 700; color: var(--text-sub); cursor: pointer; }
-    .field-note { font-size: 11px; color: var(--text-sub); }
-    .shift-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 10px; background: #f1f5f9; margin-bottom: 12px; }
+    .field-note { font-size: 12px; color: var(--text-sub); }
+    .shift-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 10px; background: var(--surface-2); margin-bottom: 12px; }
 
     .shift-checks { margin: 16px 0 10px; display: flex; flex-direction: column; gap: 6px; }
     .shift-checks div { font-size: 13px; padding: 7px 10px; border-radius: 8px; }
-    .check-ok { background: #d1fae5; color: #065f46; }
-    .check-warn { background: #fef3c7; color: #92400e; }
-    .check-error { background: #fee2e2; color: #991b1b; }
+    .check-ok { background: var(--green-soft); color: var(--green-ink); }
+    .check-warn { background: var(--yellow-soft); color: var(--yellow-ink); }
+    .check-error { background: var(--red-soft); color: var(--red-ink); }
 
-    .shift-row { display: flex; align-items: center; gap: 6px; padding: 6px 4px; border-bottom: 1px solid #f3f4f6; }
-    .shift-row.warn { background: #fffbeb; }
+    .shift-row { display: flex; align-items: center; gap: 6px; padding: 6px 4px; border-bottom: 1px solid var(--line-soft); }
+    .shift-row.warn { background: var(--yellow-tint); }
     .shift-row.excluded { opacity: 0.45; }
     .shift-row input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--primary-color); }
     .shift-row .form-control { padding: 6px 6px; font-size: 16px; border-radius: 8px; min-width: 0; }
@@ -324,16 +380,16 @@
     .shift-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 
     /* ========== 時間割 ========== */
-    .class-grid { display: grid; gap: 2px; margin: 14px 0; font-size: 10px; }
+    .class-grid { display: grid; gap: 2px; margin: 14px 0; font-size: 12px; }
     .class-grid div { min-height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; line-height: 1.15; padding: 1px; }
     .class-grid .grid-head { font-weight: 700; color: var(--text-sub); }
-    .class-grid .grid-cell { background: #f1f5f9; }
-    .class-grid .grid-cell.filled { background: #ccfbf1; color: #115e59; font-weight: 700; }
-    .class-grid .grid-cell.overlap { background: #fde68a; color: #92400e; }
+    .class-grid .grid-cell { background: var(--surface-2); }
+    .class-grid .grid-cell.filled { background: var(--class-soft); color: var(--class-ink); font-weight: 700; }
+    .class-grid .grid-cell.overlap { background: var(--yellow-line); color: var(--yellow-ink); }
 
-    .class-row { display: grid; grid-template-columns: 22px 1fr 1fr 14px 1fr; gap: 6px; align-items: center; padding: 8px 4px; border-bottom: 1px solid #f3f4f6; }
+    .class-row { display: grid; grid-template-columns: 22px 1fr 1fr 14px 1fr; gap: 6px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line-soft); }
     .class-row.excluded { opacity: 0.45; }
-    .class-row.warn { background: #fffbeb; }
+    .class-row.warn { background: var(--yellow-tint); }
     .class-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--primary-color); }
     .class-row .form-control { padding: 6px; font-size: 16px; border-radius: 8px; min-width: 0; }
     .class-row-names { grid-column: 2 / -1; display: flex; gap: 6px; }
@@ -348,22 +404,22 @@
     /* 通知トースト */
     .status-msg {
       position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
-      bottom: calc(150px + env(safe-area-inset-bottom));
+      bottom: calc(84px + env(safe-area-inset-bottom));
       width: calc(100% - 48px); max-width: 366px;
       font-size: 13px; font-weight: 600; padding: 10px 14px; border-radius: 12px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 6px 18px var(--shadow);
       display: none;
     }
-    .status-msg.info { background: #e0f2fe; color: #0369a1; display: block; }
-    .status-msg.error { background: #fee2e2; color: #991b1b; display: block; }
+    .status-msg.info { background: var(--info-soft); color: var(--info-ink); display: block; }
+    .status-msg.error { background: var(--red-soft); color: var(--red-ink); display: block; }
 
     /* 実際にかかった時間の記録（完了にしたときに出る） */
     .actual-prompt {
       position: fixed; left: 50%; transform: translateX(-50%); z-index: 15;
       bottom: calc(80px + env(safe-area-inset-bottom));
       width: calc(100% - 32px); max-width: 382px;
-      background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+      box-shadow: 0 10px 24px var(--shadow);
     }
     .actual-prompt[hidden] { display: none; }
     .actual-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
@@ -371,8 +427,8 @@
     .actual-head .sheet-close { flex-shrink: 0; }
     .actual-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
     .actual-choice { border: 1px solid var(--line); background: var(--bg-sub); border-radius: 10px; padding: 8px 2px; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; }
-    .actual-choice small { display: block; font-size: 10px; color: var(--text-sub); font-weight: 600; margin-top: 2px; }
-    .record-btn { background: none; border: none; padding: 0; margin-top: 3px; font-size: 11px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
+    .actual-choice small { display: block; font-size: 12px; color: var(--text-sub); font-weight: 600; margin-top: 2px; }
+    .record-btn { background: none; border: none; padding: 0; margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -398,19 +454,16 @@
           <div id="job-list-container"></div>
         </section>
 
-        <!-- 未完了課題の件数・残り合計時間 -->
-        <section class="summary">
-          <div><div class="stat-num" id="summary-count">0<small>件</small></div><div class="stat-label">未完了の課題</div></div>
-          <div><div class="stat-num" id="summary-time">0<small>分</small></div><div class="stat-label">残り作業の合計</div></div>
-        </section>
+        <!-- ③④ 課題リスト & カウントダウン（見出しの右に未完了の件数・残り作業の合計） -->
+        <div class="list-head">
+          <span class="label">課題（優先度順）</span>
+          <span class="list-summary"><b id="summary-count">0件</b>・残り <b id="summary-time">0分</b></span>
+        </div>
+        <div id="task-list"></div>
+        <div id="hidden-kinds-note"></div>
 
         <!-- これから7日の見通し（締切ラッシュの事前警告） -->
         <section id="outlook-card"></section>
-
-        <!-- ③④ 課題リスト & カウントダウン -->
-        <div class="list-head label">課題（優先度順）</div>
-        <div id="task-list"></div>
-        <div id="hidden-kinds-note"></div>
 
         <!-- 完了済み課題（折りたたみ） -->
         <div id="completed-container"></div>
@@ -432,7 +485,7 @@
             <button type="button" class="tl-day-btn active" data-offset="0" onclick="showTimelineDay(0)">今日</button>
             <button type="button" class="tl-day-btn" data-offset="1" onclick="showTimelineDay(1)">明日</button>
           </div>
-          <span>⏱ 自動配置</span>
+          <span>自動配置</span>
         </div>
         <div class="tl-grid" id="tl-grid"></div>
       </div>
@@ -442,48 +495,62 @@
     <!-- ===== タブ3：設定 ===== -->
     <main class="tab-panel" id="tab-settings">
       <div class="list-wrap">
-        <div class="page-title">⚙️ 設定</div>
+        <div class="page-title">設定</div>
+
+        <div class="settings-group">ふだん使う設定</div>
+        <section class="settings-card">
+          <h2>毎週の課題</h2>
+          <div id="weekly-list"></div>
+        </section>
 
         <section class="settings-card">
-          <h2>🤖 AI（所要時間の推定・画像の読み取り）</h2>
-          <div class="form-group">
-            <label for="ai-provider">使用するAI</label>
-            <select id="ai-provider" class="form-control" onchange="changeProvider()">
-              <option value="gemini">Gemini（Google・無料枠あり）</option>
-              <option value="claude">Claude（Anthropic・従量課金）</option>
-            </select>
+          <h2>課題に使える時間帯</h2>
+          <div class="field-row study-hours">
+            <select id="study-start" class="form-control" onchange="saveStudyHours()" aria-label="開始"></select>
+            <span>〜</span>
+            <select id="study-end" class="form-control" onchange="saveStudyHours()" aria-label="終了"></select>
           </div>
-          <div class="form-group" id="claude-model-group" style="display:none;">
-            <label for="claude-model">Claudeのモデル</label>
-            <select id="claude-model" class="form-control" onchange="saveClaudeModel()">
-              <option value="claude-opus-5-5">Claude Opus 5.5（高性能）</option>
-              <option value="claude-sonnet-5-5">Claude Sonnet 5.5（バランス）</option>
-              <option value="claude-haiku-5-5">Claude Haiku 5.5（最安・高速）</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="api-key-input" id="api-key-label">Gemini APIキー</label>
-            <div class="secret-field">
-              <input type="text" id="api-key-input" class="form-control secret" placeholder="APIキーを入力してください" autocomplete="off" spellcheck="false" onchange="saveApiKey()">
-              <button type="button" class="btn-clear" onclick="toggleSecret('api-key-input', this)">表示</button>
-            </div>
-            <div class="field-row">
-              <span class="field-note">※入力するとこのブラウザに保存されます</span>
-              <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
-            </div>
+          <span class="field-note">※この時間帯から授業・バイト（前後の移動30分を含む）を除いた時間を「空き時間」として、見通しと遅れの予測に使います</span>
+        </section>
+
+        <section class="settings-card">
+          <h2>時間割</h2>
+          <div class="field-row">
+            <span class="field-note" id="class-summary">未登録</span>
+            <button type="button" class="btn-clear" onclick="openClassSheet()">登録・編集する</button>
           </div>
         </section>
 
+        <section class="settings-card">
+          <h2>表示する課題の種類<small>（manaba から取り込んだ課題）</small></h2>
+          <div class="kind-options" id="kind-options"></div>
+          <span class="field-note">※チェックを外した種類は、リスト・タイムライン・残り時間の合計に出しません（手入力の課題は常に表示）</span>
+        </section>
+
+        <section class="settings-card">
+          <h2>シフト表</h2>
+          <div class="form-group">
+            <label for="shift-name">シフト表に書かれている自分の名前</label>
+            <input type="text" id="shift-name" class="form-control" placeholder="例: 上野 凪斗" onchange="saveShiftSettings()">
+          </div>
+          <div class="form-group">
+            <label for="shift-title">カレンダーに登録する予定名</label>
+            <input type="text" id="shift-title" class="form-control" value="バイト" onchange="saveShiftSettings()">
+            <span class="field-note">※「バイト」を含めると、Google連携でアプリにも自動で取り込まれます</span>
+          </div>
+        </section>
+
+        <div class="settings-group">連携と初期設定<small>（最初に1回）</small></div>
         <section class="settings-card" id="gcal-settings">
-          <h2>📅 Google連携（バイト予定・manaba の課題・通知）</h2>
+          <h2>Google連携（バイト予定・manaba の課題・通知）</h2>
           <details class="setup-guide">
             <summary>はじめての連携の手順（約5分・最初の1回だけ）</summary>
             <ol>
               <li><span id="gcal-template-step">下のボタンからテンプレートを開き、「コピーを作成」を押す</span>
-                <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>📄 テンプレートをコピーする</a></li>
+                <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>テンプレートをコピーする</a></li>
               <li>コピーしたスプレッドシートのメニュー「<b>スケジュール帳</b>」→「<b>① 初期設定</b>」を押し、表示される許可を「許可」する</li>
               <li>「拡張機能」→「Apps Script」→ 右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」、実行：<b>自分</b>／アクセス：<b>全員</b> で「デプロイ」</li>
-              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>QRコードを、下の「📲 ほかの端末に設定を移す」の「📷 QRコードを読み取る」で読み取る</b>（パソコンなら「このパソコンのアプリに登録する」を押す）</li>
+              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>QRコードを、下の「ほかの端末に設定を移す」の「QRコードを読み取る」で読み取る</b>（パソコンなら「このパソコンのアプリに登録する」を押す）</li>
             </ol>
             <p class="field-note">※ 1〜3はパソコンで行ってください（スプレッドシートのスマホアプリでは「スケジュール帳」メニューが使えません）。QRコードが使えないときは、同じ画面のURLと合言葉を下の2つの欄に貼ります。</p>
             <p class="field-note">データはあなたの Google アカウントの中だけで処理され、ほかの人（アプリの開発者を含む）には送られません。</p>
@@ -522,59 +589,47 @@
           </details>
         </section>
 
+        <section class="settings-card">
+          <h2>AI（所要時間の推定・画像の読み取り）</h2>
+          <div class="form-group">
+            <label for="ai-provider">使用するAI</label>
+            <select id="ai-provider" class="form-control" onchange="changeProvider()">
+              <option value="gemini">Gemini（Google・無料枠あり）</option>
+              <option value="claude">Claude（Anthropic・従量課金）</option>
+            </select>
+          </div>
+          <div class="form-group" id="claude-model-group" style="display:none;">
+            <label for="claude-model">Claudeのモデル</label>
+            <select id="claude-model" class="form-control" onchange="saveClaudeModel()">
+              <option value="claude-opus-5-5">Claude Opus 5.5（高性能）</option>
+              <option value="claude-sonnet-5-5">Claude Sonnet 5.5（バランス）</option>
+              <option value="claude-haiku-5-5">Claude Haiku 5.5（最安・高速）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="api-key-input" id="api-key-label">Gemini APIキー</label>
+            <div class="secret-field">
+              <input type="text" id="api-key-input" class="form-control secret" placeholder="APIキーを入力してください" autocomplete="off" spellcheck="false" onchange="saveApiKey()">
+              <button type="button" class="btn-clear" onclick="toggleSecret('api-key-input', this)">表示</button>
+            </div>
+            <div class="field-row">
+              <span class="field-note">※入力するとこのブラウザに保存されます</span>
+              <button type="button" class="btn-clear" onclick="clearApiKey()">保存キーをクリア</button>
+            </div>
+          </div>
+        </section>
+
         <section class="settings-card" id="transfer-settings">
-          <h2>📲 ほかの端末に設定を移す</h2>
+          <h2>ほかの端末に設定を移す</h2>
           <p class="field-note">設定（APIキー・Google連携）は端末ごとに別々に保存されます。設定済みの端末でQRコードを出し、もう一方の端末のアプリで読み取ると、同じ設定になります。</p>
           <label class="check-row"><input type="checkbox" id="transfer-keys" checked> AIのAPIキーも含める</label>
           <button type="button" class="btn-secondary" onclick="showTransferQr()">この端末の設定をQRコードにする</button>
-          <button type="button" class="btn-submit" onclick="openQrScanner()">📷 QRコードを読み取る</button>
+          <button type="button" class="btn-submit" onclick="openQrScanner()">QRコードを読み取る</button>
           <p class="field-note" style="margin-top: 8px;">※ホーム画面に追加したアプリは、Safari などのブラウザとも設定が別です。ホーム画面のアプリで使うときは、カメラアプリではなくこのボタンで読み取ってください（スプレッドシートの「② アプリに登録する情報」のQRコードも読み取れます）。</p>
         </section>
 
         <section class="settings-card">
-          <h2>📷 シフト表</h2>
-          <div class="form-group">
-            <label for="shift-name">シフト表に書かれている自分の名前</label>
-            <input type="text" id="shift-name" class="form-control" placeholder="例: 上野 凪斗" onchange="saveShiftSettings()">
-          </div>
-          <div class="form-group">
-            <label for="shift-title">カレンダーに登録する予定名</label>
-            <input type="text" id="shift-title" class="form-control" value="バイト" onchange="saveShiftSettings()">
-            <span class="field-note">※「バイト」を含めると、Google連携でアプリにも自動で取り込まれます</span>
-          </div>
-        </section>
-
-        <section class="settings-card">
-          <h2>⏰ 課題に使える時間帯</h2>
-          <div class="field-row study-hours">
-            <select id="study-start" class="form-control" onchange="saveStudyHours()" aria-label="開始"></select>
-            <span>〜</span>
-            <select id="study-end" class="form-control" onchange="saveStudyHours()" aria-label="終了"></select>
-          </div>
-          <span class="field-note">※この時間帯から授業・バイト（前後の移動30分を含む）を除いた時間を「空き時間」として、見通しと遅れの予測に使います</span>
-        </section>
-
-        <section class="settings-card">
-          <h2>🏫 時間割</h2>
-          <div class="field-row">
-            <span class="field-note" id="class-summary">未登録</span>
-            <button type="button" class="btn-clear" onclick="openClassSheet()">登録・編集する</button>
-          </div>
-        </section>
-
-        <section class="settings-card">
-          <h2>🔁 毎週の課題</h2>
-          <div id="weekly-list"></div>
-        </section>
-
-        <section class="settings-card">
-          <h2>👁 表示する課題の種類（manaba から取り込んだ課題）</h2>
-          <div class="kind-options" id="kind-options"></div>
-          <span class="field-note">※チェックを外した種類は、リスト・タイムライン・残り時間の合計に出しません（手入力の課題は常に表示）</span>
-        </section>
-
-        <section class="settings-card">
-          <h2>💾 データのバックアップ</h2>
+          <h2>データのバックアップ</h2>
           <p class="field-note">課題・完了の記録・時間割・設定は、このブラウザの中にだけ保存されています。ブラウザのデータを消したり機種変更したりする前に、書き出しておいてください。</p>
           <p class="field-note" id="backup-info"></p>
           <label class="check-row"><input type="checkbox" id="backup-secrets"> APIキー・連携のURL・合言葉も含める（ファイルの扱いに注意）</label>
@@ -589,9 +644,6 @@
     </main>
   </div>
 
-  <!-- 追加ボタン -->
-  <button class="fab" type="button" onclick="openSheet()" aria-label="予定・課題を追加">＋</button>
-
   <!-- 下部タブバー -->
   <nav class="tab-bar">
     <div class="tab-bar-inner">
@@ -600,6 +652,9 @@
       </button>
       <button class="tab-btn" type="button" data-tab="tab-timeline" onclick="switchTab('tab-timeline')">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>タイムライン
+      </button>
+      <button class="tab-add" type="button" onclick="openSheet()" aria-label="予定・課題を追加">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
       </button>
       <button class="tab-btn" type="button" data-tab="tab-settings" onclick="switchTab('tab-settings')">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg>設定
@@ -615,8 +670,8 @@
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
     <div id="add-sheet-imports">
-      <button type="button" class="btn-secondary" onclick="openShiftSheet()">📷 シフト表の写真からバイトを一括登録</button>
-      <button type="button" class="btn-secondary" onclick="openClassSheet()">🏫 時間割の画像から授業を登録</button>
+      <button type="button" class="btn-secondary" onclick="openShiftSheet()">シフト表の写真からバイトを一括登録</button>
+      <button type="button" class="btn-secondary" onclick="openClassSheet()">時間割の画像から授業を登録</button>
     </div>
     <form id="add-schedule-form">
       <div class="form-group">
@@ -650,7 +705,7 @@
       <div class="form-group" id="weekly-group">
         <label class="check-row" id="task-weekly-row"><input type="checkbox" id="task-weekly" onchange="toggleWeeklyInput()"> 毎週くり返す（毎週同じ曜日・時刻が締切の課題）</label>
         <div class="weekly-until" id="weekly-until-group" style="display:none;">
-          <label for="task-weekly-until">くり返す最後の日（空欄なら ⚙️ 設定でやめるまで）</label>
+          <label for="task-weekly-until">くり返す最後の日（空欄なら設定タブでやめるまで）</label>
           <input type="date" id="task-weekly-until" class="form-control">
           <span class="field-note">※締切の7日前から一覧に出ます。タイトルにコース名と課題名（例: メディアデザイン論 リフレクションシート）を入れておくと、manaba の提出のお知らせで自動で完了になります</span>
         </div>
@@ -662,6 +717,7 @@
       </div>
 
       <button type="submit" class="btn-submit" id="submit-btn">登録する</button>
+      <button type="button" class="btn-danger" id="edit-delete-btn" onclick="deleteEditedItem()" hidden>削除する</button>
 
     </form>
   </section>
@@ -695,7 +751,7 @@
 
   <section class="sheet" id="class-sheet" aria-label="時間割の登録">
     <div class="sheet-head">
-      <span>🏫 時間割</span>
+      <span>時間割</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
     <div class="form-group">
@@ -711,7 +767,7 @@
   <!-- シフト表の写真から一括登録（ボトムシート） -->
   <section class="sheet" id="shift-sheet" aria-label="シフト表から登録">
     <div class="sheet-head">
-      <span>📷 シフト表から登録</span>
+      <span>シフト表から登録</span>
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
     <p class="field-note shift-name-note" id="shift-name-note"></p>
@@ -908,7 +964,6 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
-      document.querySelector('.fab').hidden = tabId === 'tab-settings';
       if (tabId === 'tab-settings') {
         updateClassSummary();
         updateBackupInfo();
@@ -941,6 +996,28 @@
       document.getElementById('task-weekly-row').style.display = editing ? 'none' : '';
       document.getElementById('manual-est-note').textContent = editing ? '※空欄なら今のまま' : '※空欄時はAIが自動推測';
       document.getElementById('submit-btn').textContent = editing ? '保存する' : '登録する';
+      const deleteBtn = document.getElementById('edit-delete-btn');
+      deleteBtn.hidden = !editing;
+      if (editing) {
+        const item = target.kind === 'item' && tasks.find(t => t.id === target.id);
+        deleteBtn.textContent = target.kind === 'weekly' ? '毎週の登録をやめる'
+          : item && item.type === 'job' ? 'このアルバイトを削除' : 'この課題を削除';
+      }
+    }
+
+    // 編集の画面からの削除（毎週の課題は「やめる」）。確認してから消す
+    function deleteEditedItem() {
+      if (!editTarget) return;
+      if (editTarget.kind === 'weekly') {
+        const id = editTarget.id;
+        stopWeeklyTask(id);
+        if (!loadWeeklyTasks().some(w => w.id === id)) closeSheet();
+        return;
+      }
+      const item = tasks.find(t => t.id === editTarget.id);
+      if (!item || !confirm(`「${item.name}」を削除しますか？`)) return;
+      closeSheet();
+      deleteTask(item.id);
     }
 
     function openEditSheet() {
@@ -1060,8 +1137,8 @@
       document.getElementById('shift-sheet').classList.add('open');
       const name = document.getElementById('shift-name').value.trim();
       document.getElementById('shift-name-note').innerHTML = name
-        ? `シフト表の名前：<b>${escapeHtml(name)}</b>（⚙️ 設定タブで変更できます）`
-        : '⚠️ 先に ⚙️ 設定タブの「シフト表」で、シフト表に書かれている自分の名前を入力してください';
+        ? `シフト表の名前：<b>${escapeHtml(name)}</b>（設定タブで変更できます）`
+        : '先に設定タブの「シフト表」で、シフト表に書かれている自分の名前を入力してください';
     }
 
     // 設定タブの指定の欄を開いて、そこへ移動する
@@ -1425,11 +1502,10 @@
       const rowsHtml = upcomingJobs.map(job => {
         const start = new Date(job.datetime);
         return `
-          <div class="job-row">
+          <div class="job-row"${job.source === 'gcal' ? '' : ` onclick="openEditTask(${job.id})" role="button" tabindex="0"`}>
             <span class="job-row-date">${start.getMonth() + 1}/${start.getDate()}（${WEEKDAYS[start.getDay()]}） ${formatJobRange(job)}</span>
-            <span class="job-row-name">${job.source === 'gcal' ? '📅 ' : ''}${escapeHtml(job.name)}</span>
-            ${job.source === 'gcal' ? '' : `<button class="delete-btn edit" onclick="openEditTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを編集">✎</button>`}
-            <button class="delete-btn" onclick="deleteTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを削除">✕</button>
+            <span class="job-row-name">${escapeHtml(job.name)}${job.source === 'gcal' ? ' <span class="tag">カレンダー</span>' : ''}</span>
+            <button class="delete-btn" onclick="event.stopPropagation(); deleteTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを削除">✕</button>
           </div>
         `;
       }).join('');
@@ -1448,19 +1524,15 @@
     // 未完了課題の件数・残り合計時間
     function updateSummary(activeTasks) {
       const totalMinutes = activeTasks.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
-      const hours = Math.floor(totalMinutes / 60);
-      const mins = totalMinutes % 60;
-      document.getElementById('summary-count').innerHTML = `${activeTasks.length}<small>件</small>`;
-      document.getElementById('summary-time').innerHTML = hours === 0
-        ? `${mins}<small>分</small>`
-        : `${hours}<small>時間</small>${mins > 0 ? `${mins}<small>分</small>` : ''}`;
+      document.getElementById('summary-count').textContent = `${activeTasks.length}件`;
+      document.getElementById('summary-time').textContent = formatMinutes(totalMinutes);
     }
 
     function renderTaskList(activeTasks, now, risks = new Map()) {
       const taskListEl = document.getElementById('task-list');
 
       if (activeTasks.length === 0) {
-        taskListEl.innerHTML = '<div class="empty-message">未完了の課題はありません 🎉</div>';
+        taskListEl.innerHTML = '<div class="empty-message">未完了の課題はありません</div>';
         return;
       }
 
@@ -1470,23 +1542,42 @@
         const estMinutes = task.estimatedMinutes || 60;
         const countdownText = formatCountdown(targetDate - now);
 
+        // 「manabaの〇〇」だけの詳細は、下の印と同じなので出さない
+        const detail = task.detail && !/^manabaの/.test(task.detail) ? task.detail : '';
+        const link = safeManabaUrl(task.url)
+          ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">manabaで開く ›</a>`
+          : '';
+        const tags = taskTag(task) + link;
+
+        // 行のどこを押しても編集が開く（削除は編集の画面から）
         return `
           <div class="task-row">
-            <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="完了にする">
-            <div class="task-body" onclick="openEditTask(${task.id})">
-              <div class="task-name">${task.source === 'manaba' ? '📩 ' : task.source === 'weekly' ? '🔁 ' : ''}${escapeHtml(task.name)}</div>
-              ${task.detail ? `<div class="task-detail">${escapeHtml(task.detail)}</div>` : ''}
+            <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="${escapeHtml(task.name)}を完了にする">
+            <div class="task-body" onclick="openEditTask(${task.id})" onkeydown="if (event.key === 'Enter') openEditTask(${task.id})" role="button" tabindex="0">
+              <div class="task-name">${escapeHtml(task.name)}</div>
+              ${detail ? `<div class="task-detail">${escapeHtml(detail)}</div>` : ''}
               <div class="task-meta"><span class="dot bg-${level}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
-              ${safeManabaUrl(task.url) ? `<a class="task-link" href="${escapeHtml(task.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">manabaで開く ›</a>` : ''}
-              ${risks.has(task.id) ? `<div class="risk-note risk-${risks.get(task.id).level}">${risks.get(task.id).level === 'high' ? '🔥' : '⚠️'} ${risks.get(task.id).text}</div>` : ''}
+              ${tags ? `<div class="task-tags">${tags}</div>` : ''}
+              ${risks.has(task.id) ? `<div class="risk-note risk-${risks.get(task.id).level}">${risks.get(task.id).text}</div>` : ''}
             </div>
-            <div class="task-side">
+            <div class="task-side" onclick="openEditTask(${task.id})">
               <div class="count-num c-${level}">${countdownText}</div>
-              <div class="count-unit">${targetDate > now ? '残り' : ''}<button class="delete-btn edit" onclick="openEditTask(${task.id})" aria-label="編集">✎</button><button class="delete-btn" onclick="deleteTask(${task.id})" aria-label="削除">✕</button></div>
+              ${targetDate > now ? '<div class="count-unit">残り</div>' : ''}
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    // 課題の出どころの印（manaba から取り込んだ課題は種類、毎週の課題は「毎週」）。手入力の課題は印なし
+    //   manaba の課題は横に「manabaで開く」が並ぶので、印は種類だけにして1行に収める
+    function taskTag(task) {
+      if (task.source === 'manaba') {
+        const kind = taskKind(task);
+        return `<span class="tag">${kind && kind !== 'その他' ? kind : 'manaba'}</span>`;
+      }
+      if (task.source === 'weekly') return '<span class="tag tag-weekly">毎週</span>';
+      return '';
     }
 
     // 完了済み課題の折りたたみ表示（60秒ごとの再描画でも開閉状態を保つ）
@@ -1511,8 +1602,8 @@
           completedText = `完了: ${formatDateTime(completedDate)}（${marginText}）`;
         }
         const actualHtml = task.actualMinutes
-          ? `<div class="completed-meta">⏱ 実際 ${formatMinutes(task.actualMinutes)}（見込み ${formatMinutes(task.estimatedMinutes || 60)}）</div>`
-          : `<button type="button" class="record-btn" onclick="openActualPrompt(${task.id})">⏱ かかった時間を記録</button>`;
+          ? `<div class="completed-meta">実際 ${formatMinutes(task.actualMinutes)}（見込み ${formatMinutes(task.estimatedMinutes || 60)}）</div>`
+          : `<button type="button" class="record-btn" onclick="openActualPrompt(${task.id})">かかった時間を記録</button>`;
 
         return `
           <div class="task-row completed-row">
@@ -1722,7 +1813,7 @@
         extra += '<div class="tl-card"><div class="tl-card-title">今日の計画どおりに進めた場合の、明日の計画です</div></div>';
       }
       if (shortage.length > 0) {
-        extra += `<div class="tl-card"><div class="tl-card-title warn">⚠️ ${dayLabel}の空き時間では足りません</div>
+        extra += `<div class="tl-card"><div class="tl-card-title warn">${dayLabel}の空き時間では足りません</div>
           ${shortage.map(s => `<div class="tl-card-row"><span>${escapeHtml(s.task.name)}</span><span class="c-red">あと${formatMinutes(s.minutes)}不足</span></div>`).join('')}
         </div>`;
       }
@@ -1732,7 +1823,7 @@
         </div>`;
       }
       if (activeTasks.length === 0) {
-        extra += '<div class="tl-card"><div class="tl-card-title">未完了の課題はありません 🎉</div></div>';
+        extra += '<div class="tl-card"><div class="tl-card-title">未完了の課題はありません</div></div>';
       }
       document.getElementById('tl-extra').innerHTML = extra;
     }
@@ -1839,28 +1930,37 @@
         if (!tightest || slack < tightest.slack) tightest = { task, supply, demand: cumulative, slack };
       });
 
+      // 締切を過ぎた未完了の課題も、これからの作業として数える（OVERDUE_KEEP_DAYS 日以内）
+      const overdue = activeTasks.filter(t => {
+        const d = new Date(t.datetime).getTime();
+        return d <= now.getTime() && d >= now.getTime() - OVERDUE_KEEP_DAYS * DAY_MS;
+      });
       const free = freeTimeBetween(now, horizon);
-      const demand = due.reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
-      let level = 'green';
-      if (tightest && tightest.slack < 0) level = 'red';
-      else if (demand > free.total * 0.7 || (tightest && tightest.slack < 120)) level = 'yellow';
-      return { level, demand, free, due, tightest, perTask };
+      const demand = [...overdue, ...due].reduce((sum, t) => sum + (t.estimatedMinutes || 60), 0);
+      // rush：これからの締切だけで見た混み具合。期限切れがあれば、全体は少なくとも黄色にする
+      let rush = 'green';
+      if (tightest && tightest.slack < 0) rush = 'red';
+      else if (demand > free.total * 0.7 || (tightest && tightest.slack < 120)) rush = 'yellow';
+      const level = rush === 'green' && overdue.length > 0 ? 'yellow' : rush;
+      return { level, rush, demand, free, due, overdue, tightest, perTask };
     }
 
     function renderOutlook(workload, now) {
-      const { level, demand, free, due, tightest } = workload;
-      const badge = { green: '余裕あり', yellow: '余裕が少ない', red: '間に合わないおそれ' }[level];
+      const { level, rush, demand, free, due, overdue, tightest } = workload;
+      const badge = rush === 'green' && overdue.length > 0
+        ? '期限切れあり'
+        : { green: '余裕あり', yellow: '余裕が少ない', red: '間に合わないおそれ' }[level];
       const ratio = free.total > 0 ? Math.min(100, Math.round(demand / free.total * 100)) : (demand > 0 ? 100 : 0);
 
       let message;
       if (due.length === 0) {
         message = '7日以内に締切の課題はありません。';
-      } else if (level === 'green') {
-        message = `空き時間に対して課題は${ratio}%です。このペースで大丈夫です。`;
+      } else if (rush === 'green') {
+        message = `空き時間に対して課題は${ratio}%です。${overdue.length > 0 ? 'これからの締切の課題は、' : ''}このペースで大丈夫です。`;
       } else {
         const name = escapeHtml(tightest.task.name);
         const deadline = formatDeadline(new Date(tightest.task.datetime), now);
-        message = level === 'red'
+        message = rush === 'red'
           ? `「${name}」の締切（${deadline}）までに、課題の作業が合計${formatMinutes(tightest.demand)}あるのに、空き時間は${formatMinutes(tightest.supply)}しかありません。`
           : `「${name}」の締切（${deadline}）までの余裕が${formatMinutes(Math.max(0, tightest.slack))}しかありません。`;
         // いちばん苦しい締切までの課題と、余裕がほとんどない課題を、締切が早い順に
@@ -1869,6 +1969,9 @@
           workload.perTask.get(t.id).slack < (t.estimatedMinutes || 60) * 0.5
         ).slice(0, 3);
         message += `<br><b>今日から進めたい課題：</b>${startNow.map(t => escapeHtml(t.name)).join('・')}`;
+      }
+      if (overdue.length > 0) {
+        message = `<b>締切を過ぎた課題が${overdue.length}件あります。</b>遅れて出せるか確かめ、出せるものから片付けましょう。<br>` + message;
       }
 
       const today = startOfDay(now).getTime();
@@ -1880,7 +1983,7 @@
 
       document.getElementById('outlook-card').innerHTML = `
         <div class="outlook outlook-${level}">
-          <div class="outlook-head"><span>📊 これから7日の見通し</span><span class="outlook-badge">${badge}</span></div>
+          <div class="outlook-head"><span>これから7日の見通し</span><span class="outlook-badge">${badge}</span></div>
           <div class="outlook-bar"><span style="width:${ratio}%"></span></div>
           <div class="outlook-numbers">課題 ${formatMinutes(demand)} ／ 空き時間 ${formatMinutes(free.total)}（授業・バイトを除く）</div>
           <div class="outlook-message">${message}</div>
@@ -1983,21 +2086,21 @@
       }
       const time = analyzeTimeRecords();
       body += time.n === 0
-        ? '<p class="field-note">⏱ 完了にするときに実際にかかった時間を記録すると、科目ごとの傾向をAIの所要時間の推定に反映します。</p>'
-        : `<p>⏱ 実際にかかった時間（記録 ${time.n}件）：${time.overall ? `見込みの<b>${time.overall}倍</b>（中央値）` : `${MIN_TIME_RECORDS}件たまると全体の傾向を出します`}</p>
+        ? '<p class="field-note">完了にするときに実際にかかった時間を記録すると、科目ごとの傾向をAIの所要時間の推定に反映します。</p>'
+        : `<p>実際にかかった時間（記録 ${time.n}件）：${time.overall ? `見込みの<b>${time.overall}倍</b>（中央値）` : `${MIN_TIME_RECORDS}件たまると全体の傾向を出します`}</p>
           ${time.courses.length ? `<ul>${time.courses.map(c => `<li>${escapeHtml(c.course)}：見込みの<b>${c.ratio}倍</b>（${c.n}件）</li>`).join('')}</ul>` : ''}
           <p class="field-note">この倍率を、これから登録する課題のAIの推定に掛けます（科目の記録が${MIN_COURSE_TIME_RECORDS}件以上ならその科目の倍率。0.9〜1.1倍のときはそのまま）</p>`;
 
       const advice = loadAiAdvice();
       body += `
         <div class="shift-actions">
-          <button type="button" class="btn-clear" id="ai-advice-btn" onclick="requestAiAdvice()">🤖 AIに今週の進め方を相談する</button>
+          <button type="button" class="btn-clear" id="ai-advice-btn" onclick="requestAiAdvice()">AIに今週の進め方を相談する</button>
         </div>
-        ${advice ? `<div class="ai-advice">💡 ${escapeHtml(advice.text)}<div class="field-note">（${formatDateTime(new Date(advice.at))} の分析）</div></div>` : ''}`;
+        ${advice ? `<div class="ai-advice">${escapeHtml(advice.text)}<div class="field-note">（${formatDateTime(new Date(advice.at))} の分析）</div></div>` : ''}`;
 
       el.innerHTML = `
         <details class="tendency" id="tendency-details" ${tendencyOpen ? 'open' : ''}>
-          <summary>🔮 あなたの提出の傾向（記録 ${tendency.n}件）</summary>
+          <summary>あなたの提出の傾向（記録 ${tendency.n}件）</summary>
           <div class="tendency-body">${body}</div>
         </details>`;
       document.getElementById('tendency-details').addEventListener('toggle', e => { tendencyOpen = e.target.open; });
@@ -2046,7 +2149,7 @@ ${upcoming}
 
       const button = document.getElementById('ai-advice-btn');
       button.disabled = true;
-      button.textContent = '🤖 分析中…';
+      button.textContent = '分析中…';
       const result = providerId === 'claude'
         ? await callClaude(apiKey, prompt, { output_config: { effort: 'low' }, max_tokens: 2000 }, 60000)
         : await callGemini(apiKey, [{ text: prompt }], {}, 60000);
@@ -2108,7 +2211,7 @@ ${upcoming}
       hiddenTasks.forEach(t => { counts[taskKind(t)] = (counts[taskKind(t)] || 0) + 1; });
       const text = Object.entries(counts).map(([kind, n]) => `${kind} ${n}件`).join('・');
       document.getElementById('hidden-kinds-note').innerHTML = text
-        ? `<div class="hidden-note">${text}を非表示にしています（<a onclick="switchTab('tab-settings')">⚙️ 設定で変更</a>）</div>`
+        ? `<div class="hidden-note">${text}を非表示にしています（<a onclick="switchTab('tab-settings')">設定で変更</a>）</div>`
         : '';
     }
 
@@ -2226,7 +2329,7 @@ ${upcoming}
       const estimate = task.estimatedMinutes || 60;
       const round5 = m => Math.max(5, Math.round(m / 5) * 5);
       const choices = [[0.5, '半分くらい'], [1, '見込みどおり'], [1.5, '1.5倍'], [2, '2倍']];
-      document.getElementById('actual-title').textContent = `⏱ 「${task.name}」は実際に何分かかりましたか？（見込み ${formatMinutes(estimate)}）`;
+      document.getElementById('actual-title').textContent = `「${task.name}」は実際に何分かかりましたか？（見込み ${formatMinutes(estimate)}）`;
       document.getElementById('actual-choices').innerHTML = choices.map(([ratio, label]) =>
         `<button type="button" class="actual-choice" onclick="saveActualMinutes(${round5(estimate * ratio)})">${round5(estimate * ratio)}分<small>${label}</small></button>`
       ).join('');
@@ -3097,7 +3200,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       classNotes = [
         { level: 'ok', text: `${subjectCount}科目・${items.length}コマを読み取りました。下の表を元の画像と見比べてください` },
         timesRead > 0
-          ? { level: 'ok', text: `時限の時刻を画像から${timesRead}件読み取りました（「⏰ 時限の時刻」で確認できます）` }
+          ? { level: 'ok', text: `時限の時刻を画像から${timesRead}件読み取りました（「時限の時刻」で確認できます）` }
           : { level: 'warn', text: '時限の時刻は画像から読み取れなかったため、設定の時刻を使います' }
       ];
       renderClassEditor();
@@ -3172,7 +3275,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
         </div>
 
         <details class="shift-settings" style="margin-top: 14px;">
-          <summary>⏰ 時限の時刻</summary>
+          <summary>時限の時刻</summary>
           <div class="period-times">${periodTimesHtml}</div>
         </details>
 
@@ -3618,9 +3721,9 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
         <div class="shift-actions">
           <button type="button" class="btn-clear" onclick="addShiftRow()">＋ 日を追加</button>
           <button type="button" class="btn-submit" id="shift-register-btn" onclick="registerShifts()" ${registerCount === 0 ? 'disabled' : ''}>
-            ${writesCalendar ? '📅 Googleカレンダーに' : 'アプリに'}登録（${registerCount}件）
+            ${writesCalendar ? 'Googleカレンダーに' : 'アプリに'}登録（${registerCount}件）
           </button>
-          ${writesCalendar ? '' : '<span class="field-note">※カレンダーにも書き込むには、⚙️ 設定タブの「Google連携」でURLと合言葉を入れてください</span>'}
+          ${writesCalendar ? '' : '<span class="field-note">※カレンダーにも書き込むには、設定タブの「Google連携」でURLと合言葉を入れてください</span>'}
         </div>
       `;
     }
@@ -3952,7 +4055,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       }
       document.getElementById('qr-show-note').textContent =
         `含まれる設定：${[payload.u && 'Google連携', payload.g && 'Gemini APIキー', payload.c && 'Claude APIキー'].filter(Boolean).join('・')}。` +
-        'もう一方の端末のアプリで「⚙️ 設定」→「📷 QRコードを読み取る」を押して読み取ってください';
+        'もう一方の端末のアプリで「設定」→「QRコードを読み取る」を押して読み取ってください';
       openQrSheet('show', 'この端末の設定');
     }
 

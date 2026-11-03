@@ -33,7 +33,7 @@
         (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
       const meta = document.getElementById('theme-color-meta');
-      if (meta) meta.content = dark ? '#0b1120' : '#ffffff';
+      if (meta) meta.content = dark ? '#262624' : '#ffffff';
     }
 
     applyTheme();
@@ -76,37 +76,38 @@
 
     /* 夜（就寝前）に見てもまぶしくないように、暗い表示のときの色 */
     :root[data-theme="dark"] {
+      /* Claude の暗い画面のような、青みのない暖かいグレー。差し色（リンク・選択中）は Claude のオレンジ寄り */
       color-scheme: dark;
-      --primary-color: #60a5fa;
-      --primary-soft: #1e2a4a;
-      --accent-color: #a5b4fc;
-      --job-soft: #1e3a5f;
-      --job-ink: #dbeafe;
-      --bg-color: #0b1120;
-      --bg-sub: #0f1729;
-      --surface: #151d2e;
-      --surface-2: #1d2738;
-      --surface-3: #283447;
-      --text-main: #e5e7eb;
-      --text-sub: #9ca3af;
-      --text-faint: #949cab;
-      --line: #263042;
-      --line-soft: #1b2435;
-      --line-strong: #3a475c;
-      --control-border: #64738a;
-      --on-fill: #0b1120;
-      --btn-bg: #e5e7eb;
-      --alert-red: #f87171;
-      --alert-yellow: #fbbf24;
-      --alert-green: #34d399;
-      --red-soft: rgba(248, 113, 113, 0.18);   --red-ink: #fecaca;   --red-tint: rgba(248, 113, 113, 0.08);   --red-line: rgba(248, 113, 113, 0.35);
-      --yellow-soft: rgba(251, 191, 36, 0.18); --yellow-ink: #fde68a; --yellow-tint: rgba(251, 191, 36, 0.08); --yellow-line: rgba(251, 191, 36, 0.35);
-      --green-soft: rgba(52, 211, 153, 0.18);  --green-ink: #a7f3d0; --green-tint: rgba(52, 211, 153, 0.08);  --green-line: rgba(52, 211, 153, 0.35);
-      --info-soft: rgba(96, 165, 250, 0.18);   --info-ink: #bfdbfe;
-      --class-color: #2dd4bf; --class-soft: rgba(45, 212, 191, 0.18); --class-ink: #99f6e4;
+      --primary-color: #6ea8f5;
+      --primary-soft: #3d3330;
+      --accent-color: #e5906f;
+      --job-soft: #2c3645;
+      --job-ink: #dce8fb;
+      --bg-color: #262624;
+      --bg-sub: #2b2b28;
+      --surface: #30302e;
+      --surface-2: #383835;
+      --surface-3: #44433f;
+      --text-main: #f5f4ef;
+      --text-sub: #bdbab0;
+      --text-faint: #a8a59b;
+      --line: #3e3d39;
+      --line-soft: #31312e;
+      --line-strong: #55544f;
+      --control-border: #85837a;
+      --on-fill: #1f1e1d;
+      --btn-bg: #f5f4ef;
+      --alert-red: #f28b82;
+      --alert-yellow: #f2c060;
+      --alert-green: #6fd3a5;
+      --red-soft: rgba(242, 139, 130, 0.18);   --red-ink: #fbd0cb;   --red-tint: rgba(242, 139, 130, 0.08);   --red-line: rgba(242, 139, 130, 0.35);
+      --yellow-soft: rgba(242, 192, 96, 0.18); --yellow-ink: #f8dfa6; --yellow-tint: rgba(242, 192, 96, 0.08); --yellow-line: rgba(242, 192, 96, 0.35);
+      --green-soft: rgba(111, 211, 165, 0.18); --green-ink: #bdebd5; --green-tint: rgba(111, 211, 165, 0.08); --green-line: rgba(111, 211, 165, 0.35);
+      --info-soft: rgba(110, 168, 245, 0.18);  --info-ink: #c9dcf8;
+      --class-color: #5cc8b4; --class-soft: rgba(92, 200, 180, 0.18); --class-ink: #b5e8de;
       --chip-bg: rgba(255, 255, 255, 0.06);
       --track: rgba(255, 255, 255, 0.12);
-      --shadow: rgba(0, 0, 0, 0.5);
+      --shadow: rgba(0, 0, 0, 0.45);
     }
 
     * {
@@ -302,13 +303,17 @@
 
     .tl-block { position: absolute; left: 46px; right: 0; border-radius: 12px; padding: 7px 12px; font-size: 12px; overflow: hidden; }
     .tl-block b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tl-block.compact { padding: 2px 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .tl-block.compact { padding: 0 12px; display: flex; align-items: center; gap: 8px; white-space: nowrap; line-height: 1.2; }
     .tl-block.compact b { display: inline; font-size: 12px; }
     .b-job { background: var(--job-soft); color: var(--job-ink); border-left: 4px solid var(--primary-color); }
     .b-red { background: var(--red-soft); color: var(--red-ink); border-left: 4px solid var(--alert-red); }
     .b-yellow { background: var(--yellow-soft); color: var(--yellow-ink); border-left: 4px solid var(--alert-yellow); }
     .b-green { background: var(--green-soft); color: var(--green-ink); border-left: 4px solid var(--alert-green); }
     .b-class { background: var(--class-color); color: var(--on-fill); }
+    :root[data-theme="dark"] .b-class { background: #2f5650; color: #e3f4f0; }   /* 夜は大きな明るい面がまぶしいので、授業の枠は落ち着いた緑に */
+    :root[data-theme="dark"] .pill-class { background: #2f5650; color: #e3f4f0; }
+    .b-lunch { background: var(--surface-2); color: var(--text-sub); border: 1px dashed var(--line-strong); }
+    .b-gap { background: var(--surface-2); color: var(--text-faint); border: 1px dashed var(--line); }
     .b-move { background: repeating-linear-gradient(135deg, var(--surface-2), var(--surface-2) 6px, var(--surface-3) 6px, var(--surface-3) 12px); color: var(--text-faint); border: 1px dashed var(--line-strong); }
 
     .tl-now { position: absolute; left: 40px; right: 0; border-top: 2px solid var(--alert-red); z-index: 2; }
@@ -417,14 +422,32 @@
     .tendency-body { font-size: 13px; line-height: 1.6; margin-top: 8px; background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; }
     .tendency-body ul { padding-left: 18px; }
     .ai-advice { margin-top: 8px; padding: 8px 10px; background: var(--surface); border-radius: 12px; border: 1px solid var(--line); }
-    .study-hours { justify-content: flex-start; }
+    .field-row.study-hours, .form-group .field-row.study-hours { justify-content: flex-start; }
     .study-hours select { width: auto; flex: 0 1 auto; min-width: 0; }   /* ふだんは中身の幅のまま。狭い画面では縮んで、横にはみ出さない */
+    .lunch-length { margin-top: 8px; }
 
     /* ========== 設定タブ ========== */
     .settings-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 14px; }
     .settings-card h2 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
     .settings-card h2 small, .settings-group small { font-size: 12px; font-weight: 600; color: var(--text-sub); }
     .settings-group { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.04em; margin: 24px 0 -4px; }
+    /* 設定の項目の一覧（押すと項目ごとのページが開く） */
+    .menu-list { margin-top: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+    .menu-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 12px 10px 14px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--text-main); font: inherit; text-align: left; cursor: pointer; }
+    .menu-row:first-child { border-top: 0; }
+    .menu-row:active { background: var(--surface-2); }
+    .menu-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--surface-2); color: var(--text-sub); }
+    .menu-icon svg { width: 19px; height: 19px; }
+    .menu-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .menu-text b { font-size: 15px; font-weight: 700; }
+    .menu-text small { font-size: 12px; color: var(--text-sub); }
+    .menu-chev { flex: none; width: 18px; height: 18px; color: var(--text-faint); }
+    .sub-head { display: flex; align-items: center; gap: 2px; margin-left: -12px; }
+    .back-btn { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; color: var(--text-main); cursor: pointer; }
+    .back-btn svg { width: 24px; height: 24px; }
+    .back-btn:active { background: var(--surface-2); }
+    .sub-head .page-title { margin-top: 0; outline: none; }
+    .settings-page.single .settings-card > h2 { display: none; }   /* ページに1つだけの欄は、ページの見出しと同じなので出さない */
     .settings-card .form-group:last-child { margin-bottom: 0; }
     .secret-field { display: flex; gap: 8px; }
     .secret-field .form-control { flex: 1; min-width: 0; }
@@ -600,18 +623,80 @@
 
     <!-- ===== タブ3：設定 ===== -->
     <main class="tab-panel" id="tab-settings">
+      <!-- 設定は項目の一覧から、項目ごとのページを開く（スマホの「戻る」・← で一覧に戻る） -->
       <div class="list-wrap">
-        <div class="page-head">
-          <h1 class="page-title">設定</h1>
-          <button type="button" class="help-btn" onclick="openHelpSheet()" aria-label="使い方" title="使い方">?</button>
+        <div id="settings-home">
+          <div class="page-head">
+            <h1 class="page-title">設定</h1>
+            <button type="button" class="help-btn" onclick="openHelpSheet()" aria-label="使い方" title="使い方">?</button>
+          </div>
+          <nav aria-label="設定の項目">
+          <div class="settings-group">ふだん使う設定</div>
+          <div class="menu-list">
+            <button type="button" class="menu-row" data-page="sp-tasks" onclick="openSettingsPage('sp-tasks')">
+              <span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg></span>
+              <span class="menu-text"><b>課題</b><small>毎週の課題・表示する種類</small></span>
+              <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="menu-row" data-page="sp-time" onclick="openSettingsPage('sp-time')">
+              <span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+              <span class="menu-text"><b>時間の使い方</b><small>課題に使える時間帯・移動と食事</small></span>
+              <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="menu-row" data-page="sp-class" onclick="openSettingsPage('sp-class')">
+              <span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>
+              <span class="menu-text"><b>時間割とシフト表</b><small>授業の時間・シフト表の名前</small></span>
+              <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="menu-row" data-page="sp-theme" onclick="openSettingsPage('sp-theme')">
+              <span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg></span>
+              <span class="menu-text"><b>画面の色</b><small>夜だけ暗く・いつも明るい など</small></span>
+              <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+          <div class="settings-group">連携とデータ</div>
+          <div class="menu-list">
+            <button type="button" class="menu-row" data-page="sp-gcal" onclick="openSettingsPage('sp-gcal')">
+              <span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>
+              <span class="menu-text"><b>Google連携</b><small>バイト予定・manaba・通知・端末の移行</small></span>
+              <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="menu-row" data-page="sp-ai" onclick="openSettingsPage('sp-ai')">
+              <span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg></span>
+              <span class="menu-text"><b>AI</b><small>所要時間の推定・画像の読み取り</small></span>
+              <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="menu-row" data-page="sp-data" onclick="openSettingsPage('sp-data')">
+              <span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span>
+              <span class="menu-text"><b>データ</b><small>バックアップ・デモ表示</small></span>
+              <svg class="menu-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+          </nav>
         </div>
 
-        <div class="settings-group">ふだん使う設定</div>
+        <div class="settings-page" id="sp-tasks" hidden>
+          <div class="sub-head">
+            <button type="button" class="back-btn" onclick="closeSettingsPage()" aria-label="設定に戻る"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h1 class="page-title" tabindex="-1">課題</h1>
+          </div>
         <section class="settings-card">
           <h2>毎週の課題</h2>
           <div id="weekly-list"></div>
         </section>
 
+        <section class="settings-card">
+          <h2>表示する課題の種類<small>（manaba から取り込んだ課題）</small></h2>
+          <div class="kind-options" id="kind-options"></div>
+          <span class="field-note">※チェックを外した種類は、リスト・タイムライン・残り時間の合計に出しません（手入力の課題は常に表示）</span>
+        </section>
+        </div>
+
+        <div class="settings-page" id="sp-time" hidden>
+          <div class="sub-head">
+            <button type="button" class="back-btn" onclick="closeSettingsPage()" aria-label="設定に戻る"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h1 class="page-title" tabindex="-1">時間の使い方</h1>
+          </div>
         <section class="settings-card">
           <h2>課題に使える時間帯</h2>
           <div class="field-row study-hours">
@@ -619,21 +704,49 @@
             <span>〜</span>
             <select id="study-end" class="form-control" onchange="saveStudyHours()" aria-label="終了"></select>
           </div>
-          <span class="field-note">※この時間帯から授業・バイト（前後の移動30分を含む）を除いた時間を「空き時間」として、見通しと遅れの予測に使います</span>
+          <span class="field-note">※この時間帯から授業・バイト・移動・昼食を除いた時間を「空き時間」として、タイムラインと見通し・遅れの予測に使います</span>
         </section>
 
+        <section class="settings-card">
+          <h2>移動と食事</h2>
+          <div class="form-group">
+            <label for="move-school">学校まで（片道）</label>
+            <select id="move-school" class="form-control" onchange="saveLifeSettings()"></select>
+            <span class="field-note">※その日の最初の授業の前と、最後の授業の後に移動の時間を空けます（授業と授業の間には入れません）</span>
+          </div>
+          <div class="form-group">
+            <label for="move-job">バイト先まで（片道）</label>
+            <select id="move-job" class="form-control" onchange="saveLifeSettings()"></select>
+            <span class="field-note">※授業のあとそのままバイトに行く日は、重なる移動を1つにまとめます</span>
+          </div>
+          <div class="form-group">
+            <label for="lunch-start">昼食（授業がある日）</label>
+            <div class="field-row study-hours">
+              <select id="lunch-start" class="form-control" onchange="saveLifeSettings()" aria-label="昼食をとれる時間帯の始まり"></select>
+              <span>〜</span>
+              <select id="lunch-end" class="form-control" onchange="saveLifeSettings()" aria-label="昼食をとれる時間帯の終わり"></select>
+            </div>
+            <div class="field-row study-hours lunch-length">
+              <span>長さ</span>
+              <select id="lunch-minutes" class="form-control" onchange="saveLifeSettings()" aria-label="昼食の長さ"></select>
+            </div>
+            <span class="field-note">※この時間帯で、授業・バイト・移動のない時間のうち、真ん中（お昼）に近いところを昼食にし、課題を入れません。長さがとれない日は、いちばん長い空きを昼食にします</span>
+          </div>
+          <label class="check-row"><input type="checkbox" id="use-gaps" onchange="saveLifeSettings()"> 授業の合間（空きコマ）にも課題を入れる</label>
+        </section>
+        </div>
+
+        <div class="settings-page" id="sp-class" hidden>
+          <div class="sub-head">
+            <button type="button" class="back-btn" onclick="closeSettingsPage()" aria-label="設定に戻る"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h1 class="page-title" tabindex="-1">時間割とシフト表</h1>
+          </div>
         <section class="settings-card">
           <h2>時間割</h2>
           <div class="field-row">
             <span class="field-note" id="class-summary">未登録</span>
             <button type="button" class="btn-clear" onclick="openClassSheet()">登録・編集する</button>
           </div>
-        </section>
-
-        <section class="settings-card">
-          <h2>表示する課題の種類<small>（manaba から取り込んだ課題）</small></h2>
-          <div class="kind-options" id="kind-options"></div>
-          <span class="field-note">※チェックを外した種類は、リスト・タイムライン・残り時間の合計に出しません（手入力の課題は常に表示）</span>
         </section>
 
         <section class="settings-card">
@@ -648,7 +761,13 @@
             <span class="field-note">※「バイト」を含めると、Google連携でアプリにも自動で取り込まれます</span>
           </div>
         </section>
+        </div>
 
+        <div class="settings-page single" id="sp-theme" hidden>
+          <div class="sub-head">
+            <button type="button" class="back-btn" onclick="closeSettingsPage()" aria-label="設定に戻る"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h1 class="page-title" tabindex="-1">画面の色</h1>
+          </div>
         <section class="settings-card">
           <h2>画面の色</h2>
           <select id="theme-mode" class="form-control" onchange="saveThemeMode()" aria-label="画面の色">
@@ -659,10 +778,15 @@
           </select>
           <span class="field-note">※就寝前に見てもまぶしくないように、夜は暗い色にできます</span>
         </section>
+        </div>
 
-        <div class="settings-group">連携と初期設定<small>（最初に1回）</small></div>
+        <div class="settings-page" id="sp-gcal" hidden>
+          <div class="sub-head">
+            <button type="button" class="back-btn" onclick="closeSettingsPage()" aria-label="設定に戻る"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h1 class="page-title" tabindex="-1">Google連携</h1>
+          </div>
         <section class="settings-card" id="gcal-settings">
-          <h2>Google連携（バイト予定・manaba の課題・通知）</h2>
+          <h2>連携の設定</h2>
           <details class="setup-guide">
             <summary>はじめての連携の手順（約5分・最初の1回だけ）</summary>
             <ol>
@@ -670,7 +794,7 @@
                 <a id="gcal-template-link" class="btn-template" href="#" target="_blank" rel="noopener" hidden>テンプレートをコピーする</a></li>
               <li>コピーしたスプレッドシートのメニュー「<b>スケジュール帳</b>」→「<b>① 初期設定</b>」を押し、表示される許可を「許可」する</li>
               <li>「拡張機能」→「Apps Script」→ 右上の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」、実行：<b>自分</b>／アクセス：<b>全員</b> で「デプロイ」</li>
-              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>QRコードを、下の「ほかの端末に設定を移す」の「QRコードを読み取る」で読み取る</b>（パソコンなら「このパソコンのアプリに登録する」を押す）</li>
+              <li>メニュー「スケジュール帳」→「<b>② アプリに登録する情報</b>」の<b>QRコードを、このページの下の「QRコードを読み取る」で読み取る</b>（パソコンなら「このパソコンのアプリに登録する」を押す）</li>
             </ol>
             <p class="field-note">※ 1〜3はパソコンで行ってください（スプレッドシートのスマホアプリでは「スケジュール帳」メニューが使えません）。QRコードが使えないときは、同じ画面のURLと合言葉を下の2つの欄に貼ります。</p>
             <p class="field-note">データはあなたの Google アカウントの中だけで処理され、ほかの人（アプリの開発者を含む）には送られません。</p>
@@ -709,6 +833,21 @@
           </details>
         </section>
 
+        <section class="settings-card" id="transfer-settings">
+          <h2>ほかの端末に設定を移す</h2>
+          <p class="field-note">設定（APIキー・Google連携）は端末ごとに別々に保存されます。設定済みの端末でQRコードを出し、もう一方の端末のアプリで読み取ると、同じ設定になります。</p>
+          <label class="check-row"><input type="checkbox" id="transfer-keys" checked> AIのAPIキーも含める</label>
+          <button type="button" class="btn-secondary" onclick="showTransferQr()">この端末の設定をQRコードにする</button>
+          <button type="button" class="btn-submit" onclick="openQrScanner()">QRコードを読み取る</button>
+          <p class="field-note" style="margin-top: 8px;">※ホーム画面に追加したアプリは、Safari などのブラウザとも設定が別です。ホーム画面のアプリで使うときは、カメラアプリではなくこのボタンで読み取ってください（スプレッドシートの「② アプリに登録する情報」のQRコードも読み取れます）。</p>
+        </section>
+        </div>
+
+        <div class="settings-page single" id="sp-ai" hidden>
+          <div class="sub-head">
+            <button type="button" class="back-btn" onclick="closeSettingsPage()" aria-label="設定に戻る"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h1 class="page-title" tabindex="-1">AI</h1>
+          </div>
         <section class="settings-card">
           <h2>AI（所要時間の推定・画像の読み取り）</h2>
           <div class="form-group">
@@ -738,16 +877,13 @@
             </div>
           </div>
         </section>
+        </div>
 
-        <section class="settings-card" id="transfer-settings">
-          <h2>ほかの端末に設定を移す</h2>
-          <p class="field-note">設定（APIキー・Google連携）は端末ごとに別々に保存されます。設定済みの端末でQRコードを出し、もう一方の端末のアプリで読み取ると、同じ設定になります。</p>
-          <label class="check-row"><input type="checkbox" id="transfer-keys" checked> AIのAPIキーも含める</label>
-          <button type="button" class="btn-secondary" onclick="showTransferQr()">この端末の設定をQRコードにする</button>
-          <button type="button" class="btn-submit" onclick="openQrScanner()">QRコードを読み取る</button>
-          <p class="field-note" style="margin-top: 8px;">※ホーム画面に追加したアプリは、Safari などのブラウザとも設定が別です。ホーム画面のアプリで使うときは、カメラアプリではなくこのボタンで読み取ってください（スプレッドシートの「② アプリに登録する情報」のQRコードも読み取れます）。</p>
-        </section>
-
+        <div class="settings-page" id="sp-data" hidden>
+          <div class="sub-head">
+            <button type="button" class="back-btn" onclick="closeSettingsPage()" aria-label="設定に戻る"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <h1 class="page-title" tabindex="-1">データ</h1>
+          </div>
         <section class="settings-card">
           <h2>データのバックアップ</h2>
           <p class="field-note">課題・完了の記録・時間割・設定は、このブラウザの中にだけ保存されています。ブラウザのデータを消したり機種変更したりする前に、書き出しておいてください。</p>
@@ -766,6 +902,7 @@
           <p class="field-note" id="demo-note"></p>
           <button type="button" class="btn-secondary" id="demo-btn" onclick="toggleDemoMode()" style="margin: 10px 0 0;">デモ表示にする</button>
         </section>
+        </div>
       </div>
     </main>
   </div>
@@ -861,17 +998,17 @@
     <details class="help-section">
       <summary>タイムライン</summary>
       <figure class="help-shot help-shot-tall">
-        <img src="help/timeline.jpg?v=20261104" width="600" height="1165" alt="タイムラインの1日。9時から期限切れの課題、レポートの作業、10時から12時と13時から15時の授業、その合間にレポートの続き、18時から22時のアルバイトと前後の移動の時間" loading="lazy">
-        <span class="shot-mark" style="left: 90.9%; top: 3.8%">1</span>
-        <span class="shot-mark" style="left: 90.4%; top: 11.7%">2</span>
-        <span class="shot-mark" style="left: 90.4%; top: 25.1%">3</span>
-        <span class="shot-mark" style="left: 50%; top: 62.7%">4</span>
+        <img src="help/timeline.jpg?v=20261104-2" width="600" height="1168" alt="タイムラインの1日。9時に期限切れの課題、9時半から学校への移動30分、10時から12時と13時から15時の授業、その間の12時から13時に昼食、15時から移動30分、15時半からレポート、18時から22時のバイトと前後の移動10分" loading="lazy">
+        <span class="shot-mark" style="left: 90%; top: 57%">1</span>
+        <span class="shot-mark" style="left: 90%; top: 15.8%">2</span>
+        <span class="shot-mark" style="left: 90%; top: 44.7%">3</span>
+        <span class="shot-mark" style="left: 90%; top: 26%">4</span>
       </figure>
       <ol class="help-steps">
-        <li>空いている時間に、<b>急ぐ課題から自動で作業時間</b>を割り当てます（赤の課題が先）。</li>
+        <li>空いている時間に、<b>急ぐ課題から自動で作業時間</b>を割り当てます（赤の課題が先）。長い課題は空き時間に<b>分けて</b>置くこともあります（「2/3」は3回に分けた2回目）。</li>
         <li>時間割の<b>授業</b>の時間は避けます。</li>
-        <li>長い課題は、授業の合間に<b>分けて</b>置きます（「2/3」は3回に分けた2回目）。</li>
-        <li>バイトの前後30分は<b>移動の時間</b>として空けます。課題に使える時間帯は設定で変えられます。</li>
+        <li>学校への行き帰り（最初の授業の前・最後の授業の後）と、バイトの前後は<b>移動の時間</b>として空けます。</li>
+        <li>授業がある日は<b>昼食</b>の時間も空けます。移動と昼食の長さは、設定の「時間の使い方」で変えられます。</li>
       </ol>
       <p class="help-note">上の「今日／明日」で切り替えます。明日の計画は、今日の計画どおりに進めた場合のものです。</p>
     </details>
@@ -889,10 +1026,10 @@
     <details class="help-section">
       <summary>困ったとき</summary>
       <ul class="help-steps">
-        <li><b>同期できない</b>：設定の「同期できないとき」で、連携のURLを開いて原因を確かめられます。</li>
-        <li><b>スマホとパソコンで内容が違う</b>：データは端末ごとに保存されます。設定の「ほかの端末に設定を移す」のQRコードで連携をそろえてください。</li>
+        <li><b>同期できない</b>：設定の「Google連携」にある「同期できないとき」で、連携のURLを開いて原因を確かめられます。</li>
+        <li><b>スマホとパソコンで内容が違う</b>：データは端末ごとに保存されます。設定の「Google連携」にある「ほかの端末に設定を移す」のQRコードで連携をそろえてください。</li>
         <li><b>画面が暗い／明るい</b>：設定の「画面の色」で、夜だけ暗く・いつも明るい などを選べます。</li>
-        <li><b>機種変更する</b>：設定の「データのバックアップ」で書き出しておくと、新しい端末で読み込めます。</li>
+        <li><b>機種変更する</b>：設定の「データ」にある「データのバックアップ」で書き出しておくと、新しい端末で読み込めます。</li>
       </ul>
     </details>
   </section>
@@ -1100,7 +1237,6 @@
 
     const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
     const DEFAULT_JOB_HOURS = 4;          // 終了時刻が未登録のバイトは4時間とみなす
-    const MOVE_BUFFER_MIN = 30;           // バイト前後の移動・休憩時間
     const TASK_GAP_MIN = 10;              // 課題と課題の間の休憩
     const MIN_CHUNK_MIN = 15;             // これより短いスキマには課題を入れない
     const HOUR_PX = 50;                   // タイムライン1時間あたりの高さ
@@ -1237,6 +1373,7 @@
       });
       document.querySelector('.fab').hidden = tabId === 'tab-settings';
       if (tabId === 'tab-settings') {
+        showSettingsHome();
         updateClassSummary();
         updateBackupInfo();
         renderWeeklySettings();
@@ -1289,6 +1426,7 @@
       else if (!document.getElementById('tour').hidden) finishTutorial();
       else if (document.querySelector('.sheet.open')) closeSheet();
       else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
+      else if (isSettingsPageOpen()) closeSettingsPage();
       else return;
       e.preventDefault();
     });
@@ -1594,7 +1732,43 @@
       const name = document.getElementById('shift-name').value.trim();
       document.getElementById('shift-name-note').innerHTML = name
         ? `シフト表の名前：<b>${escapeHtml(name)}</b>（設定タブで変更できます）`
-        : '先に設定タブの「シフト表」で、シフト表に書かれている自分の名前を入力してください';
+        : '先に設定の「時間割とシフト表」で、シフト表に書かれている自分の名前を入力してください';
+    }
+
+    // ---------- 設定：項目の一覧と、項目ごとのページ ----------
+    function openSettingsPage(pageId) {
+      document.getElementById('settings-home').hidden = true;
+      document.querySelectorAll('.settings-page').forEach(page => { page.hidden = page.id !== pageId; });
+      window.scrollTo(0, 0);
+      document.querySelector(`#${pageId} .page-title`).focus({ preventScroll: true });   // 読み上げで、開いたページの名前から読む
+    }
+
+    function openSettings(pageId) {
+      switchTab('tab-settings');
+      openSettingsPage(pageId);
+    }
+
+    function openSettingsPageId() {
+      const page = document.querySelector('.settings-page:not([hidden])');
+      return page ? page.id : null;
+    }
+
+    function showSettingsHome() {
+      document.querySelectorAll('.settings-page').forEach(page => { page.hidden = true; });
+      document.getElementById('settings-home').hidden = false;
+    }
+
+    // ページから一覧に戻る。開いていた項目にフォーカスを戻す
+    function closeSettingsPage() {
+      const pageId = openSettingsPageId();
+      showSettingsHome();
+      window.scrollTo(0, 0);
+      const row = pageId && document.querySelector(`.menu-row[data-page="${pageId}"]`);
+      if (row) row.focus({ preventScroll: true });
+    }
+
+    function isSettingsPageOpen() {
+      return document.getElementById('tab-settings').classList.contains('active') && !!openSettingsPageId();
     }
 
     // 設定タブの指定の欄を開いて、そこへ移動する
@@ -1602,6 +1776,8 @@
       closeSheet();
       switchTab('tab-settings');
       const input = document.getElementById(inputId);
+      const page = input.closest('.settings-page');
+      if (page) openSettingsPage(page.id);
       input.scrollIntoView({ block: 'center' });
       input.focus();
     }
@@ -2125,19 +2301,9 @@
       const dayStart = startOfDay(day);
       const dayEnd = addDays(dayStart, 1);
       const from = new Date(Math.max(now.getTime(), dayStart.getTime()));
-      // 同じ時間のバイトが2件あっても、タイムラインには1つだけ描く
-      const jobKeys = new Set();
-      const jobRanges = tasks
-        .filter(t => t.type === 'job')
-        .filter(t => !jobKeys.has(jobRangeKey(t)) && jobKeys.add(jobRangeKey(t)))
-        .map(getJobRange)
-        .filter(r => r.end > from && r.start < dayEnd);
-
-      // バイト前後の移動時間と、その日の授業を「埋まっている時間」とする
-      const busy = jobRanges
-        .map(r => [r.start.getTime() - MOVE_BUFFER_MIN * 60000, r.end.getTime() + MOVE_BUFFER_MIN * 60000])
-        .concat(classRangesOn(dayStart).map(r => [r.start.getTime(), r.end.getTime()]))
-        .sort((a, b) => a[0] - b[0]);
+      // 授業・バイト・移動・昼食（・空きコマ）を「埋まっている時間」とする
+      const schedule = daySchedule(dayStart);
+      const busy = schedule.busy;
 
       // 次の15分刻みから、設定の「課題に使える時間帯」の中で計画する
       const quarter = 15 * 60000;
@@ -2193,7 +2359,7 @@
         if (remaining > 0) shortage.push({ task, minutes: Math.round(remaining / 60000) });
       }
 
-      return { jobRanges, blocks, shortage, later, placedMs };
+      return { schedule, blocks, shortage, later, placedMs };
     }
 
     // 明日の計画：今日の計画で配置した分を差し引いた残りを配置する
@@ -2231,15 +2397,14 @@
         <span class="pill pill-sum">残り ${formatMinutes(totalMinutes)}</span>
       `;
 
-      const { jobRanges, blocks, shortage, later } = isTomorrow ? planTomorrow(activeTasks, now) : planDay(activeTasks, now, now);
+      const { schedule, blocks, shortage, later } = isTomorrow ? planTomorrow(activeTasks, now) : planDay(activeTasks, now, now);
 
-      // 表示範囲：今日は いまの時刻（正時）〜 24:00。明日は 課題に使える時間帯・授業・バイト（移動を含む）の早いほう 〜 24:00
+      // 表示範囲：今日は いまの時刻（正時）〜 24:00。明日は 課題に使える時間帯・授業・バイト・移動の早いほう 〜 24:00
       const dayEnd = addDays(day, 1);
       const tlStart = new Date(isTomorrow
         ? Math.min(
             startOfDay(day).getTime() + loadStudyHours().start * HOUR_MS,
-            ...dayClasses.map(r => r.start.getTime()),
-            ...jobRanges.map(r => r.start.getTime() - MOVE_BUFFER_MIN * 60000))
+            ...schedule.busy.map(r => r[0]).filter(t => t >= startOfDay(day).getTime()))
         : now.getTime());
       if (tlStart < startOfDay(day)) tlStart.setTime(startOfDay(day).getTime());
       tlStart.setMinutes(0, 0, 0);
@@ -2252,24 +2417,33 @@
         html += `<div class="tl-hour" style="top:${h * HOUR_PX}px"><span>${pad2((tlStart.getHours() + h) % 24 || (h > 0 ? 24 : 0))}:00</span></div>`;
       }
 
-      const block = (cls, start, end, title, sub) => {
+      // 短い枠は高さを最低 18px にする。anchorEnd のとき（授業・バイトの前の移動）は終わりにそろえて下の枠と重ならないようにする
+      const block = (cls, start, end, title, sub, anchorEnd = false) => {
         const s = clip(start), e = clip(end);
         if (e <= s) return '';
-        const top = toY(s);
-        const height = Math.max(toY(e) - top, 16);
+        const height = Math.max(toY(e) - toY(s), 18);
+        const top = anchorEnd ? toY(e) - height : toY(s);
         const compact = height < 44;
         return `<div class="tl-block ${cls}${compact ? ' compact' : ''}" style="top:${top}px; height:${height}px;">
           <b>${title}</b>${sub ? `<span>${sub}</span>` : ''}
         </div>`;
       };
 
-      jobRanges.forEach(r => {
-        const job = tasks.find(t => t.type === 'job' && new Date(t.datetime).getTime() === r.start.getTime());
-        const moveMs = MOVE_BUFFER_MIN * 60000;
-        html += block('b-move', new Date(r.start - moveMs), r.start, '移動', '');
-        html += block('b-job', r.start, r.end, `アルバイト${job ? `（${escapeHtml(job.name)}）` : ''}`, `${formatHM(r.start)}–${formatHM(r.end)}`);
-        html += block('b-move', r.end, new Date(r.end.getTime() + moveMs), '移動', '');
+      const fixedStarts = new Set([...schedule.classes, ...schedule.jobs].map(r => r.start.getTime()));
+      schedule.moves.forEach(([ms, me]) => {
+        html += block('b-move', new Date(ms), new Date(me), '移動', `${Math.round((me - ms) / 60000)}分`, fixedStarts.has(me));
       });
+      schedule.jobs.forEach(r => {
+        const jobLabel = /バイト/.test(r.job.name) ? escapeHtml(r.job.name) : `アルバイト（${escapeHtml(r.job.name)}）`;
+        html += block('b-job', r.start, r.end, jobLabel, `${formatHM(r.start)}–${formatHM(r.end)}`);
+      });
+      schedule.gaps.forEach(([gs, ge]) => {
+        html += block('b-gap', new Date(gs), new Date(ge), '空きコマ', '課題を入れない設定');
+      });
+      if (schedule.lunch) {
+        const [ls, le] = schedule.lunch;
+        html += block('b-lunch', new Date(ls), new Date(le), '昼食', `${formatHM(new Date(ls))}–${formatHM(new Date(le))}`);
+      }
 
       dayClasses.forEach(r => {
         html += block('b-class', r.start, r.end, escapeHtml(r.name),
@@ -2359,17 +2533,142 @@
       return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
     }
 
-    // from〜to の「埋まっている時間」（バイト＋前後の移動・授業）を [開始ms, 終了ms] の一覧で返す
-    function busyRangesBetween(from, to) {
-      const busy = tasks
-        .filter(t => t.type === 'job')
-        .map(getJobRange)
-        .filter(r => r.end > from && r.start < to)
-        .map(r => [r.start.getTime() - MOVE_BUFFER_MIN * 60000, r.end.getTime() + MOVE_BUFFER_MIN * 60000]);
-      for (let d = startOfDay(from); d < to; d = addDays(d, 1)) {
-        classRangesOn(d).forEach(r => busy.push([r.start.getTime(), r.end.getTime()]));
+    // ---------- 移動と食事（人によって違うので設定にする） ----------
+    //   schoolMove：学校まで（片道・分）。その日の最初の授業の前と、最後の授業の後に空ける
+    //   jobMove   ：バイト先まで（片道・分）。バイトの前後に空ける
+    //   lunchStart〜lunchEnd（時）の間に lunchMinutes 分の昼食（授業がある日だけ）
+    //   useGaps   ：授業の合間（空きコマ）にも課題を入れるか
+    const LIFE_SETTINGS_STORAGE = 'smart_schedule_life_settings';
+    const DEFAULT_LIFE_SETTINGS = { schoolMove: 30, jobMove: 10, lunchStart: 11, lunchEnd: 14, lunchMinutes: 60, useGaps: true };
+
+    function loadLifeSettings() {
+      try {
+        return { ...DEFAULT_LIFE_SETTINGS, ...JSON.parse(localStorage.getItem(LIFE_SETTINGS_STORAGE) || '{}') };
+      } catch (e) {
+        return { ...DEFAULT_LIFE_SETTINGS };
       }
-      return busy.sort((a, b) => a[0] - b[0]);
+    }
+
+    function renderLifeSettings() {
+      const life = loadLifeSettings();
+      const options = (values, selected, label) => values.map(v => `<option value="${v}"${v === selected ? ' selected' : ''}>${label(v)}</option>`).join('');
+      const minutes = v => v === 0 ? 'なし' : `${v}分`;
+      document.getElementById('move-school').innerHTML = options([0, 10, 15, 20, 30, 45, 60, 90], life.schoolMove, minutes);
+      document.getElementById('move-job').innerHTML = options([0, 10, 15, 20, 30, 45, 60, 90], life.jobMove, minutes);
+      document.getElementById('lunch-start').innerHTML = options([10, 11, 12, 13], life.lunchStart, h => `${h}:00`);
+      document.getElementById('lunch-end').innerHTML = options([12, 13, 14, 15], life.lunchEnd, h => `${h}:00`);
+      document.getElementById('lunch-minutes').innerHTML = options([30, 45, 60, 90], life.lunchMinutes, v => `${v}分`);
+      document.getElementById('use-gaps').checked = life.useGaps;
+    }
+
+    function saveLifeSettings() {
+      const value = id => Number(document.getElementById(id).value);
+      const life = {
+        schoolMove: value('move-school'), jobMove: value('move-job'),
+        lunchStart: value('lunch-start'), lunchEnd: Math.max(value('lunch-end'), value('lunch-start') + 1),
+        lunchMinutes: value('lunch-minutes'), useGaps: document.getElementById('use-gaps').checked
+      };
+      localStorage.setItem(LIFE_SETTINGS_STORAGE, JSON.stringify(life));
+      renderLifeSettings();
+      renderTasks();
+    }
+
+    // 重なっている・くっついている区間を1つにまとめる（[開始ms, 終了ms] の一覧）
+    function mergeRanges(ranges) {
+      const sorted = ranges.filter(r => r[1] > r[0]).sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      for (const r of sorted) {
+        const last = merged[merged.length - 1];
+        if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+        else merged.push([r[0], r[1]]);
+      }
+      return merged;
+    }
+
+    // その日の「埋まっている時間」を、種類ごとに返す（タイムライン・見通し・遅れの予測で共通）
+    //   classes・jobs：授業とバイト、moves：移動（学校から直接バイト先へ行く日など、重なる移動は1つにまとめる）、
+    //   lunch：昼食（授業がある日だけ）、gaps：空きコマ（課題を入れない設定のとき）、busy：これら全部をまとめた区間
+    function daySchedule(day) {
+      const dayStart = startOfDay(day);
+      const dayEnd = addDays(dayStart, 1);
+      const life = loadLifeSettings();
+      const classes = classRangesOn(dayStart);
+      const jobKeys = new Set();
+      const jobs = tasks
+        .filter(t => t.type === 'job')
+        .filter(t => !jobKeys.has(jobRangeKey(t)) && jobKeys.add(jobRangeKey(t)))   // 同じ時間のバイトは1つ
+        .map(t => ({ ...getJobRange(t), job: t }))
+        .filter(r => r.end > dayStart && r.start < dayEnd)
+        .sort((a, b) => a.start - b.start);
+
+      const moveRanges = [];
+      if (classes.length > 0 && life.schoolMove > 0) {
+        const first = classes[0].start.getTime();
+        const last = Math.max(...classes.map(c => c.end.getTime()));
+        moveRanges.push([first - life.schoolMove * 60000, first], [last, last + life.schoolMove * 60000]);
+      }
+      if (life.jobMove > 0) {
+        jobs.forEach(r => moveRanges.push(
+          [r.start.getTime() - life.jobMove * 60000, r.start.getTime()],
+          [r.end.getTime(), r.end.getTime() + life.jobMove * 60000]));
+      }
+      const fixed = [...classes, ...jobs].map(r => [r.start.getTime(), r.end.getTime()]);
+      // 移動は、授業・バイトと重なる部分を除いて表示する
+      const moves = [];
+      mergeRanges(moveRanges).forEach(([ms, me]) => {
+        let cursor = ms;
+        mergeRanges(fixed).forEach(([fs, fe]) => {
+          if (fe <= cursor || fs >= me) return;
+          if (fs > cursor) moves.push([cursor, fs]);
+          cursor = Math.max(cursor, fe);
+        });
+        if (cursor < me) moves.push([cursor, me]);
+      });
+
+      const gaps = [];
+      if (!life.useGaps) {
+        for (let i = 1; i < classes.length; i++) {
+          const prevEnd = Math.max(...classes.slice(0, i).map(c => c.end.getTime()));
+          if (classes[i].start.getTime() > prevEnd) gaps.push([prevEnd, classes[i].start.getTime()]);
+        }
+      }
+
+      // 昼食：時間帯の中で、ほかの予定のない時間に必要な長さをとる。とれる場所が複数あれば時間帯の真ん中（11〜14時なら12時〜）に
+      // いちばん近いところ。どこもとれなければ、いちばん長い空きを昼食にする
+      let lunch = null;
+      if (classes.length > 0 && life.lunchMinutes > 0) {
+        const windowStart = dayStart.getTime() + life.lunchStart * HOUR_MS;
+        const windowEnd = dayStart.getTime() + life.lunchEnd * HOUR_MS;
+        const need = life.lunchMinutes * 60000;
+        const free = [];
+        let cursor = windowStart;
+        mergeRanges([...fixed, ...moves, ...gaps]).forEach(([bs, be]) => {
+          if (be <= cursor || bs >= windowEnd) return;
+          if (bs > cursor) free.push([cursor, bs]);
+          cursor = Math.max(cursor, be);
+        });
+        if (cursor < windowEnd) free.push([cursor, windowEnd]);
+        const target = (windowStart + windowEnd) / 2 - need / 2;
+        const candidates = free
+          .filter(([fs, fe]) => fe - fs >= need)
+          .map(([fs, fe]) => Math.min(Math.max(target, fs), fe - need));
+        if (candidates.length > 0) {
+          const start = candidates.reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a));
+          lunch = [start, start + need];
+        } else if (free.length > 0) {
+          lunch = free.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
+        }
+      }
+
+      const busy = mergeRanges([...fixed, ...moves, ...gaps, ...(lunch ? [lunch] : [])]);
+      return { classes, jobs, moves, gaps, lunch, busy };
+    }
+
+    // from〜to の「埋まっている時間」を [開始ms, 終了ms] の一覧で返す
+    function busyRangesBetween(from, to) {
+      const busy = [];
+      for (let d = startOfDay(from); d < to; d = addDays(d, 1)) busy.push(...daySchedule(d).busy);
+      return mergeRanges(busy);
     }
 
     // from〜to の、課題に使える空き時間（分）。日ごとの内訳も返す
@@ -2611,7 +2910,7 @@
       const provider = AI_PROVIDERS[providerId];
       const apiKey = localStorage.getItem(provider.keyStorage);
       if (!apiKey) {
-        showStatus(`${provider.label}のAPIキーが未設定です。⚙️ 設定タブで入力してください`, 'error');
+        showStatus(`${provider.label}のAPIキーが未設定です。⚙️ 設定の「AI」で入力してください`, 'error');
         return;
       }
 
@@ -2700,7 +2999,7 @@ ${upcoming}
       hiddenTasks.forEach(t => { counts[taskKind(t)] = (counts[taskKind(t)] || 0) + 1; });
       const text = Object.entries(counts).map(([kind, n]) => `${kind} ${n}件`).join('・');
       document.getElementById('hidden-kinds-note').innerHTML = text
-        ? `<div class="hidden-note">${text}を非表示にしています（<a onclick="switchTab('tab-settings')">設定で変更</a>）</div>`
+        ? `<div class="hidden-note">${text}を非表示にしています（<a href="#" onclick="openSettings('sp-tasks'); return false;">設定で変更</a>）</div>`
         : '';
     }
 
@@ -3238,7 +3537,7 @@ ${upcoming}
 
     async function syncGoogleCalendar(manual = false) {
       if (isDemoMode()) {
-        if (manual) showStatus('デモ表示中は同期しません（設定の「自分のデータに戻す」で戻せます）', 'info');
+        if (manual) showStatus('デモ表示中は同期しません（設定の「データ」の「自分のデータに戻す」で戻せます）', 'info');
         return;
       }
       const url = localStorage.getItem(GCAL_URL_STORAGE);
@@ -3307,7 +3606,7 @@ ${upcoming}
         console.error('Googleカレンダー同期エラー:', err);
         gcalLastError = err.isTokenError
           ? '合言葉が一致しません（⚙️ 設定の合言葉を確認）'
-          : err.reason || '同期に失敗しました（⚙️ 設定の「同期できないとき」で確かめられます）';
+          : err.reason || '同期に失敗しました（⚙️ 設定の「Google連携」の「同期できないとき」で確かめられます）';
         if (manual) showStatus(`📅 ${gcalLastError}`, 'error');
       } finally {
         gcalSyncing = false;
@@ -4417,7 +4716,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       localStorage.setItem(CLASS_STORAGE, JSON.stringify(classData));
       generateWeeklyTasks();
       refreshAfterDemoChange();
-      showStatus('デモ表示にしました。設定の「自分のデータに戻す」で元に戻せます', 'info');
+      showStatus('デモ表示にしました。設定の「データ」の「自分のデータに戻す」で元に戻せます', 'info');
     }
 
     function endDemoMode() {
@@ -4791,6 +5090,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     loadShiftSettings();
     renderKindOptions();
     renderStudyHoursOptions();
+    renderLifeSettings();
     loadThemeMode();
     updateDemoSettings();
     updateClassSummary();
@@ -4813,7 +5113,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     });
 
     // ---------- スマホの「戻る」ボタン：押しただけでアプリが閉じないようにする ----------
-    // 「戻る」を押したら順に：開いている案内・シート・記録を閉じる → タイムライン・設定ならリストに戻る →
+    // 「戻る」を押したら順に：開いている案内・シート・記録を閉じる → 設定の項目のページなら一覧に戻る → タイムライン・設定ならリストに戻る →
     // リストなら「アプリを終了しますか？」と確かめる。確認の間は見張りをやめるので、もう一度「戻る」を押すと終了する。
     //   Android の Chrome：CloseWatcher で「戻る」を直接受け取る（開いてすぐ押しても効き、履歴に何も積まない）
     //   それ以外：履歴に目印を1つ積み、戻ったら目印を積み直す
@@ -4843,6 +5143,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       if (!document.getElementById('tour').hidden) finishTutorial();
       else if (document.querySelector('.sheet.open')) closeSheet();
       else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
+      else if (isSettingsPageOpen()) closeSettingsPage();
       else if (!document.getElementById('tab-list').classList.contains('active')) switchTab('tab-list');
       else {
         openExitConfirm();

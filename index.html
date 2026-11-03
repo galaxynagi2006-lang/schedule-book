@@ -264,6 +264,11 @@
     .btn-danger { width: 100%; margin-top: 10px; background: none; border: 1px solid var(--red-line); color: var(--alert-red); padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
 
     .empty-message { text-align: center; color: var(--text-sub); font-size: 15px; padding: 28px 0; }
+    .empty-start { text-align: center; padding: 24px 4px 8px; }
+    .empty-title { font-size: 17px; font-weight: 800; }
+    .empty-text { margin: 8px 0 16px; font-size: 14px; line-height: 1.7; color: var(--text-sub); text-align: left; }
+    .empty-actions { display: grid; gap: 10px; }
+    .empty-actions .btn-submit, .empty-actions .btn-secondary { margin: 0; }
 
     .completed-section { margin-top: 2px; }
     .completed-section summary { font-size: 13px; color: var(--text-faint); cursor: pointer; font-weight: 600; list-style: none; min-height: 44px; display: flex; align-items: center; }
@@ -462,6 +467,8 @@
     .weekly-row { padding: 8px 0; border-top: 1px solid var(--line); }
     .weekly-row:first-child { border-top: none; margin-top: 0; }
     .weekly-name { font-size: 13px; font-weight: 700; }
+    .weekly-stats { display: block; margin-top: 2px; }
+    .weekly-stats.missed { color: var(--yellow-ink); }
     .weekly-actions { display: flex; gap: 6px; flex-shrink: 0; }
     .backup-actions { display: flex; flex-direction: column; gap: 8px; }
     .backup-import { display: block; text-align: center; margin-bottom: 0; }
@@ -507,6 +514,7 @@
     .class-grid { display: grid; gap: 2px; margin: 14px 0; font-size: 12px; }
     .class-grid div { min-height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden; line-height: 1.15; padding: 1px; }
     .class-grid .grid-head { font-weight: 700; color: var(--text-sub); }
+    .class-grid .grid-today { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--primary-color); color: var(--on-fill); }
     .class-grid .grid-cell { background: var(--surface-2); }
     .class-grid .grid-cell.filled { background: var(--class-soft); color: var(--class-ink); font-weight: 700; }
     .class-grid .grid-cell.overlap { background: var(--yellow-line); color: var(--yellow-ink); }
@@ -2190,7 +2198,18 @@
       const taskListEl = document.getElementById('task-list');
 
       if (activeTasks.length === 0) {
-        taskListEl.innerHTML = '<div class="empty-message">未完了の課題はありません</div>';
+        // まだ1件も登録していないときは、何ができるかと始め方を案内する
+        const neverAdded = !tasks.some(t => t.type !== 'job');
+        taskListEl.innerHTML = neverAdded
+          ? `<div class="empty-start">
+              <p class="empty-title">課題を登録しましょう</p>
+              <p class="empty-text">レポートや小テストの締切を登録すると、急ぐ順に並べて、空き時間で間に合うかを知らせます。Google連携でつなぐと、manaba の課題が自動で集まります。</p>
+              <div class="empty-actions">
+                <button type="button" class="btn-submit" onclick="openSheet()">＋ 課題を登録する</button>
+                <button type="button" class="btn-secondary" onclick="openSettings('sp-gcal')">Google連携を設定する</button>
+              </div>
+            </div>`
+          : '<div class="empty-message">未完了の課題はありません。おつかれさまです</div>';
         return;
       }
 
@@ -3292,6 +3311,19 @@ ${upcoming}
       renderWeeklySettings();
     }
 
+    // 締切が過ぎた週のうち、完了（提出）にした週の数。毎回出す課題を「出したか」振り返れるように
+    function weeklySubmissionStats(w, now = new Date()) {
+      const end = Math.min(w.until ? new Date(`${w.until}T23:59`).getTime() : Infinity, now.getTime());
+      let due = 0;
+      let done = 0;
+      for (const d = new Date(w.first); d.getTime() <= end; d.setDate(d.getDate() + 7)) {
+        due++;
+        const day = toLocalInputValue(d).slice(0, 10);
+        if (tasks.some(t => t.weeklyId === w.id && t.completed && t.datetime.slice(0, 10) === day)) done++;
+      }
+      return { due, done };
+    }
+
     function renderWeeklySettings() {
       const list = loadWeeklyTasks();
       document.getElementById('weekly-list').innerHTML = list.length === 0
@@ -3299,11 +3331,13 @@ ${upcoming}
         : list.map(w => {
           const first = new Date(w.first);
           const until = w.until ? `・${Number(w.until.slice(5, 7))}/${Number(w.until.slice(8, 10))}まで` : '';
+          const stats = weeklySubmissionStats(w);
           return `
             <div class="field-row weekly-row">
               <div>
                 <div class="weekly-name">${escapeHtml(w.name)}</div>
                 <span class="field-note">毎週${WEEKDAYS[first.getDay()]}曜 ${formatHM(first)} 締切・約${w.estimatedMinutes || 60}分${until}</span>
+                ${stats.due > 0 ? `<span class="field-note weekly-stats${stats.done < stats.due ? ' missed' : ''}">これまで ${stats.due}回中 ${stats.done}回 提出${stats.done < stats.due ? `（出していない週 ${stats.due - stats.done}回）` : ''}</span>` : ''}
               </div>
               <div class="weekly-actions">
                 <button type="button" class="btn-clear" onclick="openEditWeekly(${w.id})">編集</button>
@@ -3545,6 +3579,10 @@ ${upcoming}
         if (manual) showStatus('📅 先に Apps Script のURLを入力してください', 'error');
         return;
       }
+      if (!navigator.onLine) {
+        if (manual) showStatus('📶 オフラインのため同期できません。電波のある所でもう一度押してください', 'error');
+        return;
+      }
       if (gcalSyncing) return;
       gcalSyncing = true;
 
@@ -3741,7 +3779,7 @@ ${upcoming}
       estimatingTasks = true;
       try {
         let task;
-        while ((task = tasks.find(t => t.estimatePending && !t.completed && isTaskVisible(t)))) {
+        while (navigator.onLine && (task = tasks.find(t => t.estimatePending && !t.completed && isTaskVisible(t)))) {
           const result = await estimateWithCurrentAI(task.name, task.detail);
           if (result.noKey) {
             // キーがなければ60分のまま確定する
@@ -4026,7 +4064,10 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       // 確認用の小さな時間割表
       const days = active.some(c => c.weekday === 6) ? [1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5];
       const maxPeriod = Math.max(5, ...active.map(c => c.endPeriod));
-      let gridHtml = `<div class="grid-head"></div>${days.map(w => `<div class="grid-head">${WEEKDAYS[w]}</div>`).join('')}`;
+      const todayWeekday = new Date().getDay();   // 今日の曜日を丸で目立たせる
+      let gridHtml = `<div class="grid-head"></div>${days.map(w => w === todayWeekday
+        ? `<div class="grid-head"><span class="grid-today" title="今日">${WEEKDAYS[w]}</span></div>`
+        : `<div class="grid-head">${WEEKDAYS[w]}</div>`).join('')}`;
       for (let p = 1; p <= maxPeriod; p++) {
         gridHtml += `<div class="grid-head">${p}</div>`;
         days.forEach(w => {
@@ -5077,6 +5118,26 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       }
     }
 
+    // ホーム画面のアイコンを長押ししたときのショートカット（manifest の shortcuts の ?open=…）
+    function openFromShortcut() {
+      const open = new URLSearchParams(location.search).get('open');
+      if (!open) return false;
+      history.replaceState(history.state, '', location.pathname + location.hash);
+      if (open === 'add') openSheet();
+      else if (open === 'timeline') switchTab('tab-timeline');
+      return true;
+    }
+
+    // 電波がないときも開けるように、画面を端末に保存しておく（sw.js）
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(err => console.warn('オフライン用の保存を準備できませんでした', err)));
+    }
+    // 電波が戻ったら、オフラインの間にできなかった同期と所要時間の推定をする
+    window.addEventListener('online', () => {
+      syncGoogleCalendar();
+      estimatePendingTasks();
+    });
+
     const connectLink = readConnectLink();
     // アプリを開いたまま連携リンクを開いた場合（アドレスの「#」以降だけが変わる）も、読み込み直して登録する
     window.addEventListener('hashchange', () => {
@@ -5098,7 +5159,8 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     if (connectLink && connectLink.error) {
       showStatus('📅 連携用のQRコード・リンクを読み取れませんでした。もう一度読み取るか、⚙️ 設定で貼り付けてください', 'error');
     }
-    if (!connectLink && !localStorage.getItem(TUTORIAL_STORAGE)) openTutorial();
+    const fromShortcut = openFromShortcut();
+    if (!connectLink && !fromShortcut && !localStorage.getItem(TUTORIAL_STORAGE)) openTutorial();
     syncGoogleCalendar(!!connectedNames?.includes('Google連携'));   // QRコードから開いたときは結果を表示する
     if (connectedNames && !connectedNames.includes('Google連携')) showStatus(`🔗 設定を登録しました（${connectedNames.join('・')}）`, 'info');
     setInterval(syncGoogleCalendar, GCAL_SYNC_INTERVAL_MIN * 60000);

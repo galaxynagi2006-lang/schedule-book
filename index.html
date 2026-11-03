@@ -58,6 +58,7 @@
       --line: #e5e7eb;
       --line-soft: #f3f4f6;
       --line-strong: #cbd5e1;
+      --control-border: #848e9d;      /* 入力欄・? ボタンの枠。背景との差が3:1以上 */
       --on-fill: #ffffff;              /* 塗りのボタン・バッジの上の文字 */
       --btn-bg: #111827;
       --alert-red: #dc2626;
@@ -92,6 +93,7 @@
       --line: #263042;
       --line-soft: #1b2435;
       --line-strong: #3a475c;
+      --control-border: #64738a;
       --on-fill: #0b1120;
       --btn-bg: #e5e7eb;
       --alert-red: #f87171;
@@ -135,13 +137,13 @@
     .date-label { font-size: 13px; color: var(--text-sub); letter-spacing: 0.04em; }
     .page-title { font-size: 22px; font-weight: 700; margin-top: 2px; }
     .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
-    .help-btn { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--surface); color: var(--text-sub); font-size: 19px; font-weight: 800; line-height: 1; cursor: pointer; position: relative; }
+    .help-btn { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--control-border); background: var(--surface); color: var(--text-sub); font-size: 19px; font-weight: 800; line-height: 1; cursor: pointer; position: relative; }
     .help-btn::before { content: ""; position: absolute; inset: -4px; }   /* 押せる範囲を44px四方に */
 
     /* 使い方（ヘルプ） */
     .help-lead { font-size: 15px; line-height: 1.6; margin-bottom: 12px; }
     .help-section { border-top: 1px solid var(--line); }
-    .help-section summary { font-size: 15px; font-weight: 800; padding: 14px 0; cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
+    .help-section summary { font-size: 15px; font-weight: 800; padding: 14px 0; min-height: 44px; align-items: center; cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
     .help-section summary::-webkit-details-marker { display: none; }
     .help-section summary::after { content: "＋"; color: var(--text-faint); font-weight: 700; }
     .help-section[open] summary::after { content: "－"; }
@@ -166,7 +168,7 @@
     .tour-dim { position: fixed; background: rgba(2, 6, 23, 0.7); }   /* 光らせる場所の上下左右を暗くする4枚 */
     .tour-spot { position: fixed; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.55); pointer-events: none; }
     .tour-spot.none { display: none; }   /* 光らせる場所がない（あいさつ）ときは全体を暗く */
-    .tour-tip { position: fixed; left: 16px; right: 16px; max-width: 360px; margin: 0 auto; background: var(--surface); color: var(--text-main); border-radius: 14px; padding: 14px 16px 10px; border: 1px solid var(--line-strong); box-shadow: 0 12px 32px var(--shadow); transition: top 0.25s ease; }   /* 暗い表示でも、暗くしたまわりと区別できるように枠を付ける */
+    .tour-tip { position: fixed; left: 16px; right: 16px; max-width: 360px; margin: 0 auto; background: var(--surface); color: var(--text-main); border-radius: 12px; padding: 14px 16px 10px; border: 1px solid var(--line-strong); box-shadow: 0 12px 32px var(--shadow); transition: top 0.25s ease; }   /* 暗い表示でも、暗くしたまわりと区別できるように枠を付ける */
     .tour-arrow { position: absolute; width: 14px; height: 14px; background: var(--surface); transform: rotate(45deg); }
     .tour-tip.below .tour-arrow { top: -8px; border-left: 1px solid var(--line-strong); border-top: 1px solid var(--line-strong); }
     .tour-tip.above .tour-arrow { bottom: -8px; border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); }
@@ -176,7 +178,7 @@
     .tour-text { font-size: 15px; line-height: 1.55; color: var(--text-sub); }
     .tour-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
     .tour-skip { background: none; border: none; color: var(--text-sub); font-size: 15px; font-weight: 700; padding: 10px 4px; min-height: 44px; cursor: pointer; }
-    .tour-next { background: var(--btn-bg); color: var(--on-fill); border: none; border-radius: 10px; padding: 10px 22px; min-height: 44px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .tour-next { background: var(--btn-bg); color: var(--on-fill); border: none; border-radius: 12px; padding: 10px 22px; min-height: 44px; font-size: 15px; font-weight: 700; cursor: pointer; }
     @media (prefers-reduced-motion: reduce) {
       .tour-tip { transition: none; }
     }
@@ -202,8 +204,8 @@
     .task-body { flex: 1; min-width: 0; }
     .task-name { font-size: 15px; font-weight: 700; word-break: break-all; }
     .task-detail { font-size: 12px; color: var(--text-sub); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .task-meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .task-link { display: inline-block; margin-top: 4px; padding: 6px 0; margin-bottom: -6px; font-size: 12px; color: var(--primary-color); font-weight: 600; text-decoration: none; }
+    .task-meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; }
+    .task-link { display: inline-block; padding: 13px 0; margin: -9px 0 -13px; font-size: 12px; color: var(--primary-color); font-weight: 600; text-decoration: none; }
     .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
     .task-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .count-num { font-size: 17px; font-weight: 800; white-space: nowrap; }
@@ -239,14 +241,14 @@
       color: var(--text-faint);
       font-size: 15px;
       cursor: pointer;
-      min-width: 40px; min-height: 40px; margin: -8px -10px -8px 0;
+      min-width: 44px; min-height: 44px; margin: -10px -12px -10px 0;
       display: inline-grid; place-items: center;
     }
     .delete-btn:hover { color: var(--alert-red); }
     .task-body[onclick], .task-side[onclick], .job-row[onclick] { cursor: pointer; }
     .task-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 5px; }
     .task-tags .task-link { margin-top: 0; }
-    .tag { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 6px; background: var(--info-soft); color: var(--info-ink); }
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 0 7px; border-radius: 8px; background: var(--info-soft); color: var(--info-ink); }
     .tag-weekly { background: var(--class-soft); color: var(--class-ink); }
     .tag-dup { background: var(--yellow-soft); color: var(--yellow-ink); }
     .btn-danger { width: 100%; margin-top: 10px; background: none; border: 1px solid var(--red-line); color: var(--alert-red); padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
@@ -254,13 +256,13 @@
     .empty-message { text-align: center; color: var(--text-sub); font-size: 15px; padding: 28px 0; }
 
     .completed-section { margin-top: 2px; }
-    .completed-section summary { font-size: 13px; color: var(--text-faint); cursor: pointer; font-weight: 600; list-style: none; padding: 12px 0; }
+    .completed-section summary { font-size: 13px; color: var(--text-faint); cursor: pointer; font-weight: 600; list-style: none; min-height: 44px; display: flex; align-items: center; }
     .completed-section summary::-webkit-details-marker { display: none; }
-    .completed-section summary::before { content: "› "; }
+    .completed-section summary::before { content: "›"; margin-right: 6px; }
     .completed-section[open] summary::before { content: "⌄ "; }
     .job-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line-soft); font-size: 15px; }
     .job-row-date { font-weight: 700; white-space: nowrap; }
-    .job-row-name { flex: 1; min-width: 0; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-row-name { flex: 1; min-width: 0; color: var(--text-sub); overflow-wrap: anywhere; }
     .job-row .delete-btn { font-size: 15px; }
 
     .completed-row .task-name { text-decoration: line-through; color: var(--text-sub); font-weight: 600; }
@@ -281,7 +283,7 @@
     .tl-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
     .tl-title > span:last-child { color: var(--accent-color); }
     .tl-day-switch { display: inline-flex; background: var(--surface-3); border-radius: 999px; padding: 3px; gap: 2px; }
-    .tl-day-btn { border: none; background: transparent; color: var(--text-sub); font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+    .tl-day-btn { border: none; background: transparent; color: var(--text-sub); font-size: 13px; font-weight: 700; padding: 6px 18px; min-height: 44px; border-radius: 999px; cursor: pointer; }
     .tl-day-btn.active { background: var(--surface); color: var(--text-main); box-shadow: 0 1px 2px var(--shadow); }
 
     .tl-grid { position: relative; }
@@ -306,7 +308,7 @@
     .tl-deadline { position: absolute; left: 46px; right: 0; border-top: 2px dotted var(--alert-red); z-index: 1; }
     .tl-deadline span { position: absolute; right: 0; top: 2px; font-size: 12px; font-weight: 700; color: var(--alert-red); }
 
-    .tl-card { margin: 18px 20px 0; background: var(--surface); border-radius: 14px; padding: 12px 14px; border: 1px solid var(--line); }
+    .tl-card { margin: 18px 20px 0; background: var(--surface); border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); }
     .tl-card-title { font-size: 12px; font-weight: 700; color: var(--text-sub); margin-bottom: 6px; }
     .tl-card-title.warn { color: var(--alert-red); }
     .tl-card-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 4px 0; }
@@ -336,6 +338,11 @@
       width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer;
       background: var(--btn-bg); color: var(--on-fill); font-size: 30px; font-weight: 300; line-height: 1;
       box-shadow: 0 8px 20px var(--shadow);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .fab.fab-away { transform: translateY(140%); opacity: 0; pointer-events: none; }   /* 下へスクロール中は隠す */
+    @media (prefers-reduced-motion: reduce) {
+      .fab { transition: none; }
     }
 
     /* ========== 追加フォーム（ボトムシート） ========== */
@@ -355,21 +362,22 @@
     }
     .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .sheet-head span { font-size: 17px; font-weight: 800; }
-    .sheet-close { border: none; background: var(--surface-2); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 15px; color: var(--text-sub); }
+    .sheet-close { border: none; background: var(--surface-2); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 15px; color: var(--text-sub); position: relative; flex-shrink: 0; }
+    .sheet-close::before { content: ""; position: absolute; inset: -2px; }   /* 押せる範囲を44px四方に */
 
     .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
     .form-group label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
-    .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; font-size: 16px; background: var(--surface); color: var(--text-main); }
+    .form-control { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 12px; font-size: 16px; background: var(--surface); color: var(--text-main); }
     textarea.form-control { resize: vertical; }
     .btn-submit { width: 100%; background: var(--btn-bg); color: var(--on-fill); border: none; padding: 13px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
     .btn-submit:disabled { opacity: 0.6; }
 
     .api-settings { margin-top: 14px; border-top: 1px dashed var(--line-strong); padding-top: 12px; }
     .api-settings summary { font-size: 12px; color: var(--text-sub); cursor: pointer; font-weight: 600; }
-    .btn-clear { background: var(--surface-3); color: var(--text-main); border: none; padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-clear { background: var(--surface-3); color: var(--text-main); border: none; padding: 9px 14px; min-height: 44px; border-radius: 8px; font-size: 13px; cursor: pointer; }
 
     /* ========== 見通し・遅延リスク ========== */
-    .outlook { border-radius: 14px; padding: 14px; margin-top: 18px; border: 1px solid var(--line); }
+    .outlook { border-radius: 12px; padding: 14px; margin-top: 18px; border: 1px solid var(--line); }
     .outlook-green { background: var(--green-tint); border-color: var(--green-line); }
     .outlook-yellow { background: var(--yellow-tint); border-color: var(--yellow-line); }
     .outlook-red { background: var(--red-tint); border-color: var(--red-line); }
@@ -393,18 +401,18 @@
     .risk-high { background: var(--red-soft); color: var(--red-ink); border-left: 3px solid var(--alert-red); }
     .risk-mid { background: var(--yellow-soft); color: var(--yellow-ink); border-left: 3px solid var(--alert-yellow); }
     .tendency { margin-top: 2px; }
-    .tendency summary { font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: 600; list-style: none; padding: 12px 0; }
+    .tendency summary { font-size: 13px; color: var(--text-sub); cursor: pointer; font-weight: 600; list-style: none; min-height: 44px; display: flex; align-items: center; }
     .tendency summary::-webkit-details-marker { display: none; }
-    .tendency summary::before { content: "› "; }
+    .tendency summary::before { content: "›"; margin-right: 6px; }
     .tendency[open] summary::before { content: "⌄ "; }
     .tendency-body { font-size: 13px; line-height: 1.6; margin-top: 8px; background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; }
     .tendency-body ul { padding-left: 18px; }
-    .ai-advice { margin-top: 8px; padding: 8px 10px; background: var(--surface); border-radius: 10px; border: 1px solid var(--line); }
+    .ai-advice { margin-top: 8px; padding: 8px 10px; background: var(--surface); border-radius: 12px; border: 1px solid var(--line); }
     .study-hours { justify-content: flex-start; }
-    .study-hours select { width: auto; }
+    .study-hours select { width: auto; flex: 0 1 auto; min-width: 0; }   /* ふだんは中身の幅のまま。狭い画面では縮んで、横にはみ出さない */
 
     /* ========== 設定タブ ========== */
-    .settings-card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 14px; }
+    .settings-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 14px; }
     .settings-card h2 { font-size: 15px; font-weight: 800; margin-bottom: 10px; }
     .settings-card h2 small, .settings-group small { font-size: 12px; font-weight: 600; color: var(--text-sub); }
     .settings-group { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.04em; margin: 24px 0 -4px; }
@@ -415,9 +423,9 @@
     .secret.revealed { -webkit-text-security: none; }
     .field-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
     .field-row .btn-clear, .secret-field .btn-clear { white-space: nowrap; flex-shrink: 0; }
-    .kind-options { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 6px; }
-    .check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0; }
-    .check-row input, .kind-options input { width: 18px; height: 18px; accent-color: var(--primary-color); }
+    .kind-options { display: flex; flex-wrap: wrap; gap: 0 16px; margin-bottom: 6px; }
+    .check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 2px 0; min-height: 44px; cursor: pointer; }   /* 文字ごと押せる行を44pxの高さに */
+    .check-row input, .kind-options input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--primary-color); }
     .weekly-until { display: flex; flex-direction: column; gap: 6px; }
     .weekly-row { padding: 8px 0; border-top: 1px solid var(--line); }
     .weekly-row:first-child { border-top: none; margin-top: 0; }
@@ -437,14 +445,14 @@
     /* ========== シフト表からの一括登録 ========== */
     .btn-secondary { width: 100%; background: var(--primary-soft); color: var(--accent-color); border: none; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
     #add-schedule-form { margin-top: 6px; }
-    .setup-guide { margin-top: 8px; background: var(--bg-sub); border-radius: 10px; padding: 8px 12px; font-size: 13px; }
-    .setup-guide summary { font-size: 13px; font-weight: 700; color: var(--primary-color); cursor: pointer; }   /* 「manabaで開く」と同じ青 */
+    .setup-guide { margin-top: 8px; background: var(--bg-sub); border-radius: 12px; padding: 8px 12px; font-size: 13px; }
+    .setup-guide summary { font-size: 13px; font-weight: 700; color: var(--primary-color); cursor: pointer; min-height: 44px; display: flex; align-items: center; margin: -8px 0; }   /* 「manabaで開く」と同じ青 */
     .setup-guide ol { padding-left: 18px; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; line-height: 1.5; }
-    .btn-template { display: inline-block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; background: var(--primary-color); color: var(--on-fill); font-weight: 700; text-decoration: none; }
+    .btn-template { display: inline-block; margin-top: 6px; padding: 12px 14px; border-radius: 12px; background: var(--primary-color); color: var(--on-fill); font-weight: 700; text-decoration: none; }
     .shift-settings { background: var(--bg-sub); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; }
     .shift-settings summary { font-size: 13px; font-weight: 700; color: var(--text-sub); cursor: pointer; }
     .field-note { font-size: 12px; color: var(--text-sub); }
-    .shift-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 10px; background: var(--surface-2); margin-bottom: 12px; }
+    .shift-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 12px; background: var(--surface-2); margin-bottom: 12px; }
 
     .shift-checks { margin: 16px 0 10px; display: flex; flex-direction: column; gap: 6px; }
     .shift-checks div { font-size: 13px; padding: 7px 10px; border-radius: 8px; }
@@ -502,7 +510,7 @@
       position: fixed; left: 50%; transform: translateX(-50%); z-index: 15;
       bottom: calc(80px + env(safe-area-inset-bottom));
       width: calc(100% - 32px); max-width: 382px;
-      background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
       box-shadow: 0 10px 24px var(--shadow);
     }
     .actual-prompt[hidden] { display: none; }
@@ -510,9 +518,9 @@
     .actual-head span { padding-top: 6px; word-break: break-all; }
     .actual-head .sheet-close { flex-shrink: 0; }
     .actual-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
-    .actual-choice { border: 1px solid var(--line); background: var(--bg-sub); border-radius: 10px; padding: 8px 2px; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; }
+    .actual-choice { border: 1px solid var(--line); background: var(--bg-sub); border-radius: 12px; padding: 8px 2px; font-size: 13px; font-weight: 700; color: var(--text-main); cursor: pointer; }
     .actual-choice small { display: block; font-size: 12px; color: var(--text-sub); font-weight: 600; margin-top: 2px; }
-    .record-btn { background: none; border: none; padding: 6px 0; margin: -3px 0 -6px; font-size: 12px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
+    .record-btn { background: none; border: none; padding: 13px 0; margin: -10px 0 -13px; font-size: 12px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -525,14 +533,14 @@
         <div class="page-head">
           <div>
             <div class="date-label" id="list-date"></div>
-            <div class="page-title">今日の予定</div>
+            <h1 class="page-title">今日の予定</h1>
           </div>
           <button type="button" class="help-btn" onclick="openHelpSheet()" aria-label="使い方" title="使い方">?</button>
         </div>
 
         <!-- ① 今日のバイト（特大表示）／② 明日のバイト -->
         <section class="job-section">
-          <div class="label">本日のアルバイト</div>
+          <h2 class="label">本日のアルバイト</h2>
           <div class="job-main">
             <span class="job-status-large" id="today-job-status">なし</span>
             <span class="job-time" id="today-job-time"></span>
@@ -545,7 +553,7 @@
 
         <!-- ③④ 課題リスト & カウントダウン（見出しの右に未完了の件数・残り作業の合計） -->
         <div class="list-head">
-          <span class="label">課題（優先度順）</span>
+          <h2 class="label">課題（優先度順）</h2>
           <span class="list-summary"><b id="summary-count">0件</b>・残り <b id="summary-time">0分</b></span>
         </div>
         <div id="task-list"></div>
@@ -565,7 +573,7 @@
     <!-- ===== タブ2：タイムライン ===== -->
     <main class="tab-panel" id="tab-timeline">
       <div class="tl-head">
-        <div class="tl-date" id="tl-date"></div>
+        <h1 class="tl-date" id="tl-date"></h1>
         <div class="pills" id="tl-pills"></div>
       </div>
       <div class="tl-body">
@@ -585,7 +593,7 @@
     <main class="tab-panel" id="tab-settings">
       <div class="list-wrap">
         <div class="page-head">
-          <div class="page-title">設定</div>
+          <h1 class="page-title">設定</h1>
           <button type="button" class="help-btn" onclick="openHelpSheet()" aria-label="使い方" title="使い方">?</button>
         </div>
 
@@ -1211,10 +1219,45 @@
         setFormMode(null);
         toggleJobTimeInput();
       }
-      document.getElementById('sheet-overlay').classList.add('open');
-      document.getElementById('add-sheet').classList.add('open');
-      document.getElementById('add-sheet').focus({ preventScroll: true });
+      showSheet('add-sheet');
     }
+
+    // シートを開く：ほかのシートは閉じ、後ろの画面は操作・読み上げの対象から外す（inert）。
+    // 読み上げの位置はシートに移し、閉じたら開く前に押したボタンへ戻す
+    let sheetReturnFocus = null;
+
+    function showSheet(id) {
+      if (!document.querySelector('.sheet.open')) sheetReturnFocus = document.activeElement;
+      document.querySelectorAll('.sheet.open').forEach(sheet => sheet.classList.remove('open'));
+      document.getElementById('sheet-overlay').classList.add('open');
+      const sheet = document.getElementById(id);
+      sheet.classList.add('open');
+      setBackgroundInert(true);
+      if (!sheet.hasAttribute('tabindex')) sheet.setAttribute('tabindex', '-1');
+      sheet.focus({ preventScroll: true });
+    }
+
+    function setBackgroundInert(on) {
+      ['.app-container', '.fab', '.tab-bar'].forEach(selector => {
+        const el = document.querySelector(selector);
+        if (el) el.inert = on;
+      });
+    }
+
+    // 課題の行など、ボタンとして働く要素は Enter と Space のどちらでも押せる
+    function activateByKey(event, action) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      action();
+    }
+
+    // Esc：案内（チュートリアル）→ シート → 実際の時間の記録 の順に、開いているものを閉じる
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (!document.getElementById('tour').hidden) finishTutorial();
+      else if (document.querySelector('.sheet.open')) closeSheet();
+      else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
+    });
 
     // ---------- 追加フォームを編集にも使う ----------
     // editTarget: null（追加）／ { kind: 'item', id }（課題・バイト）／ { kind: 'weekly', id, datetime: 開いたときの次の締切 }
@@ -1255,9 +1298,7 @@
     }
 
     function openEditSheet() {
-      document.getElementById('sheet-overlay').classList.add('open');
-      document.getElementById('add-sheet').classList.add('open');
-      document.getElementById('add-sheet').focus({ preventScroll: true });
+      showSheet('add-sheet');
     }
 
     function openEditTask(id) {
@@ -1365,12 +1406,13 @@
       document.getElementById('qr-sheet').classList.remove('open');
       document.getElementById('help-sheet').classList.remove('open');
       stopQrScanner();
+      setBackgroundInert(false);
+      if (sheetReturnFocus && document.contains(sheetReturnFocus)) sheetReturnFocus.focus({ preventScroll: true });
+      sheetReturnFocus = null;
     }
 
     function openHelpSheet() {
-      document.getElementById('sheet-overlay').classList.add('open');
-      document.getElementById('help-sheet').classList.add('open');
-      document.getElementById('help-sheet').focus({ preventScroll: true });
+      showSheet('help-sheet');
     }
 
     // ---------- はじめての案内（実際の画面の上で、場所を光らせて吹き出しで説明する。1回だけ自動で出す） ----------
@@ -1408,6 +1450,8 @@
       tutorialSteps = TUTORIAL_STEPS.filter(step => findTourTarget(step) !== undefined);
       tutorialIndex = 0;
       document.getElementById('tour').hidden = false;
+      document.querySelector('.fab').classList.remove('fab-away');
+      setBackgroundInert(true);
       renderTutorialStep();
       document.getElementById('tour-next').focus({ preventScroll: true });
     }
@@ -1480,10 +1524,16 @@
       positionTour(findTourTarget(tutorialSteps[tutorialIndex]));
     }
     window.addEventListener('resize', refreshTour);
+
+    let lastScrollY = window.scrollY;
+    window.addEventListener('scroll', () => {
+      const fab = document.querySelector('.fab');
+      const y = window.scrollY;
+      if (y < 80 || y < lastScrollY - 4) fab.classList.remove('fab-away');
+      else if (y > lastScrollY + 4 && document.getElementById('tour').hidden) fab.classList.add('fab-away');
+      lastScrollY = y;
+    }, { passive: true });
     window.addEventListener('scroll', refreshTour, { passive: true });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && !document.getElementById('tour').hidden) finishTutorial();
-    });
 
     function nextTutorialStep() {
       if (tutorialIndex >= tutorialSteps.length - 1) {
@@ -1496,6 +1546,7 @@
 
     function finishTutorial() {
       document.getElementById('tour').hidden = true;
+      setBackgroundInert(false);
       window.scrollTo(0, 0);
       try {
         localStorage.setItem(TUTORIAL_STORAGE, new Date().toISOString());
@@ -1505,9 +1556,7 @@
     }
 
     function openShiftSheet() {
-      document.getElementById('add-sheet').classList.remove('open');
-      document.getElementById('sheet-overlay').classList.add('open');
-      document.getElementById('shift-sheet').classList.add('open');
+      showSheet('shift-sheet');
       const name = document.getElementById('shift-name').value.trim();
       document.getElementById('shift-name-note').innerHTML = name
         ? `シフト表の名前：<b>${escapeHtml(name)}</b>（設定タブで変更できます）`
@@ -1901,7 +1950,7 @@
         const duplicate = seen.has(key);
         seen.add(key);
         return `
-          <div class="job-row"${job.source === 'gcal' ? '' : ` onclick="openEditTask(${job.id})" role="button" tabindex="0"`}>
+          <div class="job-row"${job.source === 'gcal' ? '' : ` onclick="openEditTask(${job.id})" onkeydown="activateByKey(event, () => openEditTask(${job.id}))" role="button" tabindex="0"`}>
             <span class="job-row-date">${start.getMonth() + 1}/${start.getDate()}（${WEEKDAYS[start.getDay()]}） ${formatJobRange(job)}</span>
             <span class="job-row-name">${escapeHtml(job.name)}${job.source === 'gcal' ? ' <span class="tag">カレンダー</span>' : ''}${duplicate ? ' <span class="tag tag-dup">重複</span>' : ''}</span>
             <button class="delete-btn" onclick="event.stopPropagation(); deleteTask(${job.id})" aria-label="${escapeHtml(job.name)}のアルバイトを削除">✕</button>
@@ -1952,7 +2001,7 @@
         return `
           <div class="task-row">
             <input type="checkbox" class="task-checkbox" onchange="toggleComplete(${task.id})" aria-label="${escapeHtml(task.name)}を完了にする">
-            <div class="task-body" onclick="openEditTask(${task.id})" onkeydown="if (event.key === 'Enter') openEditTask(${task.id})" role="button" tabindex="0">
+            <div class="task-body" onclick="openEditTask(${task.id})" onkeydown="activateByKey(event, () => openEditTask(${task.id}))" role="button" tabindex="0">
               <div class="task-name">${escapeHtml(task.name)}</div>
               ${detail ? `<div class="task-detail">${escapeHtml(detail)}</div>` : ''}
               <div class="task-meta"><span class="dot bg-${level}" role="img" aria-label="${{ red: '急ぎ', yellow: '注意', green: '余裕あり' }[level]}"></span>${formatDeadline(targetDate, now)} 締切 ・ ${task.estimatePending ? '所要時間を推定中…' : `約${estMinutes}分`}</div>
@@ -2970,12 +3019,12 @@ ${upcoming}
       if (!localStorage.getItem(GCAL_URL_STORAGE)) {
         statusEl.textContent = '未設定';
       } else if (gcalLastError) {
-        statusEl.textContent = `⚠️ ${gcalLastError}`;
+        statusEl.textContent = `うまくいきません：${gcalLastError}`;
       } else {
         statusEl.textContent = (lastSync ? `前回の同期: ${formatDateTime(new Date(lastSync))}` : '未同期') +
-          (manabaLastError ? ` ／ ⚠️ ${manabaLastError}` : '') +
-          (manabaLastInfo ? ` ／ 📩 manaba 締切前 ${manabaLastInfo.upcoming}件（メール${manabaLastInfo.received}件）` : '') +
-          (taskPushOutdated ? ' ／ ⚠️ Apps Script のコードが古いため、まとめメールにアプリの課題が載りません' : '');
+          (manabaLastError ? ` ／ ${manabaLastError}` : '') +
+          (manabaLastInfo ? ` ／ manaba 締切前 ${manabaLastInfo.upcoming}件（メール${manabaLastInfo.received}件）` : '') +
+          (taskPushOutdated ? ' ／ Apps Script のコードが古いため、まとめメールにアプリの課題が載りません' : '');
       }
     }
 
@@ -3475,9 +3524,7 @@ ${upcoming}
     }
 
     function openClassSheet() {
-      document.getElementById('add-sheet').classList.remove('open');
-      document.getElementById('sheet-overlay').classList.add('open');
-      document.getElementById('class-sheet').classList.add('open');
+      showSheet('class-sheet');
       classDraft = JSON.parse(JSON.stringify(classData || {
         termLabel: '', termStart: '', termEnd: '', periodTimes: DEFAULT_PERIOD_TIMES, classes: []
       }));
@@ -4445,9 +4492,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     }
 
     function openQrSheet(mode, title) {
-      document.getElementById('add-sheet').classList.remove('open');
-      document.getElementById('sheet-overlay').classList.add('open');
-      document.getElementById('qr-sheet').classList.add('open');
+      showSheet('qr-sheet');
       document.getElementById('qr-sheet-title').textContent = title;
       document.getElementById('qr-show').hidden = mode !== 'show';
       document.getElementById('qr-scan').hidden = mode !== 'scan';

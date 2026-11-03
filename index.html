@@ -134,6 +134,18 @@
 
     .date-label { font-size: 13px; color: var(--text-sub); letter-spacing: 0.04em; }
     .page-title { font-size: 22px; font-weight: 700; margin-top: 2px; }
+    .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+    .help-btn { flex-shrink: 0; border: 1px solid var(--line); background: var(--surface); color: var(--text-sub); font-size: 13px; font-weight: 700; padding: 9px 14px; border-radius: 999px; cursor: pointer; }
+
+    /* 使い方（ヘルプ） */
+    .help-lead { font-size: 15px; line-height: 1.6; margin-bottom: 12px; }
+    .help-section { border-top: 1px solid var(--line); }
+    .help-section summary { font-size: 15px; font-weight: 800; padding: 14px 0; cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
+    .help-section summary::-webkit-details-marker { display: none; }
+    .help-section summary::after { content: "＋"; color: var(--text-faint); font-weight: 700; }
+    .help-section[open] summary::after { content: "－"; }
+    .help-section ul { padding: 0 0 14px 18px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.6; }
+    .help-color { font-weight: 800; }
 
     .label { font-size: 12px; color: var(--text-sub); font-weight: 600; letter-spacing: 0.08em; }
 
@@ -476,8 +488,13 @@
     <!-- ===== タブ1：リスト ===== -->
     <main class="tab-panel active" id="tab-list">
       <div class="list-wrap">
-        <div class="date-label" id="list-date"></div>
-        <div class="page-title">今日の予定</div>
+        <div class="page-head">
+          <div>
+            <div class="date-label" id="list-date"></div>
+            <div class="page-title">今日の予定</div>
+          </div>
+          <button type="button" class="help-btn" onclick="openHelpSheet()">使い方</button>
+        </div>
 
         <!-- ① 今日のバイト（特大表示）／② 明日のバイト -->
         <section class="job-section">
@@ -533,7 +550,10 @@
     <!-- ===== タブ3：設定 ===== -->
     <main class="tab-panel" id="tab-settings">
       <div class="list-wrap">
-        <div class="page-title">設定</div>
+        <div class="page-head">
+          <div class="page-title">設定</div>
+          <button type="button" class="help-btn" onclick="openHelpSheet()">使い方</button>
+        </div>
 
         <div class="settings-group">ふだん使う設定</div>
         <section class="settings-card">
@@ -710,6 +730,78 @@
       </button>
     </div>
   </nav>
+
+  <!-- 使い方（ヘルプ） -->
+  <section class="sheet" id="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-sheet-title" tabindex="-1">
+    <div class="sheet-head">
+      <span id="help-sheet-title">使い方</span>
+      <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
+    </div>
+    <p class="help-lead">朝・帰宅後・寝る前に、<b>今日と明日のバイト</b>と<b>今やるべき課題</b>を1つの画面で確かめるためのスケジュール帳です。</p>
+
+    <details class="help-section" open>
+      <summary>リスト画面の見方</summary>
+      <ul>
+        <li><b>本日のアルバイト</b>：今日バイトがあるかを大きく表示します。下に明日のバイトも出ます。</li>
+        <li><b>課題（優先度順）</b>：「締切までの残り時間 ÷ 作業にかかる時間」が小さい（＝急ぐ）順に並びます。右の数字は締切までの残り時間です。</li>
+        <li>
+          <span class="help-color c-red">赤</span>…急ぎ（残り時間が作業時間の2倍未満、または12時間未満）<br>
+          <span class="help-color c-yellow">黄</span>…注意（5倍未満、または36時間未満）<br>
+          <span class="help-color c-green">緑</span>…余裕あり
+        </li>
+        <li>締切を過ぎた課題は「期限切れ」として一番上に出ます。遅れて出せるか確かめましょう。</li>
+        <li><b>これから7日の見通し</b>：授業・バイトを除いた空き時間で、課題が間に合うかを知らせます。</li>
+      </ul>
+    </details>
+
+    <details class="help-section">
+      <summary>課題・バイトを登録する</summary>
+      <ul>
+        <li>右下の <b>＋</b> から、タイトル・種別（課題／アルバイト）・締切を入れて登録します。</li>
+        <li>課題の<b>所要時間</b>は空欄のままでOK。AI（Gemini／Claude）が内容から推定します。自分で分を入れることもできます。</li>
+        <li>毎週同じ曜日・時刻が締切の課題（リフレクションシートなど）は「<b>毎週くり返す</b>」にチェック。締切の7日前から毎週一覧に出ます。</li>
+        <li>シフト表の写真からバイトを、時間割の画像から授業を、まとめて登録できます（＋の画面の上のボタン）。</li>
+      </ul>
+    </details>
+
+    <details class="help-section">
+      <summary>完了・編集・削除</summary>
+      <ul>
+        <li>左の <b>○</b> を押すと完了です。実際にかかった時間を聞かれるので、選んで記録すると、次からのAIの推定が自分のペースに合っていきます。</li>
+        <li>課題の行を押すと<b>編集</b>できます（名前・締切・所要時間）。<b>削除</b>は編集画面のいちばん下にあります。</li>
+        <li>完了した課題は「完了済み」にまとまります。○ をもう一度押すと未完了に戻せます。</li>
+      </ul>
+    </details>
+
+    <details class="help-section">
+      <summary>タイムライン</summary>
+      <ul>
+        <li>今日（または明日）の授業・バイトの合間に、急ぐ課題から自動で作業時間を割り当てます。</li>
+        <li>バイトの前後30分は移動の時間として空けます。課題に使える時間帯は設定で変えられます。</li>
+        <li>上の「今日／明日」で切り替えます。明日の計画は、今日の計画どおりに進めた場合のものです。</li>
+      </ul>
+    </details>
+
+    <details class="help-section">
+      <summary>Google・manaba との連携と通知</summary>
+      <ul>
+        <li>設定の「Google連携」の手順で一度つなぐと、Googleカレンダーのバイトの予定と、manaba の課題（Gmail に届く「公開のお知らせ」）が自動で取り込まれます。</li>
+        <li>manaba の「提出のお知らせ」が届くと、その課題は自動で完了になります。</li>
+        <li>毎朝のまとめメール（今日・明日のバイトと締切が近い課題）と、バイト前の確認メールが届きます。</li>
+        <li>manaba からお知らせが来ない課題は、＋から手で登録するか「毎週くり返す」を使ってください。</li>
+      </ul>
+    </details>
+
+    <details class="help-section">
+      <summary>困ったとき</summary>
+      <ul>
+        <li><b>同期できない</b>：設定の「同期できないとき」で、連携のURLを開いて原因を確かめられます。</li>
+        <li><b>スマホとパソコンで内容が違う</b>：データは端末ごとに保存されます。設定の「ほかの端末に設定を移す」のQRコードで連携をそろえてください。</li>
+        <li><b>画面が暗い／明るい</b>：設定の「画面の色」で、夜だけ暗く・いつも明るい などを選べます。</li>
+        <li><b>機種変更する</b>：設定の「データのバックアップ」で書き出しておくと、新しい端末で読み込めます。</li>
+      </ul>
+    </details>
+  </section>
 
   <!-- ⑤ 予定追加フォーム（ボトムシート） -->
   <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
@@ -1184,7 +1276,14 @@
       document.getElementById('shift-sheet').classList.remove('open');
       document.getElementById('class-sheet').classList.remove('open');
       document.getElementById('qr-sheet').classList.remove('open');
+      document.getElementById('help-sheet').classList.remove('open');
       stopQrScanner();
+    }
+
+    function openHelpSheet() {
+      document.getElementById('sheet-overlay').classList.add('open');
+      document.getElementById('help-sheet').classList.add('open');
+      document.getElementById('help-sheet').focus({ preventScroll: true });
     }
 
     function openShiftSheet() {

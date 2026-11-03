@@ -1289,6 +1289,8 @@
       else if (!document.getElementById('tour').hidden) finishTutorial();
       else if (document.querySelector('.sheet.open')) closeSheet();
       else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
+      else return;
+      e.preventDefault();
     });
 
     // ---------- 追加フォームを編集にも使う ----------
@@ -4811,11 +4813,42 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     });
 
     // ---------- スマホの「戻る」ボタン：押しただけでアプリが閉じないようにする ----------
-    // 履歴に目印を1つ積んでおき、「戻る」を押したら順に：開いている案内・シート・記録を閉じる →
-    // タイムライン・設定ならリストに戻る → リストなら「アプリを終了しますか？」と確かめる。
-    // 確認の間は目印を積まないので、もう一度「戻る」を押すとそのまま終了する（時間の制限はない）
+    // 「戻る」を押したら順に：開いている案内・シート・記録を閉じる → タイムライン・設定ならリストに戻る →
+    // リストなら「アプリを終了しますか？」と確かめる。確認の間は見張りをやめるので、もう一度「戻る」を押すと終了する。
+    //   Android の Chrome：CloseWatcher で「戻る」を直接受け取る（開いてすぐ押しても効き、履歴に何も積まない）
+    //   それ以外：履歴に目印を1つ積み、戻ったら目印を積み直す
+    const supportsCloseWatcher = typeof window.CloseWatcher === 'function';
+    let backWatcher = null;
+
     function armBackGuard() {
+      if (isExitConfirmOpen()) return;
+      if (supportsCloseWatcher) {
+        if (backWatcher) return;
+        try {
+          backWatcher = new CloseWatcher();
+          backWatcher.onclose = () => {
+            backWatcher = null;
+            if (handleBackPress()) armBackGuard();
+          };
+        } catch (e) {
+          backWatcher = null;
+        }
+        return;
+      }
       if (!(history.state && history.state.backGuard)) history.pushState({ backGuard: true }, '');
+    }
+
+    // 閉じるものがあれば閉じて true（続けて「戻る」を見張る）。リストなら終了の確認を出して false
+    function handleBackPress() {
+      if (!document.getElementById('tour').hidden) finishTutorial();
+      else if (document.querySelector('.sheet.open')) closeSheet();
+      else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
+      else if (!document.getElementById('tab-list').classList.contains('active')) switchTab('tab-list');
+      else {
+        openExitConfirm();
+        return false;
+      }
+      return true;
     }
 
     function isExitConfirmOpen() {
@@ -4835,37 +4868,33 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       armBackGuard();
     }
 
-    // Webのアプリは、ホーム画面から開いたときはボタンで自分を閉じられないことがある。
-    // 閉じられなかったら、スマホの「戻る」で終了するよう案内する
+    // ホーム画面から開いたアプリは、ボタンで自分を閉じられないことが多い。
+    // 履歴をさかのぼると以前に開いたときの画面に戻ってしまうことがあるので、閉じられなければ「戻る」で終了するよう案内する
     function confirmExit() {
       window.close();
       setTimeout(() => {
-        if (document.visibilityState === 'hidden') return;
-        history.back();
-        setTimeout(() => {
-          if (document.visibilityState !== 'hidden' && isExitConfirmOpen()) {
-            document.getElementById('exit-text').textContent = 'このままスマホの「戻る」をもう一度押すと終了します。';
-          }
-        }, 400);
-      }, 200);
+        if (document.visibilityState !== 'hidden' && isExitConfirmOpen()) {
+          document.getElementById('exit-text').textContent = 'このままスマホの「戻る」をもう一度押すと終了します。';
+        }
+      }, 300);
     }
 
-    window.addEventListener('popstate', () => {
-      if (!document.getElementById('tour').hidden) finishTutorial();
-      else if (document.querySelector('.sheet.open')) closeSheet();
-      else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
-      else if (!document.getElementById('tab-list').classList.contains('active')) switchTab('tab-list');
-      else {
-        openExitConfirm();
-        return;
-      }
+    if (!supportsCloseWatcher) {
+      window.addEventListener('popstate', () => {
+        if (handleBackPress()) armBackGuard();
+      });
+    }
+    armBackGuard();
+    // 見張りが外れていたら（目印が飛ばされたときなど）、画面に触ったときに付け直す
+    ['pointerdown', 'keydown'].forEach(type => document.addEventListener(type, armBackGuard, { passive: true }));
+    // 裏から戻ったとき・ブラウザに保存されていた画面が復元されたときも、見張りを付け直す
+    window.addEventListener('pageshow', e => {
+      if (e.persisted) backWatcher = null;   // 復元された画面では、前の見張りは使えない
       armBackGuard();
     });
-    armBackGuard();
-    // ブラウザによっては、画面に触る前に積んだ目印は「戻る」で飛ばされるので、触ったときにも積み直す
-    ['pointerdown', 'keydown'].forEach(type => document.addEventListener(type, () => {
-      if (!isExitConfirmOpen()) armBackGuard();
-    }, { passive: true }));
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') armBackGuard();
+    });
   </script>
 </body>
 </html>

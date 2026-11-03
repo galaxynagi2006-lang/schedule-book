@@ -159,24 +159,26 @@
     .help-shot-tall { max-width: 250px; margin-left: auto; margin-right: auto; }   /* 縦長の画像は切らずに幅を細くして全体を見せる（番号の位置がずれないように） */
     .shot-mark { position: absolute; transform: translate(-50%, -50%); width: 24px; height: 24px; border-radius: 50%; background: var(--primary-color); color: #fff; border: 2px solid #fff; font-size: 13px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3); }
 
-    /* チュートリアル（はじめて開いたとき） */
-    .tutorial { position: fixed; inset: 0; z-index: 40; background: rgba(2, 6, 23, 0.55); display: grid; place-items: center; padding: 16px; }
-    .tutorial[hidden] { display: none; }
-    .tutorial-card { width: 100%; max-width: 382px; max-height: calc(100vh - 32px); overflow-y: auto; background: var(--surface); border-radius: 20px; padding: 18px; box-shadow: 0 16px 40px var(--shadow); }
-    .tutorial-media { border-radius: 12px; overflow: hidden; background: var(--bg-sub); border: 1px solid var(--line); }
-    .tutorial-media img { display: block; width: 100%; height: 240px; object-fit: cover; object-position: top; background: #fff; }
-    .tutorial-media .tutorial-logo { height: 240px; display: grid; place-items: center; }
-    .tutorial-media .tutorial-logo img { width: 112px; height: 112px; object-fit: contain; background: none; border-radius: 24px; }
-    .tutorial-body { padding: 14px 2px 4px; min-height: 194px; }   /* 文の長さが違っても「次へ」の位置が動かないように */
-    .tutorial-step { font-size: 12px; font-weight: 700; color: var(--primary-color); }
-    .tutorial-body h2 { font-size: 20px; font-weight: 800; margin: 4px 0 6px; }
-    .tutorial-body p { font-size: 15px; line-height: 1.6; color: var(--text-sub); }
-    .tutorial-dots { display: flex; justify-content: center; gap: 6px; margin: 12px 0; }
-    .tutorial-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
-    .tutorial-dots span.active { background: var(--primary-color); width: 18px; border-radius: 4px; }
-    .tutorial-actions { display: flex; gap: 10px; align-items: center; }
-    .tutorial-skip { flex: 0 0 auto; background: none; border: none; color: var(--text-sub); font-size: 15px; font-weight: 700; padding: 12px 8px; cursor: pointer; }
-    .tutorial-next { flex: 1; }
+    /* はじめての案内：説明する場所だけを明るく残し、まわりを暗くして吹き出しを出す */
+    .tour { position: fixed; inset: 0; z-index: 40; }
+    .tour[hidden] { display: none; }
+    .tour-dim { position: fixed; background: rgba(2, 6, 23, 0.7); }   /* 光らせる場所の上下左右を暗くする4枚 */
+    .tour-spot { position: fixed; border-radius: 12px; border: 2px solid #fff; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.55); pointer-events: none; }
+    .tour-spot.none { display: none; }   /* 光らせる場所がない（あいさつ）ときは全体を暗く */
+    .tour-tip { position: fixed; left: 16px; right: 16px; max-width: 360px; margin: 0 auto; background: var(--surface); color: var(--text-main); border-radius: 14px; padding: 14px 16px 10px; box-shadow: 0 12px 32px var(--shadow); transition: top 0.25s ease; }
+    .tour-arrow { position: absolute; width: 14px; height: 14px; background: var(--surface); transform: rotate(45deg); }
+    .tour-tip.below .tour-arrow { top: -7px; }
+    .tour-tip.above .tour-arrow { bottom: -7px; }
+    .tour-tip.tour-center .tour-arrow { display: none; }
+    .tour-step { font-size: 12px; font-weight: 700; color: var(--primary-color); }
+    .tour-title { font-size: 17px; font-weight: 800; margin: 2px 0 4px; }
+    .tour-text { font-size: 15px; line-height: 1.55; color: var(--text-sub); }
+    .tour-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .tour-skip { background: none; border: none; color: var(--text-sub); font-size: 15px; font-weight: 700; padding: 10px 4px; min-height: 44px; cursor: pointer; }
+    .tour-next { background: var(--btn-bg); color: var(--on-fill); border: none; border-radius: 10px; padding: 10px 22px; min-height: 44px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    @media (prefers-reduced-motion: reduce) {
+      .tour-tip { transition: none; }
+    }
 
     .label { font-size: 12px; color: var(--text-sub); font-weight: 600; letter-spacing: 0.08em; }
 
@@ -769,7 +771,7 @@
       <button type="button" class="sheet-close" onclick="closeSheet()" aria-label="閉じる">✕</button>
     </div>
     <p class="help-lead">朝・帰宅後・寝る前に、<b>今日と明日のバイト</b>と<b>今やるべき課題</b>を1つの画面で確かめるためのスケジュール帳です。</p>
-    <button type="button" class="btn-secondary" onclick="openTutorial()">はじめての方へ（チュートリアルを見る）</button>
+    <button type="button" class="btn-secondary" onclick="openTutorial()">画面の上で案内を見る（チュートリアル）</button>
 
     <details class="help-section" open>
       <summary>バイトの見方</summary>
@@ -868,19 +870,21 @@
     </details>
   </section>
 
-  <!-- はじめて開いたときのチュートリアル（使い方の画面からも開ける） -->
-  <div class="tutorial" id="tutorial" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" hidden>
-    <div class="tutorial-card">
-      <div class="tutorial-media" id="tutorial-media"></div>
-      <div class="tutorial-body">
-        <div class="tutorial-step" id="tutorial-step"></div>
-        <h2 id="tutorial-title"></h2>
-        <p id="tutorial-text"></p>
-      </div>
-      <div class="tutorial-dots" id="tutorial-dots" aria-hidden="true"></div>
-      <div class="tutorial-actions">
-        <button type="button" class="tutorial-skip" id="tutorial-skip" onclick="finishTutorial()">スキップ</button>
-        <button type="button" class="btn-submit tutorial-next" id="tutorial-next" onclick="nextTutorialStep()">次へ</button>
+  <!-- はじめて開いたときの案内（実際の画面の上で、光らせた場所に吹き出しで説明する。使い方の画面からも開ける） -->
+  <div class="tour" id="tour" hidden>
+    <div class="tour-dim" id="tour-dim-top"></div>
+    <div class="tour-dim" id="tour-dim-bottom"></div>
+    <div class="tour-dim" id="tour-dim-left"></div>
+    <div class="tour-dim" id="tour-dim-right"></div>
+    <div class="tour-spot" id="tour-spot"></div>
+    <div class="tour-tip" id="tour-tip" role="dialog" aria-modal="true" aria-labelledby="tour-title" aria-describedby="tour-text">
+      <span class="tour-arrow" id="tour-arrow"></span>
+      <div class="tour-step" id="tour-step"></div>
+      <div class="tour-title" id="tour-title"></div>
+      <p class="tour-text" id="tour-text"></p>
+      <div class="tour-actions">
+        <button type="button" class="tour-skip" id="tour-skip" onclick="finishTutorial()">スキップ</button>
+        <button type="button" class="tour-next" id="tour-next" onclick="nextTutorialStep()">次へ</button>
       </div>
     </div>
   </div>
@@ -1368,44 +1372,120 @@
       document.getElementById('help-sheet').focus({ preventScroll: true });
     }
 
-    // ---------- チュートリアル（はじめて開いたときに1回だけ。使い方の画面からも開ける） ----------
-    const TUTORIAL_STORAGE = 'smart_schedule_tutorial_done';
+    // ---------- はじめての案内（実際の画面の上で、場所を光らせて吹き出しで説明する。1回だけ自動で出す） ----------
+    const TUTORIAL_STORAGE = 'smart_schedule_tour_done';
+    // target：光らせる場所。左から順に、画面に出ているものを使う。target がないステップは画面の真ん中に出す
     const TUTORIAL_STEPS = [
-      { logo: true, title: 'ようこそ！', text: 'スマートスケジュール帳は、朝・帰宅後・寝る前に、今日と明日のバイトと、今やるべき課題を1つの画面で確かめるためのアプリです。使い方を6つの画面で紹介します。' },
-      { image: 'help/jobs.jpg', alt: '本日のアルバイト「あり 18:00〜22:00」と明日のアルバイト', title: '今日と明日のバイトがひと目で', text: 'いちばん上に、今日バイトがあるかを大きく表示します。明日のバイトもその下で確かめられます。' },
-      { image: 'help/tasks.jpg', alt: '赤・黄・緑で色分けされた課題のリスト', title: '課題は急ぐ順に、色で優先度', text: '締切までの残り時間を表示し、急ぐ順に並べます。赤＝急ぎ、黄＝注意、緑＝余裕あり。行を押すと編集、○ を押すと完了です。' },
-      { image: 'help/add.jpg', alt: '予定・課題を追加する画面', title: '＋ から登録。時間はAIにおまかせ', text: '右下の ＋ から課題やバイトを登録します。所要時間は空欄でOK、AIが推定します。シフト表の写真からバイトをまとめて登録することもできます。' },
-      { image: 'help/timeline.jpg', alt: '授業やバイトの合間に課題が並んだタイムライン', title: 'タイムラインで作業の計画', text: '授業やバイトの合間に、急ぐ課題から作業時間を自動で割り当てます。「今日／明日」で切り替えられます。' },
-      { image: 'help/done.jpg', alt: '実際にかかった時間を選ぶ画面', title: '終わったら ○ を押す', text: '完了にすると、実際にかかった時間を聞かれます。記録すると、次からのAIの推定が自分のペースに合っていきます。' },
-      { logo: true, title: 'さっそく始めましょう', text: '設定の「Google連携」でつなぐと、カレンダーのバイトや manaba の課題が自動で集まり、毎朝まとめメールも届きます。使い方は右上の ? からいつでも見られます。' }
+      { title: 'ようこそ！', text: '朝・帰宅後・寝る前に、バイトと今やるべき課題を1つの画面で確かめるアプリです。実際の画面で使い方を案内します。' },
+      { target: ['.job-section .job-main'], title: '今日のバイト', text: '今日バイトがあるかを大きく表示します。時間とバイト名も出ます。' },
+      { target: ['.tomorrow-row'], title: '明日のバイト', text: '明日のバイトも、ここで確かめられます。' },
+      { target: ['#task-list .task-row .count-num', '.list-head'], title: '締切までの残り時間', text: '課題は急ぐ順に並びます。赤＝急ぎ、黄＝注意、緑＝余裕あり。' },
+      { target: ['#task-list .task-row .task-checkbox'], title: '終わったら ○', text: '○ を押すと完了。かかった時間を記録すると、AIの推定が自分のペースに合っていきます。' },
+      { target: ['#task-list .task-row .task-body'], title: '押すと編集', text: '課題の行を押すと、名前・締切・所要時間を直せます。削除も編集画面から。' },
+      { target: ['.fab'], title: '＋ で登録', text: '課題やバイトを追加します。所要時間は空欄でOK、AIが推定します。シフト表の写真からも登録できます。' },
+      { target: ['.tab-btn[data-tab="tab-timeline"]'], title: 'タイムライン', text: '授業とバイトの合間に、課題の作業時間を自動で割り当てます。' },
+      { target: ['.tab-btn[data-tab="tab-settings"]'], title: '設定・Google連携', text: 'Google連携でつなぐと、カレンダーのバイトや manaba の課題が自動で集まり、毎朝まとめメールも届きます。' },
+      { target: ['#tab-list .help-btn'], title: '使い方はいつでも', text: '困ったら ? から。画像つきの説明と、この案内をもう一度見られます。' }
     ];
+    let tutorialSteps = [];   // 今の画面で出せるステップ（課題がまだないときは、課題の行の説明を飛ばす）
     let tutorialIndex = 0;
+
+    // ステップの光らせる場所。target がなければ null、あるはずなのに画面に見つからなければ undefined
+    function findTourTarget(step) {
+      if (!step || !step.target) return null;
+      for (const selector of step.target) {
+        const el = document.querySelector(selector);
+        if (el && el.getClientRects().length > 0) return el;
+      }
+      return undefined;
+    }
 
     function openTutorial() {
       closeSheet();
+      closeActualPrompt();
+      switchTab('tab-list');
+      tutorialSteps = TUTORIAL_STEPS.filter(step => findTourTarget(step) !== undefined);
       tutorialIndex = 0;
+      document.getElementById('tour').hidden = false;
       renderTutorialStep();
-      const el = document.getElementById('tutorial');
-      el.hidden = false;
-      document.getElementById('tutorial-next').focus({ preventScroll: true });
+      document.getElementById('tour-next').focus({ preventScroll: true });
     }
 
     function renderTutorialStep() {
-      const step = TUTORIAL_STEPS[tutorialIndex];
-      const last = tutorialIndex === TUTORIAL_STEPS.length - 1;
-      document.getElementById('tutorial-media').innerHTML = step.logo
-        ? '<div class="tutorial-logo"><img src="icons/icon-192.png" alt=""></div>'
-        : `<img src="${step.image}" alt="${step.alt}">`;
-      document.getElementById('tutorial-step').textContent = `${tutorialIndex + 1} / ${TUTORIAL_STEPS.length}`;
-      document.getElementById('tutorial-title').textContent = step.title;
-      document.getElementById('tutorial-text').textContent = step.text;
-      document.getElementById('tutorial-dots').innerHTML = TUTORIAL_STEPS.map((_, i) => `<span${i === tutorialIndex ? ' class="active"' : ''}></span>`).join('');
-      document.getElementById('tutorial-next').textContent = last ? 'はじめる' : '次へ';
-      document.getElementById('tutorial-skip').hidden = last;
+      const step = tutorialSteps[tutorialIndex];
+      const last = tutorialIndex === tutorialSteps.length - 1;
+      document.getElementById('tour-step').textContent = `${tutorialIndex + 1} / ${tutorialSteps.length}`;
+      document.getElementById('tour-title').textContent = step.title;
+      document.getElementById('tour-text').textContent = step.text;
+      document.getElementById('tour-next').textContent = last ? 'はじめる' : '次へ';
+      document.getElementById('tour-skip').hidden = last;
+      const target = findTourTarget(step);
+      // 画面に固定されたもの（＋・下のバー）以外は、見える位置までスクロールしてから光らせる
+      if (target && !target.closest('.tab-bar, .fab')) target.scrollIntoView({ block: 'center' });
+      positionTour(target);
     }
 
+    // 光らせる枠を対象に重ね、吹き出しを対象の下（入らなければ上）に出す。矢印は対象の真ん中を指す
+    function positionTour(target) {
+      const spot = document.getElementById('tour-spot');
+      const tip = document.getElementById('tour-tip');
+      tip.classList.remove('above', 'below', 'tour-center');
+      if (!target) {
+        spot.classList.add('none');
+        setTourDims(null);
+        tip.classList.add('tour-center');
+        tip.style.top = `${Math.max(16, (window.innerHeight - tip.offsetHeight) / 2)}px`;
+        return;
+      }
+      spot.classList.remove('none');
+      const r = target.getBoundingClientRect();
+      const pad = 6;
+      const hole = { left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad };
+      Object.assign(spot.style, {
+        left: `${hole.left}px`, top: `${hole.top}px`,
+        width: `${hole.right - hole.left}px`, height: `${hole.bottom - hole.top}px`
+      });
+      setTourDims(hole);
+      const gap = 14;
+      const tipHeight = tip.offsetHeight;
+      const below = r.bottom + pad + gap + tipHeight <= window.innerHeight - 8;
+      tip.classList.add(below ? 'below' : 'above');
+      tip.style.top = `${below ? r.bottom + pad + gap : Math.max(8, r.top - pad - gap - tipHeight)}px`;
+      const tipRect = tip.getBoundingClientRect();
+      const arrowLeft = Math.min(tipRect.width - 24, Math.max(10, r.left + r.width / 2 - tipRect.left - 7));
+      document.getElementById('tour-arrow').style.left = `${arrowLeft}px`;
+    }
+
+    // 光らせる場所（hole）のまわりの4枚を並べる。hole がなければ上の1枚で画面全体を暗くする
+    function setTourDims(hole) {
+      const w = window.innerWidth, h = window.innerHeight;
+      const place = (id, left, top, width, height) => Object.assign(document.getElementById(id).style, {
+        left: `${left}px`, top: `${top}px`, width: `${Math.max(0, width)}px`, height: `${Math.max(0, height)}px`
+      });
+      if (!hole) {
+        place('tour-dim-top', 0, 0, w, h);
+        ['tour-dim-bottom', 'tour-dim-left', 'tour-dim-right'].forEach(id => place(id, 0, 0, 0, 0));
+        return;
+      }
+      place('tour-dim-top', 0, 0, w, hole.top);
+      place('tour-dim-bottom', 0, hole.bottom, w, h - hole.bottom);
+      place('tour-dim-left', 0, hole.top, hole.left, hole.bottom - hole.top);
+      place('tour-dim-right', hole.right, hole.top, w - hole.right, hole.bottom - hole.top);
+    }
+
+    // 画面の向きが変わったり、一覧が描き直されたりしても、光らせる位置を合わせ直す
+    function refreshTour() {
+      if (document.getElementById('tour').hidden) return;
+      positionTour(findTourTarget(tutorialSteps[tutorialIndex]));
+    }
+    window.addEventListener('resize', refreshTour);
+    window.addEventListener('scroll', refreshTour, { passive: true });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !document.getElementById('tour').hidden) finishTutorial();
+    });
+
     function nextTutorialStep() {
-      if (tutorialIndex >= TUTORIAL_STEPS.length - 1) {
+      if (tutorialIndex >= tutorialSteps.length - 1) {
         finishTutorial();
         return;
       }
@@ -1414,7 +1494,8 @@
     }
 
     function finishTutorial() {
-      document.getElementById('tutorial').hidden = true;
+      document.getElementById('tour').hidden = true;
+      window.scrollTo(0, 0);
       try {
         localStorage.setItem(TUTORIAL_STORAGE, new Date().toISOString());
       } catch (e) {
@@ -2569,6 +2650,7 @@ ${upcoming}
       renderHiddenNote(now);
       renderCompletedSection(completedTasks);
       renderTimeline(activeTasks, now);
+      refreshTour();
     }
 
     document.getElementById('add-schedule-form').addEventListener('submit', async function(e) {

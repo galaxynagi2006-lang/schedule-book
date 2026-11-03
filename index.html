@@ -751,6 +751,12 @@
             </label>
           </div>
         </section>
+
+        <section class="settings-card" id="demo-settings">
+          <h2>撮影・発表用のデモ表示</h2>
+          <p class="field-note" id="demo-note"></p>
+          <button type="button" class="btn-secondary" id="demo-btn" onclick="toggleDemoMode()" style="margin: 10px 0 0;">デモ表示にする</button>
+        </section>
       </div>
     </main>
   </div>
@@ -785,10 +791,10 @@
     <details class="help-section" open>
       <summary>バイトの見方</summary>
       <figure class="help-shot">
-        <img src="help/jobs.jpg" width="600" height="300" alt="リスト画面の上部。本日のアルバイト「あり 18:00〜22:00」、明日のアルバイト、今後のアルバイトの一覧" loading="lazy">
-        <span class="shot-mark" style="left: 37%; top: 10%">1</span>
-        <span class="shot-mark" style="left: 42%; top: 69%">2</span>
-        <span class="shot-mark" style="left: 50%; top: 88%">3</span>
+        <img src="help/jobs.jpg?v=20261104" width="600" height="297" alt="リスト画面の上部。本日のアルバイト「あり 18:00〜22:00」、明日のアルバイト「あり 17:00〜21:00」、今後のアルバイト3件" loading="lazy">
+        <span class="shot-mark" style="left: 37.4%; top: 8.1%">1</span>
+        <span class="shot-mark" style="left: 41.6%; top: 66.8%">2</span>
+        <span class="shot-mark" style="left: 47.3%; top: 85.9%">3</span>
       </figure>
       <ol class="help-steps">
         <li><b>今日のバイト</b>があるかを大きく表示します。時間とバイト名も出ます。</li>
@@ -800,11 +806,11 @@
     <details class="help-section" open>
       <summary>課題の見方</summary>
       <figure class="help-shot">
-        <img src="help/tasks.jpg" width="600" height="572" alt="課題のリスト。情報理論の中間レポートが赤で残り9時間30分、ゼミの発表資料が黄、毎週のリフレクションシートが緑" loading="lazy">
-        <span class="shot-mark" style="left: 5%; top: 19%">1</span>
-        <span class="shot-mark" style="left: 64%; top: 14%">2</span>
-        <span class="shot-mark" style="left: 86%; top: 13%">3</span>
-        <span class="shot-mark" style="left: 8%; top: 34%">4</span>
+        <img src="help/tasks.jpg?v=20261104" width="600" height="740" alt="課題のリスト。締切を過ぎたリフレクションシートが赤で「期限切れ」、今日締切の中間レポートが黄で残り18時間と遅れの注意書き、ゼミの発表資料が緑" loading="lazy">
+        <span class="shot-mark" style="left: 6.7%; top: 19.1%">1</span>
+        <span class="shot-mark" style="left: 48.3%; top: 17.7%">2</span>
+        <span class="shot-mark" style="left: 84.5%; top: 16.4%">3</span>
+        <span class="shot-mark" style="left: 13.3%; top: 29.2%">4</span>
       </figure>
       <ol class="help-steps">
         <li><b>○ を押すと完了</b>です。もう一度押すと未完了に戻ります。</li>
@@ -815,17 +821,17 @@
           <span class="help-color c-green">緑</span> 余裕あり</li>
         <li>印は、manaba から取り込んだ課題の種類（レポートなど）や「毎週」の課題を表します。</li>
       </ol>
-      <p class="help-note">課題は「締切までの残り時間 ÷ 作業にかかる時間」が小さい（＝急ぐ）順に並びます。締切を過ぎた課題は「期限切れ」として一番上に出ます。下の「これから7日の見通し」では、授業・バイトを除いた空き時間で課題が間に合うかを知らせます。</p>
+      <p class="help-note">課題は「締切までの残り時間 ÷ 作業にかかる時間」が小さい（＝急ぐ）順に並びます。締切を過ぎた課題は「期限切れ」として一番上に出ます。遅れそうな課題には、色の付いた注意書きが出ます。下の「これから7日の見通し」では、授業・バイトを除いた空き時間で課題が間に合うかを知らせます。</p>
     </details>
 
     <details class="help-section">
       <summary>課題・バイトを登録する</summary>
       <figure class="help-shot help-shot-tall">
-        <img src="help/add.jpg" width="600" height="1124" alt="予定・課題を追加する画面。シフト表の写真から登録するボタン、タイトル、種別、詳細、所要時間、締切、毎週くり返すのチェック" loading="lazy">
-        <span class="shot-mark" style="left: 95%; top: 13%">1</span>
-        <span class="shot-mark" style="left: 95%; top: 33%">2</span>
-        <span class="shot-mark" style="left: 95%; top: 69%">3</span>
-        <span class="shot-mark" style="left: 95%; top: 88%">4</span>
+        <img src="help/add.jpg?v=20261104" width="600" height="1142" alt="予定・課題を追加する画面。シフト表の写真から登録するボタン、タイトル、種別、詳細、所要時間、締切、毎週くり返すのチェック" loading="lazy">
+        <span class="shot-mark" style="left: 90.4%; top: 13.3%">1</span>
+        <span class="shot-mark" style="left: 90.4%; top: 33.4%">2</span>
+        <span class="shot-mark" style="left: 90.4%; top: 69.9%">3</span>
+        <span class="shot-mark" style="left: 95.2%; top: 89.4%">4</span>
       </figure>
       <ol class="help-steps">
         <li>右下の <b>＋</b> で開きます。<b>シフト表の写真</b>からバイトを、<b>時間割の画像</b>から授業を、まとめて登録できます。</li>
@@ -838,7 +844,7 @@
     <details class="help-section">
       <summary>完了したら</summary>
       <figure class="help-shot">
-        <img src="help/done.jpg" width="600" height="328" alt="完了したときに出る「実際に何分かかりましたか？」の画面。45分・90分・135分・180分のボタンと入力欄" loading="lazy">
+        <img src="help/done.jpg?v=20261104" width="600" height="339" alt="完了したときに出る「実際に何分かかりましたか？」の画面。45分・90分・135分・180分のボタンと入力欄" loading="lazy">
       </figure>
       <p class="help-note">○ を押して完了にすると、<b>実際にかかった時間</b>を聞かれます。選んで記録すると、次からの AI の推定が自分のペースに合っていきます（記録しないときは ✕）。</p>
     </details>
@@ -846,16 +852,19 @@
     <details class="help-section">
       <summary>タイムライン</summary>
       <figure class="help-shot help-shot-tall">
-        <img src="help/timeline.jpg" width="600" height="840" alt="タイムライン。14時半から情報理論のレポート、ゼミの発表資料、18時から22時のアルバイトとその前後の移動の時間" loading="lazy">
-        <span class="shot-mark" style="left: 52%; top: 4%">1</span>
-        <span class="shot-mark" style="left: 92%; top: 19%">2</span>
-        <span class="shot-mark" style="left: 40%; top: 46%">3</span>
+        <img src="help/timeline.jpg?v=20261104" width="600" height="1165" alt="タイムラインの1日。9時から期限切れの課題、レポートの作業、10時から12時と13時から15時の授業、その合間にレポートの続き、18時から22時のアルバイトと前後の移動の時間" loading="lazy">
+        <span class="shot-mark" style="left: 90.9%; top: 3.8%">1</span>
+        <span class="shot-mark" style="left: 90.4%; top: 11.7%">2</span>
+        <span class="shot-mark" style="left: 90.4%; top: 25.1%">3</span>
+        <span class="shot-mark" style="left: 50%; top: 62.7%">4</span>
       </figure>
       <ol class="help-steps">
-        <li><b>今日／明日</b>を切り替えます。明日の計画は、今日の計画どおりに進めた場合のものです。</li>
-        <li>授業・バイトの合間に、<b>急ぐ課題から自動で作業時間</b>を割り当てます。</li>
+        <li>空いている時間に、<b>急ぐ課題から自動で作業時間</b>を割り当てます（赤の課題が先）。</li>
+        <li>時間割の<b>授業</b>の時間は避けます。</li>
+        <li>長い課題は、授業の合間に<b>分けて</b>置きます（「2/3」は3回に分けた2回目）。</li>
         <li>バイトの前後30分は<b>移動の時間</b>として空けます。課題に使える時間帯は設定で変えられます。</li>
       </ol>
+      <p class="help-note">上の「今日／明日」で切り替えます。明日の計画は、今日の計画どおりに進めた場合のものです。</p>
     </details>
 
     <details class="help-section">
@@ -1055,6 +1064,7 @@
     const WEEKLY_STORAGE = 'smart_schedule_weekly_tasks';                 // 毎週くり返す課題
     const WEEKLY_SHOW_DAYS = 7;     // 毎週の課題を締切の何日前から一覧に出すか
     const LAST_BACKUP_STORAGE = 'smart_schedule_last_backup';
+    const DEMO_BACKUP_STORAGE = 'smart_schedule_demo_backup';   // デモ表示の前の自分のデータ（元に戻すときに使う）
     const MANABA_KINDS = ['レポート', '小テスト', 'アンケート', 'プロジェクト', 'その他'];
     const CLASS_STORAGE = 'smart_schedule_classes';               // 時間割（授業）
     // 連携用テンプレート（Apps Script 入りのスプレッドシート）の「コピーを作成」リンク。
@@ -3016,7 +3026,9 @@ ${upcoming}
     function updateGcalStatus() {
       const statusEl = document.getElementById('gcal-status');
       const lastSync = localStorage.getItem(GCAL_LAST_SYNC_STORAGE);
-      if (!localStorage.getItem(GCAL_URL_STORAGE)) {
+      if (isDemoMode()) {
+        statusEl.textContent = 'デモ表示中（同期は止めています）';
+      } else if (!localStorage.getItem(GCAL_URL_STORAGE)) {
         statusEl.textContent = '未設定';
       } else if (gcalLastError) {
         statusEl.textContent = `うまくいきません：${gcalLastError}`;
@@ -3064,7 +3076,7 @@ ${upcoming}
       taskPushTimer = null;
       const url = localStorage.getItem(GCAL_URL_STORAGE);
       const token = localStorage.getItem(GCAL_TOKEN_STORAGE);
-      if (!url || !token) return;
+      if (!url || !token || isDemoMode()) return;
       const payload = buildTaskPush();
       const content = JSON.stringify(payload);
       if (content === lastPushedTasks) return;
@@ -3201,6 +3213,10 @@ ${upcoming}
     let gcalSyncing = false;   // 同期が重ならないようにする（同じ課題の二重取り込みを防ぐ）
 
     async function syncGoogleCalendar(manual = false) {
+      if (isDemoMode()) {
+        if (manual) showStatus('デモ表示中は同期しません（設定の「自分のデータに戻す」で戻せます）', 'info');
+        return;
+      }
       const url = localStorage.getItem(GCAL_URL_STORAGE);
       if (!url) {
         if (manual) showStatus('📅 先に Apps Script のURLを入力してください', 'error');
@@ -4309,6 +4325,113 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       return Object.keys(localStorage).filter(key => key.startsWith(STORAGE_PREFIX) && key !== LAST_BACKUP_STORAGE);
     }
 
+    // ---------- 撮影・発表用のデモ表示（見本のデータに切り替え、自分のデータは保存しておいて元に戻せる） ----------
+    // 画面の録画やスライドの画像に、自分の予定・課題や連携の情報を映さずに済むようにする
+    const DEMO_KEYS = [STORAGE_KEY, WEEKLY_STORAGE, CLASS_STORAGE];
+
+    function isDemoMode() {
+      return !!localStorage.getItem(DEMO_BACKUP_STORAGE);
+    }
+
+    // いつ撮っても同じように見えるよう、今日・明日からの相対の日時で見本を作る
+    //   バイト3件・課題（期限切れ／今日／明後日／数日後）・毎週の課題・完了の記録6件（提出の傾向と実際の時間の見本）・時間割
+    function buildDemoData(now = new Date()) {
+      const at = (days, h, m = 0) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() + days);
+        d.setHours(h, m, 0, 0);
+        return toLocalInputValue(d);
+      };
+      let id = Date.now();
+      const item = fields => normalizeTask({ id: id++, detail: '', estimatedMinutes: 60, createdAt: new Date(now.getTime() - 10 * DAY_MS).toISOString(), ...fields });
+      const manaba = (name, kind, datetime, estimatedMinutes, key) => item({
+        name, type: 'task', detail: `manabaの${kind}`, datetime, estimatedMinutes,
+        source: 'manaba', kind, externalId: `demo_${key}`, url: `https://demo.manaba.jp/ct/course_0_${key}`
+      });
+      const done = (task, completedDays, completedHour, actualMinutes) => ({
+        ...task, completed: true, completedAt: new Date(at(completedDays, completedHour)).toISOString(), actualMinutes
+      });
+      const weeklyId = id++;
+      const tasks = [
+        item({ name: 'バイト（カフェ）', type: 'job', datetime: at(0, 18), endTime: '22:00', source: 'gcal', externalId: 'demo_job_1' }),
+        item({ name: 'バイト（カフェ）', type: 'job', datetime: at(1, 17), endTime: '21:00', source: 'gcal', externalId: 'demo_job_2' }),
+        item({ name: 'バイト（カフェ）', type: 'job', datetime: at(3, 18), endTime: '22:00', source: 'gcal', externalId: 'demo_job_3' }),
+        manaba('メディアデザイン論：リフレクションシート', 'アンケート', at(-1, 9), 20, 'survey_1'),
+        manaba('情報理論：中間レポート', 'レポート', at(0, 23, 59), 120, 'report_1'),
+        item({ name: 'ゼミの発表資料', type: 'task', detail: 'スライド10枚', datetime: at(2, 13), estimatedMinutes: 90 }),
+        manaba('プログラミング演習：課題4', 'レポート', at(4, 23, 59), 60, 'report_2'),
+        done(manaba('情報理論：小テスト1', '小テスト', at(-9, 23, 59), 30, 'query_1'), -9, 20, 35),
+        done(manaba('メディアデザイン論：リフレクションシート（前回）', 'アンケート', at(-8, 9), 20, 'survey_0'), -8, 8, 25),
+        done(manaba('情報理論：小テスト2', '小テスト', at(-6, 23, 59), 30, 'query_2'), -7, 21, 30),
+        done(item({ name: 'ゼミの調査メモ', type: 'task', datetime: at(-5, 23, 59), estimatedMinutes: 60 }), -5, 22, 100),
+        done(manaba('プログラミング演習：課題3', 'レポート', at(-4, 23, 59), 60, 'report_0'), -6, 19, 80),
+        done(item({ name: '英語：単語テストの勉強', type: 'task', datetime: at(-2, 9), estimatedMinutes: 20 }), -3, 22, 20)
+      ];
+      const weekly = [{ id: weeklyId, name: '英語：毎週の単語テスト', detail: '', estimatedMinutes: 20, first: at(5, 9), until: '' }];
+      const classData = {
+        termLabel: '見本の時間割', termStart: '', termEnd: '', periodTimes: DEFAULT_PERIOD_TIMES,
+        classes: [1, 2, 3, 4, 5].flatMap(weekday => [
+          { weekday, startPeriod: 2, endPeriod: 3, name: ['情報理論', 'メディアデザイン論', 'プログラミング演習', '英語', 'ゼミ'][weekday - 1], room: '' },
+          ...(weekday % 2 ? [{ weekday, startPeriod: 5, endPeriod: 6, name: '基礎数学', room: '' }] : [])
+        ])
+      };
+      return { tasks, weekly, classData };
+    }
+
+    function toggleDemoMode() {
+      if (isDemoMode()) {
+        endDemoMode();
+        return;
+      }
+      if (!confirm('撮影・発表用のデモ表示にしますか？\n今のバイト・課題・時間割は保存しておき、「自分のデータに戻す」でそのまま戻せます。デモ表示の間は Google・manaba と同期しません。')) return;
+      localStorage.setItem(DEMO_BACKUP_STORAGE, JSON.stringify(Object.fromEntries(DEMO_KEYS.map(key => [key, localStorage.getItem(key)]))));
+      const demo = buildDemoData();
+      tasks = demo.tasks;
+      saveTasks();
+      saveWeeklyTasks(demo.weekly);
+      classData = demo.classData;
+      localStorage.setItem(CLASS_STORAGE, JSON.stringify(classData));
+      generateWeeklyTasks();
+      refreshAfterDemoChange();
+      showStatus('デモ表示にしました。設定の「自分のデータに戻す」で元に戻せます', 'info');
+    }
+
+    function endDemoMode() {
+      let backup = {};
+      try {
+        backup = JSON.parse(localStorage.getItem(DEMO_BACKUP_STORAGE) || '{}');
+      } catch (e) {
+        backup = {};
+      }
+      DEMO_KEYS.forEach(key => {
+        if (backup[key] == null) localStorage.removeItem(key);
+        else localStorage.setItem(key, backup[key]);
+      });
+      localStorage.removeItem(DEMO_BACKUP_STORAGE);
+      tasks = loadTasks();
+      classData = loadClassData();
+      refreshAfterDemoChange();
+      showStatus('自分のデータに戻しました', 'info');
+      syncGoogleCalendar();
+    }
+
+    function refreshAfterDemoChange() {
+      renderTasks();
+      updateClassSummary();
+      renderWeeklySettings();
+      updateBackupInfo();
+      updateGcalStatus();
+      updateDemoSettings();
+    }
+
+    function updateDemoSettings() {
+      const demo = isDemoMode();
+      document.getElementById('demo-note').textContent = demo
+        ? 'デモ表示中です。自分のデータは保存してあります。撮影が終わったら、下のボタンで戻してください。'
+        : '見本のバイト・課題・時間割に切り替えます。画面の録画やスライドの画像に、自分の予定や連携の情報を映さずに済みます。自分のデータは保存しておき、ボタンで元に戻せます（デモ表示の間は同期しません）。';
+      document.getElementById('demo-btn').textContent = demo ? '自分のデータに戻す' : 'デモ表示にする';
+    }
+
     function updateBackupInfo() {
       const last = localStorage.getItem(LAST_BACKUP_STORAGE);
       const taskCount = tasks.filter(t => t.type === 'task').length;
@@ -4645,6 +4768,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     renderKindOptions();
     renderStudyHoursOptions();
     loadThemeMode();
+    updateDemoSettings();
     updateClassSummary();
     estimatePendingTasks();
     if (connectLink && connectLink.error) {
@@ -4663,6 +4787,29 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       // 課題を変えてすぐにアプリを閉じたときも、まとめメールに反映されるように送っておく
       if (document.visibilityState === 'hidden' && taskPushTimer) pushTasksToScript(true);
     });
+
+    // ---------- スマホの「戻る」ボタン：押しただけでアプリが閉じないようにする ----------
+    // 履歴に目印を1つ積んでおき、「戻る」を押したら順に：開いている案内・シート・記録を閉じる →
+    // タイムライン・設定ならリストに戻る → リストなら「もう一度押すと閉じます」と知らせる（このときは目印を積まないので、次の「戻る」で閉じる）
+    function armBackGuard() {
+      if (!(history.state && history.state.backGuard)) history.pushState({ backGuard: true }, '');
+    }
+
+    window.addEventListener('popstate', () => {
+      if (!document.getElementById('tour').hidden) finishTutorial();
+      else if (document.querySelector('.sheet.open')) closeSheet();
+      else if (!document.getElementById('actual-prompt').hidden) closeActualPrompt();
+      else if (!document.getElementById('tab-list').classList.contains('active')) switchTab('tab-list');
+      else {
+        showStatus('もう一度「戻る」を押すとアプリを閉じます', 'info');
+        setTimeout(armBackGuard, 2500);   // 少し待っても押されなければ、また1回では閉じないようにする
+        return;
+      }
+      armBackGuard();
+    });
+    armBackGuard();
+    // ブラウザによっては、画面に触る前に積んだ目印は「戻る」で飛ばされるので、触ったときにも積み直す
+    ['pointerdown', 'keydown'].forEach(type => document.addEventListener(type, armBackGuard, { passive: true }));
   </script>
 </body>
 </html>

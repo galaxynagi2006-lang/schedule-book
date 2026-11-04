@@ -3082,9 +3082,11 @@ ${upcoming}
 
     // 授業の出席のしかた（両方使う授業もある）：attendUrl（毎週同じ出席のページ）と attendSmartme（Smart me のアプリで先生のQRコードを読み取る）
     function smartmeHref() {
-      // Android ならアプリを直接開く（入っていなければ Google Play）。それ以外の端末は Google Play のページ
+      // Chrome は「Web のリンクから開いてよい」と宣言した画面しか開けず、Smart Me のアプリは宣言していない。
+      // そこで Google Play の「アプリを起動する」リンク（market://launch?id=…）を通して起動する（入っていなければ Google Play のページ）。
+      // Android 以外の端末は Google Play のページ
       return /Android/i.test(navigator.userAgent)
-        ? `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${SMARTME_PACKAGE};S.browser_fallback_url=${encodeURIComponent(SMARTME_STORE_URL)};end`
+        ? `intent://launch?id=${SMARTME_PACKAGE}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(SMARTME_STORE_URL)};end`
         : SMARTME_STORE_URL;
     }
 

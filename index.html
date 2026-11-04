@@ -1045,7 +1045,7 @@
 
     <details class="help-section">
       <summary>授業の出席</summary>
-      <p class="help-note">設定の「時間割とシフト表」→ 時間割の「登録・編集する」で、授業ごとに<b>出席URL</b>（毎週同じ出席のページ）と<b>Smart me</b>（アプリで先生が掲示するQRコードを読み取る）を設定できます。両方使う授業は、両方のボタンが出ます。選んだ授業は、<b>授業の15分前から終わるまで</b>、リストの上に「出席する」ボタンが出ます。タイムラインの授業の枠の「出席」からも開けます。</p>
+      <p class="help-note">設定の「時間割とシフト表」→ 時間割の「登録・編集する」で、授業ごとに<b>出席URL</b>（毎週同じ出席のページ）と<b>Smart me</b>（アプリで先生が掲示するQRコードを読み取る）を設定できます。Smart me のボタンを押すと Google Play の Smart Me のページが開くので、「開く」を押してください（Smart Me はブラウザから直接起動できないため）。両方使う授業は、両方のボタンが出ます。選んだ授業は、<b>授業の15分前から終わるまで</b>、リストの上に「出席する」ボタンが出ます。タイムラインの授業の枠の「出席」からも開けます。</p>
     </details>
 
     <details class="help-section">
@@ -3081,19 +3081,19 @@ ${upcoming}
     const SMARTME_STORE_URL = `https://play.google.com/store/apps/details?id=${SMARTME_PACKAGE}`;
 
     // 授業の出席のしかた（両方使う授業もある）：attendUrl（毎週同じ出席のページ）と attendSmartme（Smart me のアプリで先生のQRコードを読み取る）
+    // Smart Me のアプリは「Web のリンクから開いてよい」と宣言していないので、Chrome からは直接起動できない
+    // （アプリを直接開くリンク・Google Play の起動リンクとも、実機で Google Play のページになった）。
+    // Android では Google Play のアプリで Smart Me のページを開き、「開く」から起動してもらう。それ以外の端末は Web の Google Play
     function smartmeHref() {
-      // Chrome は「Web のリンクから開いてよい」と宣言した画面しか開けず、Smart Me のアプリは宣言していない。
-      // そこで Google Play の「アプリを起動する」リンク（market://launch?id=…）を通して起動する（入っていなければ Google Play のページ）。
-      // Android 以外の端末は Google Play のページ
       return /Android/i.test(navigator.userAgent)
-        ? `intent://launch?id=${SMARTME_PACKAGE}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(SMARTME_STORE_URL)};end`
+        ? `intent://details?id=${SMARTME_PACKAGE}#Intent;scheme=market;package=com.android.vending;S.browser_fallback_url=${encodeURIComponent(SMARTME_STORE_URL)};end`
         : SMARTME_STORE_URL;
     }
 
     function attendLinksOf(c) {
       const links = [];
       if (c.attendUrl) links.push({ href: c.attendUrl, target: ' target="_blank" rel="noopener"', short: '出席ページ', label: '出席ページを開く' });
-      if (c.attendSmartme) links.push({ href: smartmeHref(), target: '', short: 'Smart me', label: 'Smart me を開いて先生のQRコードを読み取る' });
+      if (c.attendSmartme) links.push({ href: smartmeHref(), target: '', short: 'Smart me', label: 'Google Play から Smart Me を開いて、先生のQRコードを読み取る' });
       return links;
     }
 
@@ -3107,7 +3107,7 @@ ${upcoming}
         // 1つなら「出席する」、両方なら「出席ページ」「Smart me」の2つのボタン
         const buttons = links.map(link =>
           `<a class="attend-btn" href="${escapeHtml(link.href)}"${link.target} aria-label="${escapeHtml(c.name)}：${link.label}">${links.length > 1 ? link.short : '出席する'}</a>`).join('');
-        const hint = c.attendSmartme ? 'Smart me で先生のQRコードを読み取る' : '';
+        const hint = c.attendSmartme ? 'Google Play の「開く」→ Smart Me で先生のQRコードを読み取る' : '';
         return `
           <div class="attend-card">
             <div class="attend-info">
@@ -4210,7 +4210,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
         ${active.length > 0
           ? `<div class="class-grid" style="grid-template-columns: 18px repeat(${days.length}, 1fr);">${gridHtml}</div>`
           : '<div class="empty-message">まだ授業が登録されていません。画像から読み取るか、「＋ 授業を追加」で入力してください</div>'}
-        ${d.classes.length > 0 ? '<p class="field-note">※出席URLを入れた授業・「Smart me」にチェックした授業は、授業の15分前から終わるまで、リストの上に「出席する」ボタンが出ます（タイムラインの授業の枠にも出ます）。Smart me はアプリを開いて、先生のQRコードを読み取ります。両方使う授業は両方入れてください。</p>' : ''}
+        ${d.classes.length > 0 ? '<p class="field-note">※出席URLを入れた授業・「Smart me」にチェックした授業は、授業の15分前から終わるまで、リストの上に「出席する」ボタンが出ます（タイムラインの授業の枠にも出ます）。Smart me は Google Play の Smart Me のページが開くので、「開く」を押して先生のQRコードを読み取ります（Smart Me はブラウザから直接起動できないため）。両方使う授業は両方入れてください。</p>' : ''}
         <div>${rowsHtml}</div>
         <div class="shift-actions">
           <button type="button" class="btn-clear" onclick="addClassRow()">＋ 授業を追加</button>

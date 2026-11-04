@@ -211,9 +211,11 @@
     .attend-when { font-size: 12px; font-weight: 700; }
     .attend-info b { font-size: 16px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .attend-room { font-size: 12px; }
-    .attend-btn { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 12px; background: var(--class-ink); color: #ffffff; font-size: 15px; font-weight: 800; text-decoration: none; }
+    .attend-actions { flex: none; display: flex; flex-direction: column; gap: 6px; }
+    .attend-btn { justify-content: center; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 12px; background: var(--class-ink); color: #ffffff; font-size: 15px; font-weight: 800; text-decoration: none; }
     :root[data-theme="dark"] .attend-btn { background: #5cc8b4; color: #1f1e1d; }
-    .tl-attend { position: absolute; right: 10px; bottom: 8px; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.92); color: #115e59; font-size: 13px; font-weight: 800; text-decoration: none; }
+    .tl-attend-group { position: absolute; right: 10px; bottom: 8px; display: flex; gap: 6px; }
+    .tl-attend { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.92); color: #115e59; font-size: 13px; font-weight: 800; text-decoration: none; }
     :root[data-theme="dark"] .tl-attend { background: #e3f4f0; color: #1f3d38; }
     .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 20px; margin-bottom: 2px; }
     .list-summary { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
@@ -540,7 +542,10 @@
     .class-row-names { grid-column: 2 / -1; display: flex; gap: 6px; }
     .class-row-names input:first-child { flex: 2; }
     .class-row-names input:last-child { flex: 1; }
-    .class-row .class-row-url { grid-column: 2 / -1; font-size: 14px; }
+    .class-row-attend { grid-column: 2 / -1; display: flex; gap: 6px; }
+    .class-row-attend input[type="url"] { flex: 1; font-size: 14px; }
+    .attend-smartme { flex: none; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+    .attend-smartme input { width: 20px; height: 20px; accent-color: var(--primary-color); }
     .period-times { display: grid; grid-template-columns: 34px 1fr 14px 1fr; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; }
     .period-times .form-control { padding: 6px; font-size: 16px; text-align: center; }
     .period-times input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
@@ -605,7 +610,7 @@
           <div id="job-list-container"></div>
         </section>
 
-        <!-- 出席URLを登録した授業の15分前〜授業中だけ、「出席する」ボタンを出す -->
+        <!-- 出席のしかた（URL・Smart me）を選んだ授業の15分前〜授業中だけ、「出席する」ボタンを出す -->
         <div id="attend-card"></div>
 
         <!-- ③④ 課題リスト & カウントダウン（見出しの右に未完了の件数・残り作業の合計） -->
@@ -1040,7 +1045,7 @@
 
     <details class="help-section">
       <summary>授業の出席</summary>
-      <p class="help-note">設定の「時間割とシフト表」→ 時間割の「登録・編集する」で、授業ごとに<b>出席URL</b>（毎週同じ出席のページ）を入れられます。入れた授業は、<b>授業の15分前から終わるまで</b>、リストの上に「出席する」ボタンが出ます。タイムラインの授業の枠の「出席」からも開けます。</p>
+      <p class="help-note">設定の「時間割とシフト表」→ 時間割の「登録・編集する」で、授業ごとに<b>出席URL</b>（毎週同じ出席のページ）と<b>Smart me</b>（アプリで先生が掲示するQRコードを読み取る）を設定できます。両方使う授業は、両方のボタンが出ます。選んだ授業は、<b>授業の15分前から終わるまで</b>、リストの上に「出席する」ボタンが出ます。タイムラインの授業の枠の「出席」からも開けます。</p>
     </details>
 
     <details class="help-section">
@@ -2487,8 +2492,10 @@
       }
 
       dayClasses.forEach(r => {
-        const attend = r.attendUrl
-          ? `<a class="tl-attend" href="${escapeHtml(r.attendUrl)}" target="_blank" rel="noopener" aria-label="${escapeHtml(r.name)}の出席ページを開く">出席</a>`
+        const links = attendLinksOf(r);
+        const attend = links.length > 0
+          ? `<span class="tl-attend-group">${links.map(link =>
+            `<a class="tl-attend" href="${escapeHtml(link.href)}"${link.target} aria-label="${escapeHtml(r.name)}：${link.label}">${links.length > 1 ? link.short : '出席'}</a>`).join('')}</span>`
           : '';
         html += block('b-class', r.start, r.end, escapeHtml(r.name),
           `${formatHM(r.start)}–${formatHM(r.end)}${r.room ? ` ・ ${escapeHtml(r.room)}` : ''}`, false, attend);
@@ -3070,20 +3077,42 @@ ${upcoming}
     }
 
     const ATTEND_BEFORE_MIN = 15;   // 授業の何分前から「出席する」を出すか
+    const SMARTME_PACKAGE = 'com.ntt.smartid';
+    const SMARTME_STORE_URL = `https://play.google.com/store/apps/details?id=${SMARTME_PACKAGE}`;
+
+    // 授業の出席のしかた（両方使う授業もある）：attendUrl（毎週同じ出席のページ）と attendSmartme（Smart me のアプリで先生のQRコードを読み取る）
+    function smartmeHref() {
+      // Android ならアプリを直接開く（入っていなければ Google Play）。それ以外の端末は Google Play のページ
+      return /Android/i.test(navigator.userAgent)
+        ? `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${SMARTME_PACKAGE};S.browser_fallback_url=${encodeURIComponent(SMARTME_STORE_URL)};end`
+        : SMARTME_STORE_URL;
+    }
+
+    function attendLinksOf(c) {
+      const links = [];
+      if (c.attendUrl) links.push({ href: c.attendUrl, target: ' target="_blank" rel="noopener"', short: '出席ページ', label: '出席ページを開く' });
+      if (c.attendSmartme) links.push({ href: smartmeHref(), target: '', short: 'Smart me', label: 'Smart me を開いて先生のQRコードを読み取る' });
+      return links;
+    }
 
     function renderAttendCard(now) {
       const nowMs = now.getTime();
       const current = classRangesOn(now).filter(c =>
-        c.attendUrl && nowMs >= c.start.getTime() - ATTEND_BEFORE_MIN * 60000 && nowMs < c.end.getTime());
+        attendLinksOf(c).length > 0 && nowMs >= c.start.getTime() - ATTEND_BEFORE_MIN * 60000 && nowMs < c.end.getTime());
       document.getElementById('attend-card').innerHTML = current.map(c => {
         const started = nowMs >= c.start.getTime();
+        const links = attendLinksOf(c);
+        // 1つなら「出席する」、両方なら「出席ページ」「Smart me」の2つのボタン
+        const buttons = links.map(link =>
+          `<a class="attend-btn" href="${escapeHtml(link.href)}"${link.target} aria-label="${escapeHtml(c.name)}：${link.label}">${links.length > 1 ? link.short : '出席する'}</a>`).join('');
+        const hint = c.attendSmartme ? 'Smart me で先生のQRコードを読み取る' : '';
         return `
           <div class="attend-card">
             <div class="attend-info">
               <span class="attend-when">${started ? '授業中' : 'もうすぐ'} ${formatHM(c.start)}–${formatHM(c.end)}</span>
-              <b>${escapeHtml(c.name)}</b>${c.room ? `<span class="attend-room">${escapeHtml(c.room)}</span>` : ''}
+              <b>${escapeHtml(c.name)}</b>${c.room || hint ? `<span class="attend-room">${[c.room, hint].filter(Boolean).map(escapeHtml).join(' ・ ')}</span>` : ''}
             </div>
-            <a class="attend-btn" href="${escapeHtml(c.attendUrl)}" target="_blank" rel="noopener" aria-label="${escapeHtml(c.name)}の出席ページを開く">出席する</a>
+            <div class="attend-actions">${buttons}</div>
           </div>`;
       }).join('');
     }
@@ -3878,7 +3907,7 @@ ${upcoming}
 
     // ---------- 時間割（授業） ----------
     // 保存形式: { termLabel, termStart, termEnd, periodTimes: [{ start, end }, …（1限から順）],
-    //            classes: [{ weekday（1=月〜6=土）, startPeriod, endPeriod, name, room, attendUrl（出席のページ。毎週同じ） }] }
+    //            classes: [{ weekday（1=月〜6=土）, startPeriod, endPeriod, name, room, attendUrl（出席のページ。毎週同じ）, attendSmartme（Smart me で出席） }] }
     const PERIOD_COUNT = 10;
     // 新習志野キャンパスの時限（時間割画面の注記：1限 9:00〜10:00 …）。画像から読み取れた時刻があればそちらを使う
     const DEFAULT_PERIOD_TIMES = Array.from({ length: PERIOD_COUNT }, (_, i) => ({
@@ -3956,6 +3985,7 @@ ${upcoming}
           name: c.name,
           room: c.room,
           attendUrl: c.attendUrl || '',
+          attendSmartme: !!c.attendSmartme,
           start: at(times[c.startPeriod - 1].start),
           end: at(times[c.endPeriod - 1].end)
         }))
@@ -4083,8 +4113,9 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
           room: String(c.room || '').trim()
         }))
         .filter(c => c.weekday >= 1 && c.period >= 1 && c.period <= PERIOD_COUNT && c.name);
-      const previousUrls = new Map((classDraft.classes || []).filter(c => c.attendUrl).map(c => [c.name, c.attendUrl]));
-      classDraft.classes = mergeClassPeriods(items).map(c => ({ ...c, attendUrl: previousUrls.get(c.name) || '' }));
+      const previousAttend = new Map((classDraft.classes || []).filter(c => c.attendUrl || c.attendSmartme)
+        .map(c => [c.name, { attendUrl: c.attendUrl || '', attendSmartme: !!c.attendSmartme }]));
+      classDraft.classes = mergeClassPeriods(items).map(c => ({ ...c, attendUrl: '', attendSmartme: false, ...previousAttend.get(c.name) }));
 
       let timesRead = 0;
       (analysis.period_times || []).forEach(pt => {
@@ -4157,7 +4188,10 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
             <input type="text" class="form-control" value="${escapeHtml(c.name)}" placeholder="科目名" onchange="updateClassRow(${i}, 'name', this.value)" aria-label="科目名">
             <input type="text" class="form-control" value="${escapeHtml(c.room || '')}" placeholder="教室" onchange="updateClassRow(${i}, 'room', this.value)" aria-label="教室">
           </div>
-          <input type="url" class="form-control class-row-url" value="${escapeHtml(c.attendUrl || '')}" placeholder="出席URL（なければ空欄）" inputmode="url" autocomplete="off" spellcheck="false" onchange="updateClassRow(${i}, 'attendUrl', this.value)" aria-label="出席URL">
+          <div class="class-row-attend">
+            <input type="url" class="form-control" value="${escapeHtml(c.attendUrl || '')}" placeholder="出席URL（なければ空欄）" inputmode="url" autocomplete="off" spellcheck="false" onchange="updateClassRow(${i}, 'attendUrl', this.value)" aria-label="出席URL">
+            <label class="attend-smartme"><input type="checkbox" ${c.attendSmartme ? 'checked' : ''} onchange="updateClassRow(${i}, 'attendSmartme', this.checked)"> Smart me</label>
+          </div>
         </div>
       `).join('');
 
@@ -4174,7 +4208,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
         ${active.length > 0
           ? `<div class="class-grid" style="grid-template-columns: 18px repeat(${days.length}, 1fr);">${gridHtml}</div>`
           : '<div class="empty-message">まだ授業が登録されていません。画像から読み取るか、「＋ 授業を追加」で入力してください</div>'}
-        ${d.classes.length > 0 ? '<p class="field-note">※出席URLを入れた授業は、授業の15分前から終わるまで、リストの上に「出席する」ボタンが出ます（タイムラインの授業の枠にも出ます）。</p>' : ''}
+        ${d.classes.length > 0 ? '<p class="field-note">※出席URLを入れた授業・「Smart me」にチェックした授業は、授業の15分前から終わるまで、リストの上に「出席する」ボタンが出ます（タイムラインの授業の枠にも出ます）。Smart me はアプリを開いて、先生のQRコードを読み取ります。両方使う授業は両方入れてください。</p>' : ''}
         <div>${rowsHtml}</div>
         <div class="shift-actions">
           <button type="button" class="btn-clear" onclick="addClassRow()">＋ 授業を追加</button>
@@ -4211,7 +4245,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     }
 
     function addClassRow() {
-      classDraft.classes.push({ weekday: 1, startPeriod: 1, endPeriod: 1, name: '', room: '', attendUrl: '', include: true });
+      classDraft.classes.push({ weekday: 1, startPeriod: 1, endPeriod: 1, name: '', room: '', attendUrl: '', attendSmartme: false, include: true });
       renderClassEditor();
     }
 
@@ -4235,6 +4269,11 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       }
     }
 
+    // 保存する出席のしかた（URL として読めないものは保存しない）
+    function savedAttend(c) {
+      return { attendUrl: normalizeAttendUrl(c.attendUrl), attendSmartme: !!c.attendSmartme };
+    }
+
     function saveClassData() {
       const classes = classDraft.classes
         .filter(c => c.include && c.name.trim())
@@ -4244,7 +4283,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
           endPeriod: c.endPeriod,
           name: c.name.trim(),
           room: (c.room || '').trim(),
-          attendUrl: normalizeAttendUrl(c.attendUrl)
+          ...savedAttend(c)
         }));
       classData = {
         termLabel: classDraft.termLabel || '',

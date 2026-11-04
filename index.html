@@ -206,6 +206,15 @@
     .tomorrow-row b { color: var(--text-main); text-align: right; }
     .nowrap { white-space: nowrap; }
 
+    .attend-card { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 12px 12px 16px; border-radius: 14px; background: var(--class-soft); color: var(--class-ink); }
+    .attend-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .attend-when { font-size: 12px; font-weight: 700; }
+    .attend-info b { font-size: 16px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .attend-room { font-size: 12px; }
+    .attend-btn { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 12px; background: var(--class-ink); color: #ffffff; font-size: 15px; font-weight: 800; text-decoration: none; }
+    :root[data-theme="dark"] .attend-btn { background: #5cc8b4; color: #1f1e1d; }
+    .tl-attend { position: absolute; right: 10px; bottom: 8px; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.92); color: #115e59; font-size: 13px; font-weight: 800; text-decoration: none; }
+    :root[data-theme="dark"] .tl-attend { background: #e3f4f0; color: #1f3d38; }
     .list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 20px; margin-bottom: 2px; }
     .list-summary { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
     .list-summary b { color: var(--text-main); font-size: 15px; }
@@ -531,6 +540,7 @@
     .class-row-names { grid-column: 2 / -1; display: flex; gap: 6px; }
     .class-row-names input:first-child { flex: 2; }
     .class-row-names input:last-child { flex: 1; }
+    .class-row .class-row-url { grid-column: 2 / -1; font-size: 14px; }
     .period-times { display: grid; grid-template-columns: 34px 1fr 14px 1fr; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; }
     .period-times .form-control { padding: 6px; font-size: 16px; text-align: center; }
     .period-times input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
@@ -594,6 +604,9 @@
           <!-- 今後のアルバイト一覧（削除用・折りたたみ） -->
           <div id="job-list-container"></div>
         </section>
+
+        <!-- 出席URLを登録した授業の15分前〜授業中だけ、「出席する」ボタンを出す -->
+        <div id="attend-card"></div>
 
         <!-- ③④ 課題リスト & カウントダウン（見出しの右に未完了の件数・残り作業の合計） -->
         <div class="list-head">
@@ -1023,6 +1036,11 @@
         <li>授業がある日は<b>昼食</b>の時間も空けます。移動と昼食の長さは、設定の「時間の使い方」で変えられます。</li>
       </ol>
       <p class="help-note">上の「今日／明日」で切り替えます。明日の計画は、今日の計画どおりに進めた場合のものです。</p>
+    </details>
+
+    <details class="help-section">
+      <summary>授業の出席</summary>
+      <p class="help-note">設定の「時間割とシフト表」→ 時間割の「登録・編集する」で、授業ごとに<b>出席URL</b>（毎週同じ出席のページ）を入れられます。入れた授業は、<b>授業の15分前から終わるまで</b>、リストの上に「出席する」ボタンが出ます。タイムラインの授業の枠の「出席」からも開けます。</p>
     </details>
 
     <details class="help-section">
@@ -2441,14 +2459,14 @@
       }
 
       // 短い枠は高さを最低 18px にする。anchorEnd のとき（授業・バイトの前の移動）は終わりにそろえて下の枠と重ならないようにする
-      const block = (cls, start, end, title, sub, anchorEnd = false) => {
+      const block = (cls, start, end, title, sub, anchorEnd = false, extraHtml = '') => {
         const s = clip(start), e = clip(end);
         if (e <= s) return '';
         const height = Math.max(toY(e) - toY(s), 18);
         const top = anchorEnd ? toY(e) - height : toY(s);
         const compact = height < 44;
         return `<div class="tl-block ${cls}${compact ? ' compact' : ''}" style="top:${top}px; height:${height}px;">
-          <b>${title}</b>${sub ? `<span>${sub}</span>` : ''}
+          <b>${title}</b>${sub ? `<span>${sub}</span>` : ''}${extraHtml}
         </div>`;
       };
 
@@ -2469,8 +2487,11 @@
       }
 
       dayClasses.forEach(r => {
+        const attend = r.attendUrl
+          ? `<a class="tl-attend" href="${escapeHtml(r.attendUrl)}" target="_blank" rel="noopener" aria-label="${escapeHtml(r.name)}の出席ページを開く">出席</a>`
+          : '';
         html += block('b-class', r.start, r.end, escapeHtml(r.name),
-          `${formatHM(r.start)}–${formatHM(r.end)}${r.room ? ` ・ ${escapeHtml(r.room)}` : ''}`);
+          `${formatHM(r.start)}–${formatHM(r.end)}${r.room ? ` ・ ${escapeHtml(r.room)}` : ''}`, false, attend);
       });
 
       blocks.forEach(b => {
@@ -3048,6 +3069,25 @@ ${upcoming}
         : '未登録';
     }
 
+    const ATTEND_BEFORE_MIN = 15;   // 授業の何分前から「出席する」を出すか
+
+    function renderAttendCard(now) {
+      const nowMs = now.getTime();
+      const current = classRangesOn(now).filter(c =>
+        c.attendUrl && nowMs >= c.start.getTime() - ATTEND_BEFORE_MIN * 60000 && nowMs < c.end.getTime());
+      document.getElementById('attend-card').innerHTML = current.map(c => {
+        const started = nowMs >= c.start.getTime();
+        return `
+          <div class="attend-card">
+            <div class="attend-info">
+              <span class="attend-when">${started ? '授業中' : 'もうすぐ'} ${formatHM(c.start)}–${formatHM(c.end)}</span>
+              <b>${escapeHtml(c.name)}</b>${c.room ? `<span class="attend-room">${escapeHtml(c.room)}</span>` : ''}
+            </div>
+            <a class="attend-btn" href="${escapeHtml(c.attendUrl)}" target="_blank" rel="noopener" aria-label="${escapeHtml(c.name)}の出席ページを開く">出席する</a>
+          </div>`;
+      }).join('');
+    }
+
     function renderTasks() {
       const now = new Date();
       const activeTasks = tasks
@@ -3058,6 +3098,7 @@ ${upcoming}
       document.getElementById('list-date').textContent = formatDateHeading(now);
       updateJobSection(now);
       renderJobList(now);
+      renderAttendCard(now);
       updateSummary(activeTasks);
       const workload = analyzeWorkload(activeTasks, now);
       const tendency = analyzeTendency(now);
@@ -3837,7 +3878,7 @@ ${upcoming}
 
     // ---------- 時間割（授業） ----------
     // 保存形式: { termLabel, termStart, termEnd, periodTimes: [{ start, end }, …（1限から順）],
-    //            classes: [{ weekday（1=月〜6=土）, startPeriod, endPeriod, name, room }] }
+    //            classes: [{ weekday（1=月〜6=土）, startPeriod, endPeriod, name, room, attendUrl（出席のページ。毎週同じ） }] }
     const PERIOD_COUNT = 10;
     // 新習志野キャンパスの時限（時間割画面の注記：1限 9:00〜10:00 …）。画像から読み取れた時刻があればそちらを使う
     const DEFAULT_PERIOD_TIMES = Array.from({ length: PERIOD_COUNT }, (_, i) => ({
@@ -3914,6 +3955,7 @@ ${upcoming}
         .map(c => ({
           name: c.name,
           room: c.room,
+          attendUrl: c.attendUrl || '',
           start: at(times[c.startPeriod - 1].start),
           end: at(times[c.endPeriod - 1].end)
         }))
@@ -4041,7 +4083,8 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
           room: String(c.room || '').trim()
         }))
         .filter(c => c.weekday >= 1 && c.period >= 1 && c.period <= PERIOD_COUNT && c.name);
-      classDraft.classes = mergeClassPeriods(items);
+      const previousUrls = new Map((classDraft.classes || []).filter(c => c.attendUrl).map(c => [c.name, c.attendUrl]));
+      classDraft.classes = mergeClassPeriods(items).map(c => ({ ...c, attendUrl: previousUrls.get(c.name) || '' }));
 
       let timesRead = 0;
       (analysis.period_times || []).forEach(pt => {
@@ -4114,6 +4157,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
             <input type="text" class="form-control" value="${escapeHtml(c.name)}" placeholder="科目名" onchange="updateClassRow(${i}, 'name', this.value)" aria-label="科目名">
             <input type="text" class="form-control" value="${escapeHtml(c.room || '')}" placeholder="教室" onchange="updateClassRow(${i}, 'room', this.value)" aria-label="教室">
           </div>
+          <input type="url" class="form-control class-row-url" value="${escapeHtml(c.attendUrl || '')}" placeholder="出席URL（なければ空欄）" inputmode="url" autocomplete="off" spellcheck="false" onchange="updateClassRow(${i}, 'attendUrl', this.value)" aria-label="出席URL">
         </div>
       `).join('');
 
@@ -4130,6 +4174,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
         ${active.length > 0
           ? `<div class="class-grid" style="grid-template-columns: 18px repeat(${days.length}, 1fr);">${gridHtml}</div>`
           : '<div class="empty-message">まだ授業が登録されていません。画像から読み取るか、「＋ 授業を追加」で入力してください</div>'}
+        ${d.classes.length > 0 ? '<p class="field-note">※出席URLを入れた授業は、授業の15分前から終わるまで、リストの上に「出席する」ボタンが出ます（タイムラインの授業の枠にも出ます）。</p>' : ''}
         <div>${rowsHtml}</div>
         <div class="shift-actions">
           <button type="button" class="btn-clear" onclick="addClassRow()">＋ 授業を追加</button>
@@ -4166,7 +4211,7 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
     }
 
     function addClassRow() {
-      classDraft.classes.push({ weekday: 1, startPeriod: 1, endPeriod: 1, name: '', room: '', include: true });
+      classDraft.classes.push({ weekday: 1, startPeriod: 1, endPeriod: 1, name: '', room: '', attendUrl: '', include: true });
       renderClassEditor();
     }
 
@@ -4177,6 +4222,19 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
       document.getElementById('class-preview').hidden = true;
     }
 
+    // 出席URL：前後の空白を除き、「https://」がなければ付ける。URLとして読めなければ空にする
+    function normalizeAttendUrl(value) {
+      let url = String(value || '').trim();
+      if (!url || /\s/.test(url)) return '';
+      if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+      try {
+        const parsed = new URL(url);
+        return parsed.hostname.includes('.') ? parsed.href : '';
+      } catch (e) {
+        return '';
+      }
+    }
+
     function saveClassData() {
       const classes = classDraft.classes
         .filter(c => c.include && c.name.trim())
@@ -4185,7 +4243,8 @@ term_label: 年度と学期の表示（例: "2026年度 後期"）。なけれ�
           startPeriod: c.startPeriod,
           endPeriod: c.endPeriod,
           name: c.name.trim(),
-          room: (c.room || '').trim()
+          room: (c.room || '').trim(),
+          attendUrl: normalizeAttendUrl(c.attendUrl)
         }));
       classData = {
         termLabel: classDraft.termLabel || '',
